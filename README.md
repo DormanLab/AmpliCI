@@ -63,7 +63,7 @@ AmpliCI require all input reads have the **same** length, with no **ambiguous** 
 
 AmpliCI takes a single demultiplexed FASTQ file (one per sample) generated from the Illumina sequencing platform, with reads trimmed to the same length and containing no ambiguous nucleotides (see above steps).  If you have paired end data, AmpliCI can analyze the forward reads or the reverse reads, but not both simultaneously.
 
-You can find example input fastq files in directory [test](https://github.com/DormanLab/AmpliCI).
+You can find example input fastq files in directory [test](https://github.com/DormanLab/AmpliCI/test).
 
 One read in the input FASTQ file should fit in exactly **four** lines, as in the format below.
 
@@ -234,7 +234,7 @@ However, we modified and used related code from R, which derives from the above.
 
 - We used the hash implemented in [uthash.h](https://troydhanson.github.io/uthash/userguide.html).
 
-- This work is under review.  Please see [](arxiv link) or [](bioarxiv).
+- This work is under review.  Please see [bioRxiv](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1).
 
 
 # Contact <a name = "contact" />
