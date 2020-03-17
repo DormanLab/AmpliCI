@@ -1248,9 +1248,10 @@ double trans_nw(options *opt, unsigned char **aln, size_t alen,
 	/* [KSD] paper says truncated, so you should demo, at least
 	 * [KSD] comment that it doesn't matter at X decimal places for
 	 * [KSD] your indel rate.  For someone's indel rate, it may!
+	 * [XY] fix it 
 	 */
 	if (opt->indel_model == INDEL_PER_READ)
-		e_trans += dpois(ngap, opt->indel_error * rlen, 1);
+		e_trans += dpois(ngap, opt->indel_error * rlen, 1)/adj;
 
 	/* may be used later */
 	unsigned int pre_nmismatch = mismatch;
