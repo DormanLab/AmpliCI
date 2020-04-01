@@ -553,14 +553,14 @@ int fread_fastq(FILE *fp, fastq_data **in_fqd, fastq_options *fqo)
 	}
 
 	if (fqd->file_type == FASTQ_FILE) {
-		debug_msg(SILENT, fxn_debug, "Minimum quality score: %c (%d)\n",
+		debug_msg(TALKATIVE, fxn_debug, "Minimum quality score: %c (%d)\n",
 			fqd->min_quality, (int) fqd->min_quality);
-		debug_msg(SILENT, fxn_debug, "Maximum quality score: %c (%d)\n",
+		debug_msg(TALKATIVE, fxn_debug, "Maximum quality score: %c (%d)\n",
 			fqd->max_quality, (int) fqd->max_quality);
 	}
-	debug_msg(SILENT, fxn_debug, "Minimum read length: %u\n",
+	debug_msg(TALKATIVE, fxn_debug, "Minimum read length: %u\n",
 		fqd->n_min_length);
-	debug_msg(SILENT, fxn_debug, "Maximum read length: %u\n",
+	debug_msg(TALKATIVE, fxn_debug, "Maximum read length: %u\n",
 		fqd->n_max_length);
 
 	qptr = fqd->quals;

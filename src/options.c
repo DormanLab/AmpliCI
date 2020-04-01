@@ -127,9 +127,10 @@ int parse_options(options *opt, int argc, const char **argv)
 			a = argv[i][j];
 		switch(a) {
 		case 'a':
-			if (i == argc - 1)
+			if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
-			else {
+				goto CMDLINE_ERROR;
+			} else {
 				opt->alpha = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
 			}
@@ -142,6 +143,7 @@ int parse_options(options *opt, int argc, const char **argv)
 	//		break;
 		case 'k':
 			if (i == argc - 1) {
+				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
 			} else if (!strcmp(&argv[i][j], "kmax")) {
 				if (argv[i + 1][0] >= 48
@@ -160,6 +162,7 @@ int parse_options(options *opt, int argc, const char **argv)
 			break;
 		case 'l':
 			if (i == argc - 1) {
+				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
 			} else if (!strcmp(&argv[i][j], "lb")) {
 				opt->low_bound = read_cmdline_double(argc,
@@ -180,6 +183,7 @@ int parse_options(options *opt, int argc, const char **argv)
 			break;
 		case 'i':
 			if (i == argc - 1) {
+				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
 			/* option argument starts with a digit */
 			} else if (!strcmp(argv[i+1],"amplici")){
@@ -195,9 +199,18 @@ int parse_options(options *opt, int argc, const char **argv)
 				goto CMDLINE_ERROR;
 			break;
 		case 'f':
-			if (i == argc - 1)
+			if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
+				goto CMDLINE_ERROR;
+			}
 			opt->fastq_file = argv[++i];
+			break;
+		case 'm':	/* hidden option: --most */
+			if (i == argc - 1) {
+				err = INVALID_CMD_OPTION;
+				goto CMDLINE_ERROR;
+			}
+			opt->most_abundant = atoi(argv[++i]);
 			break;
 		case 'o':
 			if (i == argc - 1) {
@@ -238,7 +251,7 @@ int parse_options(options *opt, int argc, const char **argv)
 		err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
 			"No input fastq file! (see help -h) \n");
 
-	if (!opt->outfile)
+	if (!opt->outfile && !opt->most_abundant)
 		err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
 			"No output file specified! (see help -h) \n");
 
@@ -318,6 +331,7 @@ void fprint_usage(FILE *fp, const char *cmdname, void *obj)
 	fprintf(fp, "\t-lb <lbdbl>\n\t\tLower bound for scaled true abundance during haplotype reconstruction.  [DEFAULT: %f]\n", opt->low_bound);
 	fprintf(fp, "\t-ll <lldbl>\n\t\tLower bound for reads maximum posterior assignment probability screening during reads assignment. [DEFAULT: %f]\n", opt->ll_cutoff);
 	fprintf(fp, "\t-o <ostr>\n\t\tOutput file to record best clustering solution or the estimated error profile.  [REQUIRED]\n");
+	/* fprintf(fp, "\t--most <mint>\n\t\tReport top m-most abundant sequences and quit. [DEFAULT: %i]\n", opt->most_abundant);
 	fprintf(fp, "\t-z \n\t\tTurn off the alignment-free.  [DEFAULT: none]\n");	/* KSD: And turn on what? If not alignment-free, what do you get? XY: pairwise alignment of each reads and haplotypes*/
 	fprintf(fp, "\t-h\n\t\tThis help.\n");
 	fprintf(fp, "\n");
