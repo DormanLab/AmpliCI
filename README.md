@@ -14,7 +14,7 @@ AmpliCI, Amplicon Clustering Inference, denoises Illumina amplicon data by appro
 1. [Output](#output)
 1. [Downstream analysis](#downstream)
 1. [Troubleshooting](#troubleshooting)
-1. [Detailed options](#options) need to add this
+1. [Detailed options](#options)
 1. [Acknowledgements](#acknowledgements)
 1. [Contact](#contact)
 
@@ -63,7 +63,7 @@ AmpliCI require all input reads have the **same** length, with no **ambiguous** 
 
 AmpliCI takes a single demultiplexed FASTQ file (one per sample) generated from the Illumina sequencing platform, with reads trimmed to the same length and containing no ambiguous nucleotides (see above steps).  If you have paired end data, AmpliCI can analyze the forward reads or the reverse reads, but not both simultaneously.
 
-You can find example input fastq files in directory [test](https://github.com/DormanLab/AmpliCI/test).
+You can find example input fastq files in directory [test](https://github.com/DormanLab/AmpliCI/tree/master/test).
 
 One read in the input FASTQ file should fit in exactly **four** lines, as in the format below.
 
@@ -122,54 +122,62 @@ When run to estimate the error profile, AmpliCI will output an error profile `<o
 
 When run to estimate haplotypes and their abundances with argument `-o <output_base_filename>`, there will be two output files:
 
-- `output_base_filename.fa`
+***1.`output_base_filename.fa`***
 
-FASTA-formatted file containing denoised sequences (or haplotypes).  For each sequence, we also provide `size` (scaled true abundance), `DiagP` (diagnostic probability), ee (mean expected number of errors in the read), useful for chimera detection and *post hoc* filtering, for example for the first haplotype, the FASTA header might look like:
+FASTA-formatted file (will be used in the downstream analysis) containing denoised sequences (or haplotypes).  For each sequence, we also provide `size` (scaled true abundance), `DiagP` (diagnostic probability), `ee` (mean expected number of errors in reads), useful for chimera detection and *post hoc* filtering, for example for the first haplotype, the FASTA header might look like:
+
 ```
 >H0;size=516.000;DiagP=0.00e+00;ee=0.405;
 ```
 
-- `output_base_filename.out`
+- `size`: scaled true abundance estimated for each selected haplotype, required for the following chimera detection with UCHIME3. 
+
+- `DiagP`: diagnostic probability, which could be used as a criterion to check false positives. We suggest to remove haplotypes with `DiagP` > 1e-40 when applied AmpliCI on real datasets with number of reads > 1M for *post hoc* filtering. For further information of the diagnostic probability, please see [our paper](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1).
+
+- `ee`: mean expected number of errors per read. Edgar and Flyvbjerg ([Edgar and Flyvbjerg, 2015](https://academic.oup.com/bioinformatics/article/31/21/3476/194979)) suggested a strategy to filter reads according to their expected number of errors. Here for the *post hoc* filtering, you could further remove some false positives when setting a threshold on `ee`.  For example, you could remove haplotypes with `ee` > 1. However, though this strategy work for most of mock datasets, we did observe `ee` > 1 for several true haplotypes with very low abundance when analyzing a specific mock dataset (stag1, the dataset analyzed in our paper). You can check further discussion on `ee` [here](https://www.drive5.com/usearch/manual/exp_errs.html).
+
+
+***2.`output_base_filename.out`***
 
 A text file with the following information provided as key: value pairs, one per line.  The keys are:
 
-	- K: Number of haplotypes selected by AmpliCI.
+- `K`: Number of haplotypes selected by AmpliCI.
 
-	- assignments: AmpliCI-assigned haplotype by posterior probability for each read in FASTQ-determined input order.  Haplotypes are numbered 0, 1, ....  NA is output if the read's maximum conditional log likelihood (given the source haplotype) does not exceed a user-defined threshold (option `-ll`; default -100).
+- `assignments`: AmpliCI-assigned haplotype by posterior probability for each read in FASTQ-determined input order.  Haplotypes are numbered 0, 1, ....  NA is output if the read's maximum conditional log likelihood (given the source haplotype) does not exceed a user-defined threshold (option `-ll`; default -100).
 
-	- sizes: Number of reads assigned to each haplotype.
+- `sizes`: Number of reads assigned to each haplotype.
 
-	- pi: Estimated $\boldsymbol{\pi}$ from AmpliCI.  Each read is assigned to a haplotype by maximum transition probability (distinct from posterior probability used for assignments) and $\pi_k$ is the proportion of reads assigned to haplotype $k$.
+- `pi`: Estimated $\boldsymbol{\pi}$ from AmpliCI.  Each read is assigned to a haplotype by maximum transition probability (distinct from posterior probability used for assignments) and $\pi_k$ is the proportion of reads assigned to haplotype $k$.
 
-	- reads ll: The maximum conditional log likelihood given haplotype source for each read, maximizing over haplotype source.
+- `reads ll`: The maximum conditional log likelihood given haplotype source for each read, maximizing over haplotype source.
 
-	- There is also a fasta listing of the haplotypes reported in this file.
+- There is also a fasta listing of the haplotypes reported in this file.
 
-	- ee: Mean expected number of errors per across all reads with matching read sequence to the haplotype sequence.  This number can sometimes identify problematic haplotypes that might contain substantial contamination of misreads from another haplotype.
+- `ee`: Mean expected number of errors. See discussion on `ee` in ***`output_base_filename.fa`*** above.
 
-	- uniq seq id: The index of the first read matching each selected haplotype's sequence.
+- `uniq seq id`: The index of the listed unique sequence (From the highest abundance to the lowest) matching each selected haplotype's sequence.
 
-	- scaled true abun: The estimated scaled true abundances of each selected haplotype.
+- `scaled true abun`: The estimated scaled true abundances of each selected haplotype.
 
-	- obser abun: The observed abundance of each selected haplotype.
+- `obser abun`: The observed abundance of each selected haplotype.
 
-	- Estimated common ancestor (value on next two lines in FASTA format): The final, estimated common ancestor of all the haplotypes used in BIC calculation.
+- `Estimated common ancestor` (value on next two lines in FASTA format): The final, estimated common ancestor of all the haplotypes used in BIC calculation.
 
-	- Evolution_rate: The estimated evolutionary time separating each haplotype from the ancestor.
+- `Evolution_rate`: The estimated evolutionary time separating each haplotype from the ancestor.
 
-	- log likelihood from JC69 model: The log likelihood of the JC69 hierarchical model computed on the final, fitted model.
+- `log likelihood from JC69 model`: The log likelihood of the JC69 hierarchical model computed on the final, fitted model.
 
-	- Diagnostic Probability threshold: The threshold used to reject candidate haplotypes in the contamination test.  This is the value input through option `-a` divided by the number of possible candidate haplotypes.
+- `Diagnostic Probability threshold`: The threshold used to reject candidate haplotypes in the contamination test.  This is the value input through option `-a` divided by the number of possible candidate haplotypes.
 
-	- aic: The estimated [Akaike Information Criterion](https://en.wikipedia.org/wiki/Akaike_information_criterion) value from the final fitted model.
+- `aic`: The estimated [Akaike Information Criterion](https://en.wikipedia.org/wiki/Akaike_information_criterion) value from the final fitted model.
 
-	- bic: The estimated [Bayesian Information Criterion](https://en.wikipedia.org/wiki/Bayesian_information_criterion) value from the final fitted model.
+- `bic`: The estimated [Bayesian Information Criterion](https://en.wikipedia.org/wiki/Bayesian_information_criterion) value from the final fitted model.
 
 When run to reassign reads with **given input haplotype set** (a FASTA-formatted file), AmpliCI will output a reads assignment file `<output_assignment_filename>` in text format. The keys are
 
-	- assignments: AmpliCI-assigned haplotype by posterior probability for each read in FASTQ-determined input order.  Haplotypes are numbered 0, 1, ....  NA is output if the read's maximum conditional log likelihood (given the source haplotype) does not exceed a user-defined threshold (option `-ll`; default -100).
+- assignments: AmpliCI-assigned haplotype by posterior probability for each read in FASTQ-determined input order when aligning to given haplotype set.  Haplotypes are numbered 0, 1, ....  NA is output if the read's maximum conditional log likelihood (given the source haplotype) does not exceed a user-defined threshold (option `-ll`; default -100).
 
-	- sizes: Number of reads assigned to each haplotype.
+- sizes: Number of reads assigned to each haplotype.
 
 # Downstream Analysis <a name="downstream" />
 
