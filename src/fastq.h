@@ -288,7 +288,7 @@ inline int valid_nucleotide(unsigned char c) {
  * @param fqd	fastq_data object pointer
  * @return	probability
  */
-inline double error_prob(fastq_data *fqd, unsigned char q) {
+inline double error_prob(fastq_data *fqd, char q) {
 	return exp(- (q + fqd->min_quality - 33) / 10. * log(10.));
 } /* error_prob */
 

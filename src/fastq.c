@@ -144,7 +144,7 @@ extern int valid_nucleotide(unsigned char c);
 /**
  * Convert quality score to probability.
  */
-extern double error_prob(fastq_data *fqd, unsigned char c);
+extern double error_prob(fastq_data *fqd, char c);
 
 /**
  * Print all observed quality scores as probabilities.
