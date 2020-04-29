@@ -74,8 +74,8 @@ int make_options(options **opt) {
 	
 	
 	/* error */ 
-	op->insertion_error = 0.00004;   // only used in simulation
-	op->deletion_error = 0.00002;	// only used in simulation 
+	op->insertion_error = 0.00004;   
+	op->deletion_error = 0.00002;	
 	op->indel_error = op->insertion_error + op->deletion_error;   // per site per read 
 	
 	
@@ -181,6 +181,15 @@ int parse_options(options *opt, int argc, const char **argv)
 				opt->error_estimation = 1;
 			}
 			break;
+		case 'd':
+			if (i == argc - 1) {
+				err = INVALID_CMD_OPTION;
+				goto CMDLINE_ERROR;
+			} else if (!strcmp(&argv[i][j], "deletion")) {
+				opt->deletion_error = read_cmdline_double(argc,
+					argv, ++i, (void *)opt);
+			}
+			break;
 		case 'i':
 			if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
@@ -189,6 +198,9 @@ int parse_options(options *opt, int argc, const char **argv)
 			} else if (!strcmp(argv[i+1],"amplici")){
 				opt->run_amplici = ALGORITHM_AMPLICI;
 				++i;
+			}else if (!strcmp(&argv[i][j], "insertion")){
+				opt->insertion_error = read_cmdline_double(argc,
+					argv, ++i, (void *)opt);
 			}else {
 				opt->initialization_file = argv[++i];
 				mmessage(INFO_MSG, NO_ERROR, "Haplotype set: "
@@ -274,6 +286,9 @@ int parse_options(options *opt, int argc, const char **argv)
 	if (!opt->error_profile_name)
 		opt->use_error_profile = 0;
 
+	/* update indel error rates */
+	opt->indel_error = opt->insertion_error + opt->deletion_error;
+
 	return err;
 
 CMDLINE_ERROR:
@@ -330,6 +345,8 @@ void fprint_usage(FILE *fp, const char *cmdname, void *obj)
 	fprintf(fp, "\t--kmax <kuint>\n\t\tSet maximum number of clusters K. [DEFAULT: %i]\n", opt->K_max);
 	fprintf(fp, "\t-lb <lbdbl>\n\t\tLower bound for scaled true abundance during haplotype reconstruction.  [DEFAULT: %f]\n", opt->low_bound);
 	fprintf(fp, "\t-ll <lldbl>\n\t\tLower bound for reads maximum posterior assignment probability screening during reads assignment. [DEFAULT: %f]\n", opt->ll_cutoff);
+	fprintf(fp, "\t-insertion <lbdbl>\n\t\tInsertion error rate.  [DEFAULT: %f]\n", opt->insertion_error);
+	fprintf(fp, "\t-deletion <lbdbl>\n\t\tDeletion error rate.  [DEFAULT: %f]\n", opt->deletion_error);
 	fprintf(fp, "\t-o <ostr>\n\t\tOutput file to record best clustering solution or the estimated error profile.  [REQUIRED]\n");
 	/* fprintf(fp, "\t--most <mint>\n\t\tReport top m-most abundant sequences and quit. [DEFAULT: %i]\n", opt->most_abundant); */
 	fprintf(fp, "\t-z \n\t\tTurn off the alignment-free.  [DEFAULT: none]\n");	 /* KSD: And turn on what? If not alignment-free, what do you get? XY: pairwise alignment of each reads and haplotypes*/
