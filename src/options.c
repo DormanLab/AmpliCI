@@ -345,8 +345,8 @@ void fprint_usage(FILE *fp, const char *cmdname, void *obj)
 	fprintf(fp, "\t--kmax <kuint>\n\t\tSet maximum number of clusters K. [DEFAULT: %i]\n", opt->K_max);
 	fprintf(fp, "\t-lb <lbdbl>\n\t\tLower bound for scaled true abundance during haplotype reconstruction.  [DEFAULT: %f]\n", opt->low_bound);
 	fprintf(fp, "\t-ll <lldbl>\n\t\tLower bound for reads maximum posterior assignment probability screening during reads assignment. [DEFAULT: %f]\n", opt->ll_cutoff);
-	fprintf(fp, "\t-insertion <lbdbl>\n\t\tInsertion error rate.  [DEFAULT: %f]\n", opt->insertion_error);
-	fprintf(fp, "\t-deletion <lbdbl>\n\t\tDeletion error rate.  [DEFAULT: %f]\n", opt->deletion_error);
+	fprintf(fp, "\t--insertion <lbdbl>\n\t\tInsertion error rate.  [DEFAULT: %f]\n", opt->insertion_error);
+	fprintf(fp, "\t--deletion <lbdbl>\n\t\tDeletion error rate.  [DEFAULT: %f]\n", opt->deletion_error);
 	fprintf(fp, "\t-o <ostr>\n\t\tOutput file to record best clustering solution or the estimated error profile.  [REQUIRED]\n");
 	/* fprintf(fp, "\t--most <mint>\n\t\tReport top m-most abundant sequences and quit. [DEFAULT: %i]\n", opt->most_abundant); */
 	fprintf(fp, "\t-z \n\t\tTurn off the alignment-free.  [DEFAULT: none]\n");	 /* KSD: And turn on what? If not alignment-free, what do you get? XY: pairwise alignment of each reads and haplotypes*/

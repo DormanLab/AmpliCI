@@ -118,7 +118,12 @@ Using Phred quality scores tends to generate high numbers of false positives and
 
 # Output Files <a name = "output" />
 
-When run to estimate the error profile, AmpliCI will output an error profile `<output_error_profile_file>` in text format.  This is simply a list of comma-separated probabilities (times 1000) of the probability haplotype nucleotide `n` is misread as read nucleotide `m` with quality score `q`.  They are ordered as `(n,m,q)`, with the last index varying the fastest.
+When run to estimate the error profile, AmpliCI will output an error profile `<output_error_profile_file>` in text format.  This is simply a list of comma-separated probabilities (times 1000) of the probability haplotype nucleotide `n` is misread as read nucleotide `m` with quality score `q`.  They are ordered as `(n,m,q)`, with the last index varying the fastest. Both haplotype nucleotide `n` and read nucleotide `m` are in the order (A,C,T,G) , and `q` has the range from 0 to 40 (41 in total). For example, the first 41 entries are estimated transition probabilities for A->A when observed quality score q is in [0:40]; Then the 42nd - 82nd entries are estimated transition probabilities for A->C; the 165th - 205th entries are estimated transition probabilities for C->A.... In our recommended workflow, we suggest the error profile is only used for the dataset from which we estimated. If you try to apply those estimates to other datasets, you need to consider the following:
+
+- AmpliCI encodes nucleotides in the order of (A(0),C(1),T(2),G(3)), which is different from the commonly used order (A, C, G, T).
+
+- Not all quality scores will be observed, especially for quality scores < 3. To avoid extrapolation, those quality scores will not be estimated by LOESS regression if they are out of the range of quality scores observed in the dataset. Instead, we just assume the error rates are same as those dictated by [Phred quality scores](https://www.illumina.com/documents/products/technotes/technote_Q-Scores.pdf) and the transition probabilities to other nucleotides are equal. 
+
 
 When run to estimate haplotypes and their abundances with argument `-o <output_base_filename>`, there will be two output files:
 
@@ -134,7 +139,7 @@ FASTA-formatted file (will be used in the downstream analysis) containing denois
 
 - `DiagP`: diagnostic probability, which could be used as a criterion to check false positives. We suggest to remove haplotypes with `DiagP` > 1e-40 when applied AmpliCI on real datasets with number of reads > 1M for *post hoc* filtering. For further information of the diagnostic probability, please see [our paper](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1).
 
-- `ee`: mean expected number of errors per read. Edgar and Flyvbjerg ([Edgar and Flyvbjerg, 2015](https://academic.oup.com/bioinformatics/article/31/21/3476/194979)) suggested a strategy to filter reads according to their expected number of errors. Here for the *post hoc* filtering, you could further remove some false positives when setting a threshold on `ee`.  For example, you could remove haplotypes with `ee` > 1. However, though this strategy work for most of mock datasets, we did observe `ee` > 1 for several true haplotypes with very low abundance when analyzing a specific mock dataset (stag1, the dataset analyzed in our paper). You can check further discussion on `ee` [here](https://www.drive5.com/usearch/manual/exp_errs.html).
+- `ee`: mean expected number of errors per read. Edgar and Flyvbjerg ([Edgar and Flyvbjerg, 2015](https://academic.oup.com/bioinformatics/article/31/21/3476/194979)) suggested a strategy to filter reads according to their expected number of errors. Here for the *post hoc* filtering, you could further remove some false positives when setting a threshold on `ee`.  For example, you could remove haplotypes with `ee` > 1. However, though this strategy works for most of mock datasets, we did observe `ee` > 1 for several true haplotypes with very low abundance when analyzing a specific mock dataset (stag1, the dataset analyzed in our paper). You can check further discussion on `ee` [here](https://www.drive5.com/usearch/manual/exp_errs.html).
 
 
 ***2.`output_base_filename.out`***
