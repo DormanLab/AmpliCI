@@ -245,11 +245,7 @@ The algorithm may stop if your:
 
 # Acknowledgments <a name = "acknowledgements" />
 
-- AmpliCI contains LOESS regression for error estimation, the original file is available at:
-
-[https://www.netlib.org/a/dloess](https://www.netlib.org/a/dloess)
-
-However, we modified and used related code from R, which derives from the above.
+- AmpliCI contains LOESS regression for error estimation, the original file is available at [https://www.netlib.org/a/dloess](https://www.netlib.org/a/dloess).  However, we modified and used related code from R, which derives from the above.
 
 - We used the hash implemented in [uthash.h](https://troydhanson.github.io/uthash/userguide.html).
 
