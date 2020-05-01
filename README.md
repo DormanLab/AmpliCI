@@ -22,7 +22,10 @@ AmpliCI, Amplicon Clustering Inference, denoises Illumina amplicon data by appro
 
 - AmpliCI requires [cmake](https://cmake.org) (3.5.0 or higher version) and [gcc](https://gcc.gnu.org) (5.4.0 or higher version). 
 - AmpliCI requires some C and FORTRAN libraries provided by R.  You can download and install R from [https://www.r-project.org](https://www.r-project.org).
-- AmpliCI requires Rmath, the [R Standalone Math Library](https://cran.r-project.org/doc/manuals/r-release/R-admin.html#The-standalone-Rmath-library).  Typically, the Rmath library (libRmath.a or libRmath.so for Linux or libRmath.dylib for MacOS) will be installed with R, but not always.  You can install the Rmath standalone library from the repository [https://github.com/statslabs/rmath](https://github.com/statslabs/rmath).
+- AmpliCI requires Rmath, the [R Standalone Math Library](https://cran.r-project.org/doc/manuals/r-release/R-admin.html#The-standalone-Rmath-library).  Often, the Rmath library (libRmath.a or libRmath.so for Linux or libRmath.dylib for MacOS) will be installed with R, but not always.  Here are some other locations for the library.
+	- r-mathlib on [Ubuntu](https://ubuntu.com/) and [Debian](https://www.debian.org/)
+	- libRmath on [Fedora](https://ubuntu.com/), [CentOS](https://centos.org/), [Mageia](https://www.mageia.org/en/), and [Mandriva](https://www.openmandriva.org/)
+	- Or if all else fails, you can install the Rmath standalone library from the repository [https://github.com/statslabs/rmath](https://github.com/statslabs/rmath)
 
 # Installation <a name = "installation" />
 
@@ -57,13 +60,13 @@ Like all other denoising methods, the starting point of the analysis is FASTQ se
 
 ## **Quality control and read preprocessing** <a name="quality" />
 
-AmpliCI require all input reads have the **same** length, with no **ambiguous** nucleotides (only A, C, G, T read calls allowed).  (One way to truncate reads or filter reads with ambiguous nucleotides is via the R package [ShortRead](https://rdrr.io/bioc/ShortRead/).)
+AmpliCI requires all input reads have the **same** length, with no **ambiguous** nucleotides (only A, C, G, T base calls allowed).  (One way to truncate or filter reads with ambiguous nucleotides is via the R package [ShortRead](https://rdrr.io/bioc/ShortRead/).)
 
 ## **Input files** <a name="inputfiles" />
 
-AmpliCI takes a single demultiplexed FASTQ file (one per sample) generated from the Illumina sequencing platform, with reads trimmed to the same length and containing no ambiguous nucleotides (see above steps).  If you have paired end data, AmpliCI can analyze the forward reads or the reverse reads, but not both simultaneously.
+AmpliCI takes a single demultiplexed FASTQ file (one per sample) generated from the Illumina sequencing platform, with reads trimmed to the same length and containing no ambiguous nucleotides (see above steps).  If you have paired end data, AmpliCI can analyze the forward reads, the reverse reads, or the merged reads, but not both forward and reverse reads simultaneously.
 
-You can find example input fastq files in directory [test](https://github.com/DormanLab/AmpliCI/tree/master/test).
+You can find example input FASTQ files in the [test](https://github.com/DormanLab/AmpliCI/tree/master/test) directory.
 
 One read in the input FASTQ file should fit in exactly **four** lines, as in the format below.
 
@@ -118,28 +121,31 @@ Using Phred quality scores tends to generate high numbers of false positives and
 
 # Output Files <a name = "output" />
 
-When run to estimate the error profile, AmpliCI will output an error profile `<output_error_profile_file>` in text format.  This is simply a list of comma-separated probabilities (times 1000) of the probability haplotype nucleotide `n` is misread as read nucleotide `m` with quality score `q`.  They are ordered as `(n,m,q)`, with the last index varying the fastest. Both haplotype nucleotide `n` and read nucleotide `m` are in the order (A,C,T,G) , and `q` has the range from 0 to 40 (41 in total). For example, the first 41 entries are estimated transition probabilities for A->A when observed quality score q is in [0:40]; Then the 42nd - 82nd entries are estimated transition probabilities for A->C; the 165th - 205th entries are estimated transition probabilities for C->A.... In our recommended workflow, we suggest the error profile is only used for the dataset from which we estimated. If you try to apply those estimates to other datasets, you need to consider the following:
+## Estimating error profile.
 
-- AmpliCI encodes nucleotides in the order of (A(0),C(1),T(2),G(3)), which is different from the commonly used order (A, C, G, T).
+When run to estimate the error profile, AmpliCI will output an error profile `<output_error_profile_file>` in text format.  This is simply a list of comma-separated probabilities (times 1000) of the probability that haplotype nucleotide `n` is misread as read nucleotide `m` with quality score `q`.  They are ordered as `(n,m,q)`, with the last index varying the fastest. Both haplotype nucleotide `n` and read nucleotide `m` are in the order (A,C,T,G) , and `q` has the range from 0 to 40 (41 in total). For example, the first 41 entries are estimated transition probabilities for A->A when observed quality score q is in [0:40]; Then the 42nd - 82nd entries are estimated transition probabilities for A->C; the 165th - 205th entries are estimated transition probabilities for C->A.... In our recommended workflow the error profile should only be used with the dataset from which it was estimated. If you apply AmpliCI estimates to other datasets or use other estimates with AmpliCI, you should consider the following:
 
-- Not all quality scores will be observed, especially for quality scores < 3. To avoid extrapolation, those quality scores will not be estimated by LOESS regression if they are out of the range of quality scores observed in the dataset. Instead, we just assume the error rates are same as those dictated by [Phred quality scores](https://www.illumina.com/documents/products/technotes/technote_Q-Scores.pdf) and the transition probabilities to other nucleotides are equal. 
+- AmpliCI encodes nucleotides in the order of (A, C, T, G), which is different from the commonly used alphabetic order (A, C, G, T).
 
+- Not all quality scores will be observed, especially for quality scores < 3. To avoid extrapolation, error rates for quality scores outside the range of observed quality scores will not be estimated by LOESS regression. Instead, we just assume the error rates dictated by [Phred quality scores](https://www.illumina.com/documents/products/technotes/technote_Q-Scores.pdf) with equal probability of each possible nucleotide substitution when there is an error.
+
+## Estimating haplotypes.
 
 When run to estimate haplotypes and their abundances with argument `-o <output_base_filename>`, there will be two output files:
 
 ***1.`output_base_filename.fa`***
 
-FASTA-formatted file (will be used in the downstream analysis) containing denoised sequences (or haplotypes).  For each sequence, we also provide `size` (scaled true abundance), `DiagP` (diagnostic probability), `ee` (mean expected number of errors in reads), useful for chimera detection and *post hoc* filtering, for example for the first haplotype, the FASTA header might look like:
+FASTA-formatted file (will be used in the downstream analysis) containing denoised sequences (or haplotypes).  For each sequence, we also provide `size` (scaled true abundance), `DiagP` (diagnostic probability), `ee` (mean expected number of errors in reads), useful for chimera detection and *post hoc* filtering. For example for the first haplotype, the FASTA header might look like:
 
 ```
 >H0;size=516.000;DiagP=0.00e+00;ee=0.405;
 ```
 
-- `size`: scaled true abundance estimated for each selected haplotype, required for the following chimera detection with UCHIME3. 
+- `size`: scaled true abundance estimated for each selected haplotype, required for the subsequent chimera detection with UCHIME3. 
 
-- `DiagP`: diagnostic probability, which could be used as a criterion to check false positives. We suggest to remove haplotypes with `DiagP` > 1e-40 when applied AmpliCI on real datasets with number of reads > 1M for *post hoc* filtering. For further information of the diagnostic probability, please see [our paper](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1).
+- `DiagP`: diagnostic probability, which could be used as a criterion to check false positives. We suggest post hoc removal of haplotypes with `DiagP` > 1e-40 when applying AmpliCI on real datasets with more than 1 million reads to reduce false positives. For further information of the diagnostic probability, please see [our paper](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1).
 
-- `ee`: mean expected number of errors per read. Edgar and Flyvbjerg ([Edgar and Flyvbjerg, 2015](https://academic.oup.com/bioinformatics/article/31/21/3476/194979)) suggested a strategy to filter reads according to their expected number of errors. Here for the *post hoc* filtering, you could further remove some false positives when setting a threshold on `ee`.  For example, you could remove haplotypes with `ee` > 1. However, though this strategy works for most of mock datasets, we did observe `ee` > 1 for several true haplotypes with very low abundance when analyzing a specific mock dataset (stag1, the dataset analyzed in our paper). You can check further discussion on `ee` [here](https://www.drive5.com/usearch/manual/exp_errs.html).
+- `ee`: mean expected number of errors per read. Edgar and Flyvbjerg ([Edgar and Flyvbjerg, 2015](https://academic.oup.com/bioinformatics/article/31/21/3476/194979)) suggested a strategy to filter reads according to their expected number of errors.  For example, you could remove haplotypes with `ee` > 1. Though this strategy works for most of mock datasets, we did observe `ee` > 1 for several true haplotypes with very low abundance when analyzing a specific mock dataset (stag1, see [our paper](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1)). You can read [more about `ee`](https://www.drive5.com/usearch/manual/exp_errs.html).
 
 
 ***2.`output_base_filename.out`***
@@ -148,7 +154,7 @@ A text file with the following information provided as key: value pairs, one per
 
 - `K`: Number of haplotypes selected by AmpliCI.
 
-- `assignments`: AmpliCI-assigned haplotype by posterior probability for each read in FASTQ-determined input order.  Haplotypes are numbered 0, 1, ....  NA is output if the read's maximum conditional log likelihood (given the source haplotype) does not exceed a user-defined threshold (option `-ll`; default -100).
+- `assignments`: AmpliCI-assigned haplotype by posterior probability for each read in FASTQ-determined input order.  Haplotypes are numbered 0, 1, ..., and match the sequences H0, H1, ... in the output FASTA file of haplotypes.  NA is output if the read's maximum conditional log likelihood (given the source haplotype) does not exceed a user-defined threshold (option `-ll`; default -100).  These assignments are not based on alignment of reads to the haplotypes, so some reads, particularly indel errors, may not be assigned (NA).  See option `-i` for more careful read assignment.
 
 - `sizes`: Number of reads assigned to each haplotype.
 
@@ -160,13 +166,13 @@ A text file with the following information provided as key: value pairs, one per
 
 - `ee`: Mean expected number of errors. See discussion on `ee` in ***`output_base_filename.fa`*** above.
 
-- `uniq seq id`: The index of the listed unique sequence (From the highest abundance to the lowest) matching each selected haplotype's sequence.
+- `uniq seq id`: The index of the first unique sequence in FASTQ order matching each selected haplotype's sequence, ordered from highest abundance to lowest.
 
 - `scaled true abun`: The estimated scaled true abundances of each selected haplotype.
 
 - `obser abun`: The observed abundance of each selected haplotype.
 
-- `Estimated common ancestor` (value on next two lines in FASTA format): The final, estimated common ancestor of all the haplotypes used in BIC calculation.
+- `Estimated common ancestor` (value on next two lines in FASTA format): The final, estimated common ancestor of all the haplotypes used in the BIC calculation.
 
 - `Evolution_rate`: The estimated evolutionary time separating each haplotype from the ancestor.
 
@@ -178,11 +184,11 @@ A text file with the following information provided as key: value pairs, one per
 
 - `bic`: The estimated [Bayesian Information Criterion](https://en.wikipedia.org/wiki/Bayesian_information_criterion) value from the final fitted model.
 
-When run to reassign reads with **given input haplotype set** (a FASTA-formatted file), AmpliCI will output a reads assignment file `<output_assignment_filename>` in text format. The keys are
+When run with option `-i` to reassign reads to the user-provided **haplotype set** (a FASTA-formatted file), AmpliCI will output a read assignment file `<output_assignment_filename>` in text format. The keys are
 
-- assignments: AmpliCI-assigned haplotype by posterior probability for each read in FASTQ-determined input order when aligning to given haplotype set.  Haplotypes are numbered 0, 1, ....  NA is output if the read's maximum conditional log likelihood (given the source haplotype) does not exceed a user-defined threshold (option `-ll`; default -100).
+- `assignments`: See the description above for outfile `output_base_filename.out`.  There should be fewer NA assignments because reads with low log likelihood are aligned to the haplotypes to detect indel sequencing errors.
 
-- sizes: Number of reads assigned to each haplotype.
+- `sizes`: See the description above for outfile `output_base_filename.out`.  The sizes should be higher if more reads are successfully assigned to haplotypes.
 
 # Downstream Analysis <a name="downstream" />
 
@@ -190,7 +196,7 @@ The output FASTA file contains denoised raw haplotype sequences, which may inclu
 
 ## **Chimera Detection** <a name="chimera" />
 
-Our outputted FASTA file is in acceptable format to input into the [uchime3_denovo](https://www.drive5.com/usearch/manual/cmd_uchime3_denovo.html) method implemented in [usearch](https://drive5.com/usearch/). 
+The AmpliCI-outputted FASTA file is in acceptable format to input into the [uchime3_denovo](https://www.drive5.com/usearch/manual/cmd_uchime3_denovo.html) method implemented in [usearch](https://drive5.com/usearch/). 
 
 Haplotype sorting by abundance
 ```sh
@@ -204,13 +210,13 @@ Chimera detection
 
 You may also use other chimera detection algorithms to remove chimeras.
 
-## **Generate ASV (sOTU) Table** <a name = "otu" />
+## **Generate Amplicon Sequence Variant (ASV or sOTU) Table** <a name = "otu" />
 
-Currently we do not provide any script to generate the ASV (sOTU) table.  Once you have filtered out chimeric sequences, you can write your own script to generate ASV (sOTU) tables.
+Currently we do not provide a script to generate the ASV (sOTU) table.  Once you have filtered out chimeric sequences, you can write your own script to generate ASV (sOTU) tables.
 
 ## **Taxa Assignment** <a name = "taxa" />
 
-You may identify the non-chimeric haplotypes detected in your sample.
+You may want to identify the non-chimeric haplotypes detected in your sample.
 There are multiple methods.
 
 1. [DECIPHER](https://bioconductor.org/packages/release/bioc/html/DECIPHER.html) contains [IDTAXA](https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-018-0521-5), a novel approach for taxonomic classification.
@@ -226,15 +232,15 @@ There are multiple methods.
 
 The algorithm may stop if your:
 
-- quality scores are not in a typical range of Illumina sequencing [33,73]  
+- quality scores are not in the typical range for Illumina datasets [33,73]  
 
-- sequence contains ambiguous nucleotides
+- reads contain ambiguous nucleotides
 
 - reads vary in length	<!-- Actually, in our experience, your program is fine with this. -->
 
 - reads are not in the right FASTQ input format, for example reads and quality scores cannot contain newline characters
 
-- reads are too few or too noisy so that there are no sequences observed more than the lower bound number of times (option `-lb`, default 2.0)
+- there are too few reads or reads are so noisy that there are no sequences observed more than the lower bound number of times (option `-lb`, default 2.0)
 
 
 # Acknowledgments <a name = "acknowledgements" />
@@ -256,4 +262,4 @@ If you have any problems with AmpliCI, please contact:
 
 Xiyu Peng (xiyupeng@iastate.edu)
 
-Karin Dorman (kdorman@iastate.edu)	
+Karin Dorman (kdorman@iastate.edu)

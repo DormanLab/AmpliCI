@@ -252,7 +252,7 @@ int haplotype_selection(options * opt, data * dat, model *mod, initializer *ini,
 	} else {
 		low_bound = 1.5;   // avoid singletons 
 		mmessage(WARNING_MSG, INVALID_USER_INPUT, "User low bound set "
-			"below 1: resetting low bound to %f \n", low_bound);
+			"at or below 1: resetting to %f.", low_bound);
 	}
 
 	/* malloc space only when we check false positive */

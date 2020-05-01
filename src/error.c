@@ -72,14 +72,21 @@ int vmessage(FILE *fp, const char *file_name, const char *fxn_name, int line,
 				if (msg) {
 					fprintf(fp, ": ");
 					vfprintf(fp, msg, vl);
-				} else
+				} else {
 					fprintf(fp, "\n");
+				}
 				break;
 			case INVALID_CMDLINE:
 				fprintf(fp, "[invalid command line] %s\n", msg);
 				break;
 			case INVALID_USER_INPUT:
-				fprintf(fp, "[invalid user choice] %s\n", msg);
+				fprintf(fp, "[invalid user choice]");
+				if (msg) {
+					fprintf(fp, ": ");
+					vfprintf(fp, msg, vl);
+				} else {
+					fprintf(fp, "\n");
+				}
 				break;
 			case FILE_OPEN_ERROR:
 				fprintf(fp, "could not open file \"%s\"\n", msg);
@@ -124,7 +131,7 @@ int vmessage(FILE *fp, const char *file_name, const char *fxn_name, int line,
 		}
 	}
 	return msg_id;
-} /* message */
+} /* vmessage */
 
 int omessage(FILE *fp, const char *file_name, const char *fxn_name, int line,
 	int msg_type, int msg_id, const char *msg, ...) {
