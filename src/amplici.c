@@ -2280,13 +2280,14 @@ int modified_ic(unsigned char *hap, unsigned char *est_anc, double *distance,
  *
  * return	err status
  **/
-int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, run_info *ri){
+int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, run_info *ri)
+{
 	int err = NO_ERROR;
 	int fxn_debug = opt->info;
 
 
 	/* reads the haplotype fasta file */
-	if((err = read_initialization_file(opt->initialization_file, dat, opt, ini)))
+	if ((err = read_initialization_file(opt->initialization_file, dat, opt, ini)))
 		return err;
 	
 	/* maybe use error profile */

@@ -194,14 +194,13 @@ int parse_options(options *opt, int argc, const char **argv)
 			if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
-			/* option argument starts with a digit */
-			} else if (!strcmp(argv[i+1],"amplici")){
+			} else if (!strcmp(argv[i+1], "amplici")) {
 				opt->run_amplici = ALGORITHM_AMPLICI;
 				++i;
-			}else if (!strcmp(&argv[i][j], "insertion")){
+			} else if (!strncmp(&argv[i][j], "ins", 3)) {
 				opt->insertion_error = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
-			}else {
+			} else {
 				opt->initialization_file = argv[++i];
 				mmessage(INFO_MSG, NO_ERROR, "Haplotype set: "
 					"%s\n", opt->initialization_file);

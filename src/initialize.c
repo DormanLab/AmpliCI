@@ -328,49 +328,48 @@ int read_initialization_file(char const * const filename, data *dat,
 	//debug_msg(DEBUG_III, fxn_debug, "First character '%c'\n", c);
 
 	
-		debug_msg(DEBUG_III, fxn_debug, "entering fasta read\n");
-		//mmessage(INFO_MSG, NO_ERROR, "Read the haplotype set: "
-		//			"%s\n", opt->initialization_file);
+	debug_msg(DEBUG_III, fxn_debug, "entering fasta read\n");
+	//mmessage(INFO_MSG, NO_ERROR, "Read the haplotype set: "
+	//			"%s\n", opt->initialization_file);
 
-		/* read in fasta-formatted haplotypes */
-		fastq_data *fqd = NULL;
-		fastq_options fop = {.read_encoding = XY_ENCODING};
-		if ((err = fread_fastq(fp, &fqd, &fop))) {
-			debug_msg(DEBUG_III, fxn_debug, "err=%d\n", err);
-			fclose(fp);
-			return err;
-		}
+	/* read in fasta-formatted haplotypes */
+	fastq_data *fqd = NULL;
+	fastq_options fop = {.read_encoding = XY_ENCODING};
+	if ((err = fread_fastq(fp, &fqd, &fop))) {
+		debug_msg(DEBUG_III, fxn_debug, "err=%d\n", err);
+		fclose(fp);
+		return err;
+	}
 
-		mmessage(INFO_MSG, NO_ERROR, "finished reading %u sequences "
-			"in %s format\n", fqd->n_reads,
-			fqd->file_type == FASTA_FILE ? "fasta" : "fastq");
+	mmessage(INFO_MSG, NO_ERROR, "finished reading %u sequences "
+		"in %s format\n", fqd->n_reads,
+		fqd->file_type == FASTA_FILE ? "fasta" : "fastq");
 
-		if (fqd->n_lengths || fqd->n_max_length
-						!= dat->max_read_length) {
-			fclose(fp);
-			mmessage(INFO_MSG, NO_ERROR,
-				"haplotypes in '%s' must be same length.\n",
-				filename);
-			return mmessage(ERROR_MSG,INVALID_USER_INPUT,"unvalid input haplotype set");
-		}
+	if (fqd->n_lengths || fqd->n_max_length != dat->max_read_length) {
+		fclose(fp);
+		mmessage(INFO_MSG, NO_ERROR, "haplotypes in '%s' must be same "
+							"length.\n", filename);
+		return mmessage(ERROR_MSG, INVALID_USER_INPUT,
+						"invalid input haplotype set");
+	}
 
 
-		if(fqd->n_reads != opt->K){
-			fclose(fp);
-			mmessage(INFO_MSG, NO_ERROR,
-				"number of haplotypes in '%s' is %u ! Rerun with -k %u !\n", 
-				filename, fqd->n_reads, fqd->n_reads);
-			return mmessage(ERROR_MSG,INVALID_USER_INPUT,"unvalid input K");
-		}
+	if (fqd->n_reads != opt->K) {	/* KSD: Why not just set opt->K = fqd->n_reads? You just need to call this function earlier, like during make_initializer(). */
+		fclose(fp);
+		mmessage(INFO_MSG, NO_ERROR, "number of haplotypes in '%s' is "
+			"%u! Rerun with -k %u !\n", filename, fqd->n_reads,
+								fqd->n_reads);
+		return mmessage(ERROR_MSG, INVALID_USER_INPUT, "invalid input K");
+	}
 
-		for (unsigned int k = 0; k < opt->K; ++k){
-			memcpy(ini->seeds[k],
-				&fqd->reads[k * fqd->n_max_length],
-				fqd->n_max_length * sizeof *fqd->reads);
-			ini->seed_lengths[k] = fqd->n_max_length;			
-		}
+	for (unsigned int k = 0; k < opt->K; ++k){
+		memcpy(ini->seeds[k],
+			&fqd->reads[k * fqd->n_max_length],
+			fqd->n_max_length * sizeof *fqd->reads);
+		ini->seed_lengths[k] = fqd->n_max_length;			
+	}
 
-		free_fastq(fqd);
+	free_fastq(fqd);
 
 	fclose(fp);
 	return err;
