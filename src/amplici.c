@@ -54,7 +54,7 @@ double iterate_expected_true_abundance(unsigned int sample_size, size_t *idx_arr
 int evaluate_haplotype(options *opt, data *dat, model *mod, initializer *ini, unsigned int K, double low_bound, double * error_profile, unsigned int ord, unsigned int n_candidates, int *fp,int final);
 int check_fp_with_indels(options *opt, data *dat, model *mod, initializer *ini,unsigned int select, double low_bound, double * error_profile, int *fp);
 int Est_pi(initializer *ini, double *pi, size_t sample_size, unsigned int K, int reassign);
-int abun_pvalue(options *opt, initializer *ini, size_t *idx_array, double *e_trans, unsigned int count, unsigned int select, double lower_bound, double *p, size_t sample_size, int partial);
+int abun_pvalue(options *opt, initializer *ini, size_t *idx_array, double *e_trans, unsigned int count, unsigned int select, unsigned int threshold, double *p, size_t sample_size, int partial);
 
 
 /* transition prob with or without alignment */
@@ -250,9 +250,12 @@ int haplotype_selection(options * opt, data * dat, model *mod, initializer *ini,
 	if (opt->low_bound > 1) {
 		low_bound = opt->low_bound;
 	} else {
-		low_bound = 1.5;   // avoid singletons 
+		low_bound = 2.0;   // avoid singletons 
+		opt->contamination_threshold = 1; 
 		mmessage(WARNING_MSG, INVALID_USER_INPUT, "User low bound set "
 			"at or below 1: resetting to %f.", low_bound);
+		mmessage(WARNING_MSG, INVALID_USER_INPUT, 
+			"contamination threshold resetting to %f.", opt->contamination_threshold);
 	}
 
 	/* malloc space only when we check false positive */
@@ -1461,7 +1464,7 @@ int evaluate_haplotype(options *opt, data *dat, model *mod, initializer *ini,
 			return err;
 
 		if ((err = abun_pvalue(opt, ini, idx_array, ini->e_trans,
-				count, curr_K, low_bound, &ini->H_pvalue[curr_K],
+				count, curr_K, opt->contamination_threshold, &ini->H_pvalue[curr_K],
 							dat->sample_size, 0)))
 			return err;
 		
@@ -1854,7 +1857,7 @@ EXIT_CHECK_FP_WITH_INDELS:
  * @param count		abserved abundance of candidate haplotype
  * @param e_trans	transition probability matrix
  * @param select	index of candidate haplotype
- * @param low_bound	lower bound of haplotype abundance
+ * @param threshold  threshold for contamination
  * @param error_profile	input error profile
  * @param p		pointer to p-value
  * @param sample_size	total number of reads
@@ -1866,7 +1869,7 @@ EXIT_CHECK_FP_WITH_INDELS:
  **/
 int abun_pvalue(options *opt, initializer *ini, size_t *idx_array,
 	double *e_trans, unsigned int count, unsigned int select,
-	double lower_bound, double *p, size_t sample_size, int partial)
+	unsigned int threshold, double *p, size_t sample_size, int partial)
 {
 
 	int fxn_debug = opt->info;
@@ -1917,7 +1920,7 @@ int abun_pvalue(options *opt, initializer *ini, size_t *idx_array,
 	debug_msg(DEBUG_II, fxn_debug, "variance under null: %f \n", true_abun_var);
 	debug_msg(DEBUG_II, fxn_debug, "N_H->sm under null: %f \n", abun_null);
 	
-	unsigned int bound = count - (unsigned int) lower_bound; 
+	unsigned int bound = count - (threshold+1); 
 	if (perr)
 		*p = ppoisbin(bound, count, perr, 1); // P(S > bound)
 	else{ /* approximate p value */

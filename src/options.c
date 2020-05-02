@@ -46,7 +46,9 @@ int make_options(options **opt) {
 	op->initialization_file = NULL;
 	op->run_amplici =ALGORITHM_AMPLICI; 
 	op->low_bound = 2.0;
-
+	op->contamination_threshold = 1;
+	op->associate_zc = 1; /* contamination_threshold = low_bound -1 */
+	op->deletion_error = 1;
 
 	/* model */
 	op->JC69_model = 1;
@@ -133,6 +135,16 @@ int parse_options(options *opt, int argc, const char **argv)
 			} else {
 				opt->alpha = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
+			}
+			break;
+		case 'c':
+			if (i == argc - 1) {
+				err = INVALID_CMD_OPTION;
+				goto CMDLINE_ERROR;
+			} else if (!strcmp(&argv[i][j], "cont")){
+				opt->contamination_threshold = read_uint(argc,
+						argv, ++i, (void *)opt);
+				opt->associate_zc = 0;
 			}
 			break;
 		case 'z':
@@ -288,6 +300,20 @@ int parse_options(options *opt, int argc, const char **argv)
 	/* update indel error rates */
 	opt->indel_error = opt->insertion_error + opt->deletion_error;
 
+
+	/* check contamination threshold */
+	if(opt->associate_zc) /* no input for contamination threshold. Use the default */
+		opt->contamination_threshold = (unsigned int) opt->low_bound - 1;
+
+	if (opt->contamination_threshold < 1){
+		err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
+			"Contamination threshold could not be set below 1\n");
+	}else if(opt->contamination_threshold >= opt->low_bound){
+		err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
+			"Contamination threshold should be set below low_bound \n");
+	}
+
+
 	return err;
 
 CMDLINE_ERROR:
@@ -343,9 +369,10 @@ void fprint_usage(FILE *fp, const char *cmdname, void *obj)
 	fprintf(fp, "\t-k <kuint>\n\t\tNumber of haplotypes in the haplotype set (used with -i <hstr>). [DEFAULT: %i]\n", opt->K);
 	fprintf(fp, "\t--kmax <kuint>\n\t\tSet maximum number of clusters K. [DEFAULT: %i]\n", opt->K_max);
 	fprintf(fp, "\t-lb <lbdbl>\n\t\tLower bound for scaled true abundance during haplotype reconstruction.  [DEFAULT: %f]\n", opt->low_bound);
+	fprintf(fp, "\t-cont <ctdbl>\n\t\t baseline count abundance of contaminating or noise sequences.  [DEFAULT: lb -1 ]\n");
 	fprintf(fp, "\t-ll <lldbl>\n\t\tLower bound for reads maximum posterior assignment probability screening during reads assignment. [DEFAULT: %f]\n", opt->ll_cutoff);
-	fprintf(fp, "\t--insertion <lbdbl>\n\t\tInsertion error rate.  [DEFAULT: %f]\n", opt->insertion_error);
-	fprintf(fp, "\t--deletion <lbdbl>\n\t\tDeletion error rate.  [DEFAULT: %f]\n", opt->deletion_error);
+	fprintf(fp, "\t-insertion <indbl>\n\t\tInsertion error rate.  [DEFAULT: %f]\n", opt->insertion_error);
+	fprintf(fp, "\t-deletion <dedbl>\n\t\tDeletion error rate.  [DEFAULT: %f]\n", opt->deletion_error);
 	fprintf(fp, "\t-o <ostr>\n\t\tOutput file to record best clustering solution or the estimated error profile.  [REQUIRED]\n");
 	/* fprintf(fp, "\t--most <mint>\n\t\tReport top m-most abundant sequences and quit. [DEFAULT: %i]\n", opt->most_abundant); */
 	fprintf(fp, "\t-z \n\t\tTurn off the alignment-free.  [DEFAULT: none]\n");	 /* KSD: And turn on what? If not alignment-free, what do you get? XY: pairwise alignment of each reads and haplotypes*/

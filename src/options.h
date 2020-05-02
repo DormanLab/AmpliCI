@@ -71,7 +71,9 @@ struct _options {
 	double alpha;  /*<! FWER */
 	double p_threshold;  /*<! threshold on p-value */
 	unsigned int most_abundant;  /*<! report these most abundant only */
-	
+	unsigned int contamination_threshold; /*<! Maximum abundance for contamination */
+	int associate_zc; /*<! contamination_threshold = low_bound - 1 */
+
 	/* alignment */
 	int score[NUM_NUCLEOTIDES][NUM_NUCLEOTIDES];  /* score matrix for nw alignment */
 	int gap_p;  /* penalty for gaps */
