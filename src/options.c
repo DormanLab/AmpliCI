@@ -142,6 +142,8 @@ int parse_options(options *opt, int argc, const char **argv)
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
 			} else if (!strcmp(&argv[i][j], "cont")){
+				if (argv[i + 1][0] >= 48
+						&& argv[i + 1][0] <= 57)
 				opt->contamination_threshold = read_uint(argc,
 						argv, ++i, (void *)opt);
 				opt->associate_zc = 0;
@@ -369,7 +371,7 @@ void fprint_usage(FILE *fp, const char *cmdname, void *obj)
 	fprintf(fp, "\t-k <kuint>\n\t\tNumber of haplotypes in the haplotype set (used with -i <hstr>). [DEFAULT: %i]\n", opt->K);
 	fprintf(fp, "\t--kmax <kuint>\n\t\tSet maximum number of clusters K. [DEFAULT: %i]\n", opt->K_max);
 	fprintf(fp, "\t-lb <lbdbl>\n\t\tLower bound for scaled true abundance during haplotype reconstruction.  [DEFAULT: %f]\n", opt->low_bound);
-	fprintf(fp, "\t-cont <ctdbl>\n\t\t baseline count abundance of contaminating or noise sequences.  [DEFAULT: lb -1 ]\n");
+	fprintf(fp, "\t-cont <ctuint>\n\t\t baseline count abundance of contaminating or noise sequences.  [DEFAULT: %i]\n",opt->contamination_threshold);
 	fprintf(fp, "\t-ll <lldbl>\n\t\tLower bound for reads maximum posterior assignment probability screening during reads assignment. [DEFAULT: %f]\n", opt->ll_cutoff);
 	fprintf(fp, "\t-insertion <indbl>\n\t\tInsertion error rate.  [DEFAULT: %f]\n", opt->insertion_error);
 	fprintf(fp, "\t-deletion <dedbl>\n\t\tDeletion error rate.  [DEFAULT: %f]\n", opt->deletion_error);
