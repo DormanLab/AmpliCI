@@ -47,7 +47,7 @@ int make_options(options **opt) {
 	op->run_amplici =ALGORITHM_AMPLICI; 
 	op->low_bound = 2.0;
 	op->contamination_threshold = 1;
-	op->associate_zc = 1; /* contamination_threshold = low_bound -1 */
+	op->associate_zc = 0; /* contamination_threshold = low_bound -1 */
 	op->deletion_error = 1;
 
 	/* model */
@@ -146,15 +146,11 @@ int parse_options(options *opt, int argc, const char **argv)
 						&& argv[i + 1][0] <= 57)
 				opt->contamination_threshold = read_uint(argc,
 						argv, ++i, (void *)opt);
-				opt->associate_zc = 0;
 			}
 			break;
 		case 'z':
 			opt->nw_align = ALIGNMENT_UNIQ_SEQ;
 			break;
-	//	case 'n':  // not used anymore, moved
-	//		opt->estimate_K = 0;  // default change to 1, use -n to turn off
-	//		break;
 		case 'k':
 			if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
@@ -289,7 +285,7 @@ int parse_options(options *opt, int argc, const char **argv)
 			"Please provide number of haplotypes (K) in your haplotype set (-k)\n");
 
 	/* If the user want to find a true K */
-	/* [KSD] AmpliCI always estimates true K? Nope */
+	/* [KSD] AmpliCI always estimates true K? Nope [XY] if K is provided, opt->estimate_K = 0 */
 	if (opt->estimate_K)
 		opt->K = opt->K_space;
 	else
@@ -304,13 +300,10 @@ int parse_options(options *opt, int argc, const char **argv)
 
 
 	/* check contamination threshold */
-	if(opt->associate_zc) /* no input for contamination threshold. Use the default */
+	if(opt->associate_zc) /* currently not used */
 		opt->contamination_threshold = (unsigned int) opt->low_bound - 1;
 
-	if (opt->contamination_threshold < 1){
-		err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
-			"Contamination threshold could not be set below 1\n");
-	}else if(opt->contamination_threshold >= opt->low_bound){
+	if(opt->contamination_threshold > opt->low_bound){
 		err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
 			"Contamination threshold should be set below low_bound \n");
 	}
