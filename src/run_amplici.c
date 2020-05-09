@@ -53,6 +53,7 @@ int main(int argc, const char **argv)
 	fastq_options *fqo = NULL;	/* fastq file options */
 	initializer *ini = NULL;	/* initializer */
 	run_info *ri=NULL;		/*run_info object */
+	fastq_data *fqdf = NULL;    /* initialize fasta file */
 
 	/* parse command line */
 	if ((err = make_options(&opt)))
@@ -80,6 +81,20 @@ int main(int argc, const char **argv)
 	if ((err = sync_state(dat, opt)))
 		goto CLEAR_AND_EXIT;
 
+	/* read initialization file  into fqdf */
+	if (opt->initialization_file && (err = read_fastq(opt->initialization_file,
+						&fqdf, fqo)))
+		goto CLEAR_AND_EXIT;
+	opt->K = (unsigned int) fqdf->n_reads;
+
+	mmessage(INFO_MSG, NO_ERROR, "number of haplotypes in '%s' is "
+			"%u!\n", opt->initialization_file, fqdf->n_reads);
+	//if(opt->initialization_file){
+	//	if((err = read_initialization_file(opt->initialization_file, dat, opt, &fqdf)))
+	//		goto CLEAR_AND_EXIT;
+	//	
+	//}
+
 	/* create model
 	 * [TODO] reasonable defaults, but uses data for binned quality models
 	 */
@@ -87,7 +102,7 @@ int main(int argc, const char **argv)
 		goto CLEAR_AND_EXIT;
 
 	/* make initializer */
-	if ((err = make_initializer(&ini, dat, opt)))
+	if ((err = make_initializer(&ini, dat, opt,fqdf)))
 		goto CLEAR_AND_EXIT;
 
 	/* create run_info object */
@@ -137,6 +152,8 @@ CLEAR_AND_EXIT:
 		free_options(opt);
 	if(fqo)
 		free_fastq_options(fqo);
+	if(fqdf)
+		free_fastq(fqdf);
 
 	return (EXIT_FAILURE);	/* return err? */
 } /* main */

@@ -280,9 +280,9 @@ int parse_options(options *opt, int argc, const char **argv)
 		err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
 			"Cannot combine options --error and --profile\n");
 
-	if(opt->initialization_file && opt->estimate_K)
-		err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
-			"Please provide number of haplotypes (K) in your haplotype set (-k)\n");
+	//if(opt->initialization_file && opt->estimate_K)
+	//	err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
+	//		"Please provide number of haplotypes (K) in your haplotype set (-k)\n");
 
 	/* If the user want to find a true K */
 	/* [KSD] AmpliCI always estimates true K? Nope [XY] if K is provided, opt->estimate_K = 0 */

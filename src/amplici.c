@@ -2291,11 +2291,6 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 	int err = NO_ERROR;
 	int fxn_debug = opt->info;
 
-
-	/* reads the haplotype fasta file */
-	if ((err = read_initialization_file(opt->initialization_file, dat, opt, ini)))
-		return err;
-	
 	/* maybe use error profile */
 	double *error_profile = NULL;
 	if (opt->use_error_profile && mod->error_profile) {

@@ -73,11 +73,11 @@ struct _initializer {
 }; /* initializer */
 
 
-int make_initializer(initializer **ini, data *dat, options *opt);
+int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf);
 int sync_initializer(initializer *ini, data *dat);
 int realloc_initializer(initializer *ini, data *dat, options *opt);
 void free_initializer(initializer *ini, options *opt);
 int read_initialization_file(char const * const filename, data *dat,
-	options *opt, initializer *ini);
+	options *opt, fastq_data **fqdf);
 
 #endif
