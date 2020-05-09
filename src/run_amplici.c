@@ -82,18 +82,12 @@ int main(int argc, const char **argv)
 		goto CLEAR_AND_EXIT;
 
 	/* read initialization file  into fqdf */
-	if (opt->initialization_file && (err = read_fastq(opt->initialization_file,
-						&fqdf, fqo)))
-		goto CLEAR_AND_EXIT;
-	opt->K = (unsigned int) fqdf->n_reads;
-
-	mmessage(INFO_MSG, NO_ERROR, "number of haplotypes in '%s' is "
-			"%u!\n", opt->initialization_file, fqdf->n_reads);
-	//if(opt->initialization_file){
-	//	if((err = read_initialization_file(opt->initialization_file, dat, opt, &fqdf)))
-	//		goto CLEAR_AND_EXIT;
-	//	
-	//}
+	if (opt->initialization_file){ 
+		if((err = read_initialization_file(opt->initialization_file, dat,
+				opt, &fqdf)))
+			goto CLEAR_AND_EXIT;
+		opt->K = fqdf->n_reads;
+	}
 
 	/* create model
 	 * [TODO] reasonable defaults, but uses data for binned quality models
