@@ -107,10 +107,10 @@ If you provide no input error profile with the `-p` option, AmpliCI will assume 
 Assuming Phred quality scores is not a good idea.
 Using Phred quality scores tends to generate high numbers of false positives and runs very slowly.
 
-- You can also use AmpliCI to reassign reads given input haplotypes. You can provide your haplotype set with '-i' option and give the number of haplotypes with '-k' option (under development):
+- You can also use AmpliCI to reassign reads given input haplotypes. You can provide your haplotype set with '-i' option.
 
 ```sh
-./run_AmpliCI -f <input_fastq_file> -o <output_assignment_filename> -p <input_error_profile_file> -i <input_haplotypes_fasta_file> -k <input_number_of_haplotypes>
+./run_AmpliCI -f <input_fastq_file> -o <output_assignment_filename> -p <input_error_profile_file> -i <input_haplotypes_fasta_file>
 ```
 
 - Detailed help can be obtained with:
@@ -166,7 +166,7 @@ A text file with the following information provided as key: value pairs, one per
 
 - `ee`: Mean expected number of errors. See discussion on `ee` in ***`output_base_filename.fa`*** above.
 
-- `uniq seq id`: The index of the first unique sequence in FASTQ order matching each selected haplotype's sequence, ordered from highest abundance to lowest.
+- `uniq seq id`: The index of each selected haplotype's sequence in the order of unique sequences from highest abundance to lowest.
 
 - `scaled true abun`: The estimated scaled true abundances of each selected haplotype.
 
