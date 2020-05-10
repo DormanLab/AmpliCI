@@ -46,7 +46,7 @@ construct_ASVtable<-function(foldername,p.threshold = 1){
     for (j in 1:length(data[[k]])){
       name<-names(data[[k]])[j]
       name2<-strsplit(name,";")[[1]][3]
-      pvalue.i[j]<-as.numeric(gsub("pvalue=", "", name2))
+      pvalue.i[j]<-as.numeric(gsub("DiagP=", "", name2))
       ee.i[j]<-as.numeric(gsub("ee=", "", strsplit(name,";")[[1]][4]))
       size.i[j]<-as.numeric(gsub("size=", "", strsplit(name,";")[[1]][2]))
     }
