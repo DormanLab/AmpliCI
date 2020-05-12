@@ -1,5 +1,5 @@
 #include "statistics.h"
-
+#include "error.h"
 double aic(double ll, size_t k) {
 	return (2*k - 2*ll);
 } /* aic */
@@ -55,11 +55,18 @@ double dpoisbind(unsigned int n, unsigned int k, double *perr)
  * @param upper_tail	compute Pr(X>k)
  * @return		desired probability
  */
-double ppoisbin(unsigned int k, unsigned int n, double *perr, int upper_tail)
+double ppoisbin(int k, unsigned int n, double *perr, int upper_tail)
 {
 	double prob = 0.;
-
-	if (k >= n) {
+	
+	if (k < 0){
+		//mmessage(INFO_MSG, NO_ERROR, "1\n");
+		if(upper_tail)
+			return 1.;
+		else
+			return 0.;
+	}else if (k >= n){
+		//mmessage(INFO_MSG, NO_ERROR, "0\n");
 		if (upper_tail) 
 			return prob;
 		else

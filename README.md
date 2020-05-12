@@ -166,7 +166,7 @@ A text file with the following information provided as key: value pairs, one per
 
 - `ee`: Mean expected number of errors. See discussion on `ee` in ***`output_base_filename.fa`*** above.
 
-- `uniq seq id`: The index of the first unique sequence in FASTQ order matching each selected haplotype's sequence, ordered from highest abundance to lowest.
+- `uniq seq id`: The index of each selected haplotype's sequence in the order of unique sequences from highest abundance to lowest.
 
 - `scaled true abun`: The estimated scaled true abundances of each selected haplotype.
 
@@ -212,7 +212,7 @@ You may also use other chimera detection algorithms to remove chimeras.
 
 ## **Generate Amplicon Sequence Variant (ASV or sOTU) Table** <a name = "otu" />
 
-Currently we do not provide a script to generate the ASV (sOTU) table.  Once you have filtered out chimeric sequences, you can write your own script to generate ASV (sOTU) tables.
+We have provided a [R script](https://github.com/DormanLab/AmpliCI/tree/master/script/Make_ASV_Tables.R) to help to generate the ASV (sOTU) table, where scaled true abundances (see `size`) per sample per ASVs/sOTUs are reported.
 
 ## **Taxa Assignment** <a name = "taxa" />
 

@@ -1936,10 +1936,13 @@ int abun_pvalue(options *opt, initializer *ini, size_t *idx_array,
 	debug_msg(DEBUG_II, fxn_debug, "variance under null: %f \n", true_abun_var);
 	debug_msg(DEBUG_II, fxn_debug, "N_H->sm under null: %f \n", abun_null);
 	
-	unsigned int bound = count - (threshold+1); 
-	if (perr)
+	int bound = count - (threshold+1); 
+	debug_msg(DEBUG_I, fxn_debug, "bound=%i;\n", bound);
+	debug_msg(DEBUG_I, fxn_debug, "count=%i;\n", count);
+
+	if (perr){
 		*p = ppoisbin(bound, count, perr, 1); // P(S > bound)
-	else{ /* approximate p value */
+	}else{ /* approximate p value */
 		// *p = ppois(lower_bound, true_abun, 1, 0);	/* [KSD] What is this? */
 		/* avoid numeric problem here */
 		double sigma = sqrt(true_abun_var);
@@ -2304,11 +2307,6 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 	int err = NO_ERROR;
 	int fxn_debug = opt->info;
 
-
-	/* reads the haplotype fasta file */
-	if ((err = read_initialization_file(opt->initialization_file, dat, opt, ini)))
-		return err;
-	
 	/* maybe use error profile */
 	double *error_profile = NULL;
 	if (opt->use_error_profile && mod->error_profile) {

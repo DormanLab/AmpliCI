@@ -34,7 +34,7 @@
  * @param opt	options object
  * @return	error status
  */
-int make_initializer(initializer **ini, data *dat, options *opt)
+int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf)
 {
 	int err = NO_ERROR;
 	initializer *in;
@@ -101,6 +101,22 @@ int make_initializer(initializer **ini, data *dat, options *opt)
 	if (!in->cluster_id)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 			"initializer.cluster_id");
+
+	if(fqdf){
+		for (unsigned int k = 0; k < opt->K; ++k){
+			memcpy(in->seeds[k],
+				&fqdf->reads[k * fqdf->n_max_length],
+				fqdf->n_max_length * sizeof *fqdf->reads);
+			in->seed_lengths[k] = fqdf->n_max_length;
+		//	mmessage(INFO_MSG, NO_ERROR, "%u\n", k);
+		//	mmessage(INFO_MSG, NO_ERROR, "Read %2u: %.*s\n", k,
+		//		in->seed_lengths[k], display_sequence(in->seeds[k],
+		//		in->seed_lengths[k], XY_ENCODING));
+			//display_sequence(in->seeds[k], in->seed_lengths[k], XY_ENCODING);			
+		}
+		//mmessage(INFO_MSG, NO_ERROR, "number of haplotypes is "
+		//	"%u!\n", fqdf->n_reads);
+	}
 
 	in->abun_true = NULL;
 	in->p = NULL;
@@ -310,8 +326,8 @@ int realloc_initializer(initializer *ini, data *dat, options *opt)
  * @return		error status
  */
 int read_initialization_file(char const * const filename, data *dat,
-	options *opt, initializer *ini)
-{
+	options *opt, fastq_data **fqdf){
+
 	int fxn_debug = opt->info;	//DEBUG_III;	//
 	int err = NO_ERROR;
 	FILE *fp = fopen(filename, "r");
@@ -334,12 +350,15 @@ int read_initialization_file(char const * const filename, data *dat,
 
 	/* read in fasta-formatted haplotypes */
 	fastq_data *fqd = NULL;
+	
 	fastq_options fop = {.read_encoding = XY_ENCODING};
-	if ((err = fread_fastq(fp, &fqd, &fop))) {
+	if ((err = fread_fastq(fp, fqdf, &fop))) {
 		debug_msg(DEBUG_III, fxn_debug, "err=%d\n", err);
 		fclose(fp);
 		return err;
 	}
+
+	fqd = *fqdf;
 
 	mmessage(INFO_MSG, NO_ERROR, "finished reading %u sequences "
 		"in %s format\n", fqd->n_reads,
@@ -353,23 +372,31 @@ int read_initialization_file(char const * const filename, data *dat,
 						"invalid input haplotype set");
 	}
 
+	//mmessage(INFO_MSG, NO_ERROR, "number of haplotypes in '%s' is "
+	//		"%u!\n", filename, fqd->n_reads);
 
-	if (fqd->n_reads != opt->K) {	/* KSD: Why not just set opt->K = fqd->n_reads? You just need to call this function earlier, like during make_initializer(). */
+	/* KSD: Why not just set opt->K = fqd->n_reads? You just need to call this function earlier, like during make_initializer(). */
+	/*
+	if (fqd->n_reads != opt->K) {	
 		fclose(fp);
 		mmessage(INFO_MSG, NO_ERROR, "number of haplotypes in '%s' is "
 			"%u! Rerun with -k %u !\n", filename, fqd->n_reads,
 								fqd->n_reads);
 		return mmessage(ERROR_MSG, INVALID_USER_INPUT, "invalid input K");
 	}
+	*/
 
+	/* move to make_initializer */
+	/*
 	for (unsigned int k = 0; k < opt->K; ++k){
 		memcpy(ini->seeds[k],
 			&fqd->reads[k * fqd->n_max_length],
 			fqd->n_max_length * sizeof *fqd->reads);
 		ini->seed_lengths[k] = fqd->n_max_length;			
 	}
+	*/
 
-	free_fastq(fqd);
+	//free_fastq(fqd);
 
 	fclose(fp);
 	return err;
