@@ -113,11 +113,12 @@ int main(int argc, const char **argv)
 
 	/* main algorithm */
 	if ((!opt->initialization_file) && opt->run_amplici) {
-		/* if we only use ampliCI */
+
 		if ((err = ampliCI(opt, dat, mod, ini, ri)))
 			goto CLEAR_AND_EXIT;
 
-	} else if(opt->initialization_file) { /* reads assignment with given haplotypes */
+	/* reads assignment with user-provided haplotypes */
+	} else if(opt->initialization_file) {
 		if ((err = reads_assignment(opt, dat, mod, ini, ri)))
 			goto CLEAR_AND_EXIT;
 

@@ -32,9 +32,11 @@ struct _options {
 	/* input */
 	char const *offset_file;  /*<! name of offset file */
 	char const *fastq_file;  /*<! name of fastq input file */
-	char const *initialization_file;   /*<! name of initialization file */
+	char const *initialization_file;  /*<! name of initialization file */
 	/* output */
-	char const *outfile;  /*<! ... */
+	char const *outfile_base;  /*<! basename of outfiles */
+	char const *outfile_info;  /*<! name of informational outfile */
+	char const *outfile_fasta;  /*<! name of fasta outfile */
 
 	/* model */
 	int convergence_amplici;  /*<! convergence or not when updating abundance */
@@ -55,6 +57,7 @@ struct _options {
 	double insertion_error;  /*<! insertion error rate */
 	double deletion_error;  /*<! deletion error rate */
 	double indel_error;  /*<! indel error rate per site per read */
+	int indel_error_set;  /*<! has indel error been set? */
 	
 	/* K number of clusters */
 	int estimate_K;  /*<! whether algorithm should estimate K */
@@ -70,6 +73,7 @@ struct _options {
 	double epsilon;  /*<! change in relative abundance */
 	double alpha;  /*<! FWER */
 	double p_threshold;  /*<! threshold on p-value */
+	int per_candidate;  /*<! threshold on p-value is per candidate */
 	unsigned int most_abundant;  /*<! report these most abundant only */
 	unsigned int contamination_threshold; /*<! Maximum abundance for contamination */
 	int associate_zc; /*<! contamination_threshold = low_bound - 1 */

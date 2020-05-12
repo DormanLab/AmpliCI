@@ -95,19 +95,21 @@ int error_profile_generator(options *opt, data *dat, model *mod,
 		}
 	}
 
-	if(outputprofile){
-		if(output_encoding == XY_ENCODING){
-				FILE *fp = fopen(opt->outfile, "w");
+	if (outputprofile) {
+		if (output_encoding == XY_ENCODING) {
+			FILE *fp = fopen(opt->outfile_base, "w");
+
         		if (!fp)
-            		return mmessage(ERROR_MSG, FILE_OPEN_ERROR, opt->outfile);
+            			return mmessage(ERROR_MSG, FILE_OPEN_ERROR, opt->outfile_base);
 
-			fprint_error_profile(fp,error_profile,NUM_NUCLEOTIDES*NUM_NUCLEOTIDES,err_length);
+			fprint_error_profile(fp, error_profile, NUM_NUCLEOTIDES * NUM_NUCLEOTIDES, err_length);
 
-			mmessage(INFO_MSG, NO_ERROR, "Output the error profile: %s \n",opt->outfile);
+			mmessage(INFO_MSG, NO_ERROR, "Output the error profile: %s \n", opt->outfile_base);
 
-       		fclose(fp);
-		}else
+	       		fclose(fp);
+		} else {
 			return mmessage(ERROR_MSG, INTERNAL_ERROR, "Codes are not ready");
+		}
 	}
 
 	free(error_profile);
@@ -266,9 +268,9 @@ int error_count_generator(options *opt, data *dat, model *mod,
 
 	/* output the result we are interested */
 	if (fxn_debug > DEBUG_I) {
-		FILE *fp = fopen(opt->outfile, "w");
+		FILE *fp = fopen(opt->outfile_base, "w");
 		if (!fp)
-			return mmessage(ERROR_MSG, FILE_OPEN_ERROR, opt->outfile);
+			return mmessage(ERROR_MSG, FILE_OPEN_ERROR, opt->outfile_base);
 
 		fprintf(fp, "error count:");
 		fprint_vectorized_uintmatrix(fp, err_cnt_cur,

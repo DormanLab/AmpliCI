@@ -33,7 +33,7 @@ int make_options(options **opt) {
 
 	op = *opt;
 
-	op->info = SILENT;  // control DEBUG message 
+	op->info = SILENT;//DEBUG_I;  // control DEBUG message 
 	op->use_curses = 0;
 	op->wp = NULL;
 	op->active_fp = NULL;
@@ -42,7 +42,9 @@ int make_options(options **opt) {
 	/* ampliCI */
 	op->fastq_file = NULL;
 	op->offset_file = NULL;
-	op->outfile = NULL;
+	op->outfile_base = NULL;
+	op->outfile_fasta = NULL;
+	op->outfile_info = NULL;
 	op->initialization_file = NULL;
 	op->run_amplici =ALGORITHM_AMPLICI; 
 	op->low_bound = 2.0;
@@ -79,6 +81,7 @@ int make_options(options **opt) {
 	op->insertion_error = 0.00004;   
 	op->deletion_error = 0.00002;	
 	op->indel_error = op->insertion_error + op->deletion_error;   // per site per read 
+	op->indel_error_set = 0;
 	
 	
 	/* running criterion */
@@ -87,7 +90,8 @@ int make_options(options **opt) {
 	op->epsilon_aln = -100; // Currently just as the epsilon for the alignment result.
 	op->epsilon = 1e-6;
 	op->alpha = 0.001;
-	op->p_threshold = 1.;   /* default = 1, or 1e-40 (conserved); depends on alpha */
+	op->p_threshold = 1e-40;   /* will be overwritten by alpha / M or alpha */
+	op->per_candidate = 1;
 	op->most_abundant = 0;
 
 	/* for sequence alignment */
@@ -117,21 +121,28 @@ void free_options(options *opt)
 int parse_options(options *opt, int argc, const char **argv)
 {
 	int i, j;
+	size_t n;
 	int err = NO_ERROR;
 	char a;
 
 	for (i = 1; i < argc; i++) {
-		if (strlen(argv[i]) < 2)
+		n = strlen(argv[i]);
+		if (n < 2)
 			usage_error(argv, i, (void *)opt);
-		j = 1;
-		a = argv[i][j];
-		while (a == '-' && ++j < (int) strlen(argv[i]))
-			a = argv[i][j];
+		j = 0;
+		while ((a = argv[i][++j]) == '-' && j < (int) n);
 		switch(a) {
 		case 'a':
+			if (!strncmp(&argv[i][j], "ali", 3)) {
+				opt->nw_align = ALIGNMENT_UNIQ_SEQ;
+				break;
+			}
 			if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
+			} else if (!strncmp(&argv[i][j], "abu", 3)) {
+				opt->low_bound = read_cmdline_double(argc,
+					argv, ++i, (void *)opt);
 			} else {
 				opt->alpha = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
@@ -141,11 +152,12 @@ int parse_options(options *opt, int argc, const char **argv)
 			if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
-			} else if (!strcmp(&argv[i][j], "cont")){
+			} else {
 				if (argv[i + 1][0] >= 48
 						&& argv[i + 1][0] <= 57)
-				opt->contamination_threshold = read_uint(argc,
-						argv, ++i, (void *)opt);
+					opt->contamination_threshold
+						= read_uint(argc, argv, ++i,
+								(void *)opt);
 				opt->associate_zc = 0;
 			}
 			break;
@@ -181,7 +193,8 @@ int parse_options(options *opt, int argc, const char **argv)
 			} else if (!strcmp(&argv[i][j], "lb")) {
 				opt->low_bound = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
-			} else if (!strcmp(&argv[i][j], "ll")) {
+			} else if (!strcmp(&argv[i][j], "ll")
+					|| !strncmp(&argv[i][j], "log", 3)) {
 				opt->ll_cutoff = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
 			} 
@@ -199,7 +212,16 @@ int parse_options(options *opt, int argc, const char **argv)
 			if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
-			} else if (!strcmp(&argv[i][j], "deletion")) {
+			} else if (!strncmp(&argv[i][j], "dia", 3)) {
+				opt->alpha = read_cmdline_double(argc,
+					argv, ++i, (void *)opt);
+			} else if (!strncmp(&argv[i][j], "del", 3)) {
+				if (opt->indel_error_set) {
+					err = mmessage(INFO_MSG,
+						INVALID_USER_INPUT, "Cannot "
+						"set --deletion and --indel\n");
+					goto CMDLINE_ERROR;
+				}
 				opt->deletion_error = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
 			}
@@ -211,15 +233,27 @@ int parse_options(options *opt, int argc, const char **argv)
 			} else if (!strcmp(argv[i+1], "amplici")) {
 				opt->run_amplici = ALGORITHM_AMPLICI;
 				++i;
+			} else if (!strncmp(&argv[i][j], "ind", 3)) {
+				opt->indel_error = read_cmdline_double(argc,
+							argv, ++i, (void *)opt);
+				opt->indel_error_set = 1;
+				opt->insertion_error = opt->deletion_error
+							= opt->indel_error / 2;
 			} else if (!strncmp(&argv[i][j], "ins", 3)) {
+				if (opt->indel_error_set) {
+					err = mmessage(INFO_MSG,
+						INVALID_USER_INPUT, "Cannot "
+						"set --insertion and --indel\n");
+					goto CMDLINE_ERROR;
+				}
 				opt->insertion_error = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
-			} else {
+			} else {	/* deprecated: use --haplotype */
 				opt->initialization_file = argv[++i];
 				mmessage(INFO_MSG, NO_ERROR, "Haplotype set: "
 					"%s\n", opt->initialization_file);
-					opt->run_amplici = 0; 
-				}
+				opt->run_amplici = 0; 
+			}
 			if (errno)
 				goto CMDLINE_ERROR;
 			break;
@@ -242,15 +276,47 @@ int parse_options(options *opt, int argc, const char **argv)
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
 			}
-			opt->outfile = argv[++i];
+
+			/* single option argument */
+			if (i + 1 == argc - 1 || argv[i + 2][0] == '-') {
+				opt->outfile_base = argv[++i];
+
+				/* check for file extension */
+				j = 0;
+				n = strlen(argv[i]);
+				while ((a = argv[i][j++]) != '.' && j < n);
+
+				/* guess the user has named a fasta file */
+				if (j < n && (!strcmp(&argv[i][j], "fsa")
+					|| !strcmp(&argv[i][j], "fasta")
+					|| !strcmp(&argv[i][j], "ffn")
+					|| !strcmp(&argv[i][j], "frn")
+					|| !strcmp(&argv[i][j], "faa")
+					|| !strcmp(&argv[i][j], "fna")
+					|| !strcmp(&argv[i][j], "fa")
+					|| !strcmp(&argv[i][j], "fas"))) {
+					opt->outfile_fasta = argv[i];
+					opt->outfile_base = NULL;
+				}
+			/* >1 option arguments */
+			} else {
+				opt->outfile_fasta = argv[++i];
+				opt->outfile_info = argv[++i];
+			}
 			break;
 		case 'p':
+			if (!strncmp(&argv[i][j], "per", 3)) {
+				opt->per_candidate = 1;
+				break;
+			}
 			if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
-			} else if (!strcmp(&argv[i][j], "pdiag")) {
-				opt->p_threshold = read_cmdline_double(argc,
+			}
+			if (!strcmp(&argv[i][j], "pdiag")) {
+				opt->alpha = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
+				opt->per_candidate = 0;
 			} else {
 				opt->error_profile_name = argv[++i];
 				mmessage(INFO_MSG, NO_ERROR, "Error profile: "
@@ -261,9 +327,21 @@ int parse_options(options *opt, int argc, const char **argv)
 			opt->use_curses = 1;
 			break;
 		case 'h':
-			fprint_usage(stderr, argv[0], opt);
-			free_options(opt);
-			exit(EXIT_SUCCESS);
+			if (!strncmp(&argv[i][j], "hap", 3)) {
+				if (i == argc - 1) {
+					err = INVALID_CMD_OPTION;
+					goto CMDLINE_ERROR;
+				}
+				opt->initialization_file = argv[++i];
+				mmessage(INFO_MSG, NO_ERROR, "Haplotype set: "
+					"%s\n", opt->initialization_file);
+				opt->run_amplici = 0; 
+			} else {
+				fprint_usage(stderr, argv[0], opt);
+				free_options(opt);
+				exit(EXIT_SUCCESS);
+			}
+			break;
 		default:
 			err = INVALID_CMD_OPTION;
 			goto CMDLINE_ERROR;
@@ -276,7 +354,7 @@ int parse_options(options *opt, int argc, const char **argv)
 		err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
 			"No input fastq file! (see help -h) \n");
 
-	if (!opt->outfile && !opt->most_abundant)
+	if (!opt->outfile_base && !opt->most_abundant && !opt->outfile_fasta)
 		err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
 			"No output file specified! (see help -h) \n");
 
@@ -284,7 +362,13 @@ int parse_options(options *opt, int argc, const char **argv)
 		err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
 			"Cannot combine options --error and --profile\n");
 
-	if(opt->initialization_file && opt->estimate_K)
+	if (opt->error_estimation && !opt->outfile_base)
+		opt->outfile_base = opt->outfile_fasta;
+
+	if (opt->initialization_file && !opt->outfile_base)
+		opt->outfile_base = opt->outfile_fasta;
+
+	if (opt->initialization_file && opt->estimate_K)
 		err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
 			"Please provide number of haplotypes (K) in your haplotype set (-k)\n");
 
@@ -300,11 +384,12 @@ int parse_options(options *opt, int argc, const char **argv)
 		opt->use_error_profile = 0;
 
 	/* update indel error rates */
-	opt->indel_error = opt->insertion_error + opt->deletion_error;
+	if (!opt->indel_error_set)
+		opt->indel_error = opt->insertion_error + opt->deletion_error;
 
 
 	/* check contamination threshold */
-	if(opt->associate_zc) /* no input for contamination threshold. Use the default */
+	if (opt->associate_zc) /* no input for contamination threshold. Use the default */
 		opt->contamination_threshold = (unsigned int) opt->low_bound - 1;
 
 	if (opt->contamination_threshold < 1){
@@ -344,41 +429,45 @@ void fprint_usage(FILE *fp, const char *cmdname, void *obj)
 	fprintf(fp, "(v1.0.0)\n");
 	fprintf(fp, "\nNAME\n\t%s - Amplicon Clustering Inference\n",
 		&cmdname[start]);
-	fprintf(fp, "\nSYNOPSIS\n\t%s [--error --profile <estr> "
-		"-lb <lbdbl> -ll <lldbl> -a <adbl> --pdiag <pdbl> -i <hstr> -k <kuint> -z ] "
-		"-f <fstr> -o <ostr>\n",
+	fprintf(fp, "\nSYNOPSIS\n\t%s [-e -p <pstr> "
+		"--abundance <adbl> --log_likelihood <lldbl> --diagnostic <ddbl> --per_candidate --haplotypes <hstr> --align] "
+		"--fastq <fstr> --outfile <ostr>\n",
 		&cmdname[start]);
 	fprintf(fp, "\nDESCRIPTION\n\tProgram %s clusters amplicon sequences presented "
 		"as reads in fastq file <fstr> in two steps.\n"
 		"\n\tStep 1:\n\t\tEstimate error profile and write to file <ostr> given input fastq file <fstr> with option -e error."
-		"\n\t\tExample: \n\t\t\trun_ampliCI --error -f <fstr> -o <ostr>"
-		"\n\tStep 2:\n\t\tCluster amplicon sequences in fastq file <fstr> with estimated error profile from file <estr>, using lower bound 2, and output results in file <ostr>."
-		"\n\t\tExample: \n\t\t\trun_ampliCI --profile <estr> -lb 2 -f <fstr> -o <ostr>"
+		"\n\t\tExample: \n\t\t\trun_ampliCI --error --fastq <fstr> --outfile <ostr>"
+		"\n\tStep 2:\n\t\tCluster amplicon sequences in fastq file <fstr> with estimated error profile from file <pstr>, using lower bound 2, and output results in file <ostr>."
+		"\n\t\tExample: \n\t\t\trun_ampliCI --profile <pstr> --abundance <adbl> --fastqs <fstr> --outfile <ostr>"
 
 		"\n\n\tBy default, %s will automatically select K true haplotypes with estimated scaled "
-		"true abundance greater than or equal to <lbdbl> using an alignment-free strategy. "
+		"true abundance greater than or equal to <adbl> using an alignment-free strategy. "
 		"A Diagnostic test is used to screen false positives with provided threshold."
 		"Reads with log likelihood higher than <lldbl> under the current model are assigned "
 		"to clusters.\n", &cmdname[start], &cmdname[start]);
 		
+	/* KSD: Maybe we should make AmpliCI-cons the default. */
 	fprintf(fp, "\nOPTIONS\n");
 	fprintf(fp, "\t--error | -e\n\t\tEstimate the error profile.\n");
-	fprintf(fp, "\t-f <fstr>\n\t\tThe fastq input file. [REQUIRED]\n");
-	fprintf(fp, "\t--profile | -p <estr>\n\t\tThe input error profile. If none, treat quality score literally. [DEFAULT: none]\n");
-	fprintf(fp, "\t-a <adbl>\n\t\tThreshold of diagnostic probability in the diagnostic test will be given as [DEFAULT: %f/number_candidates].\n", opt->alpha);
-	fprintf(fp, "\t--pdiag <pdbl>\n\t\tOverride option -a and give a hard threshold of diagnostic probability.\n");
-	fprintf(fp, "\t-i <hstr> \n\t\tThe fasta input haplotype set. [DEFAULT:none]\n");	/* KSD: why keep this option; there is no other possibility, right? XY: I will do reads assignment with given haplotype set in the future*/
-	fprintf(fp, "\t-k <kuint>\n\t\tNumber of haplotypes in the haplotype set (used with -i <hstr>). [DEFAULT: %i]\n", opt->K);
-	fprintf(fp, "\t--kmax <kuint>\n\t\tSet maximum number of clusters K. [DEFAULT: %i]\n", opt->K_max);
-	fprintf(fp, "\t-lb <lbdbl>\n\t\tLower bound for scaled true abundance during haplotype reconstruction.  [DEFAULT: %f]\n", opt->low_bound);
-	fprintf(fp, "\t-cont <ctuint>\n\t\t baseline count abundance of contaminating or noise sequences.  [DEFAULT: %i]\n",opt->contamination_threshold);
-	fprintf(fp, "\t-ll <lldbl>\n\t\tLower bound for reads maximum posterior assignment probability screening during reads assignment. [DEFAULT: %f]\n", opt->ll_cutoff);
-	fprintf(fp, "\t-insertion <indbl>\n\t\tInsertion error rate.  [DEFAULT: %f]\n", opt->insertion_error);
-	fprintf(fp, "\t-deletion <dedbl>\n\t\tDeletion error rate.  [DEFAULT: %f]\n", opt->deletion_error);
-	fprintf(fp, "\t-o <ostr>\n\t\tOutput file to record best clustering solution or the estimated error profile.  [REQUIRED]\n");
+	fprintf(fp, "\t--fastq | -f <fstr>\n\t\tThe fastq input file.  [REQUIRED]\n");
+	fprintf(fp, "\t--profile | -p <estr>\n\t\tThe input error profile. If none, treat quality score literally.  [DEFAULT: none]\n");
+	fprintf(fp, "\t--diagnostic | -a <ddbl>\n\t\tThreshold of probability in the diagnostic test.  [DEFAULT: %f].\n", opt->alpha);
+	fprintf(fp, "\t--per_candidate | --pdiag <pdbl>\n\t\tChange diagnostic threshold to %f / number_candidates.  [DEFAULT: %s]\n", opt->alpha, opt->per_candidate ? "yes" : "no");
+	fprintf(fp, "\t-k <kuint>\n\t\tNumber of haplotypes in the haplotype set (used with -i <hstr>).  [DEFAULT: %i]\n", opt->K);	/* KSD: get rid of this option */
+	fprintf(fp, "\t--kmax <kuint>\n\t\tSet maximum number of clusters K.  [DEFAULT: %i]\n", opt->K_max);
+	fprintf(fp, "\t--abundance | -lb <adbl>\n\t\tLower bound for scaled true abundance during haplotype reconstruction.  [DEFAULT: %f]\n", opt->low_bound);
+	fprintf(fp, "\t--contaminants | -c <ctuint>\n\t\t baseline count abundance of contaminating or noise sequences.  [DEFAULT: %i]\n", opt->contamination_threshold);
+	fprintf(fp, "\t--log_likelihood | -ll <lldbl>\n\t\tLower bound for reads maximum posterior assignment probability screening during reads assignment. [DEFAULT: %f]\n", opt->ll_cutoff);
+	fprintf(fp, "\t--indel <inddbl>\n\t\tIndel sequencing error rate.  Cannot also use --insertion or --deletion.  [DEFAULT: %f]\n", opt->indel_error);
+	fprintf(fp, "\t--insertion <insdbl>\n\t\tInsertion sequencing error rate.  [DEFAULT: %f]\n", opt->insertion_error);
+	fprintf(fp, "\t--deletion <deldbl>\n\t\tDeletion sequencing error rate.  [DEFAULT: %f]\n", opt->deletion_error);
+	fprintf(fp, "\t--haplotypes | -i <hstr>\n\t\tFASTA file with haplotypes.  [DEFAULT: none]\n");
+	fprintf(fp, "\t--outfile | -o <ostr>|<ostr1> <ostr2>\n\t\tOutput file(s) for best clustering solution or estimated error profile.  [REQUIRED]\n");
+	fprintf(fp, "\t\tWith --error, provide name of file to output error profile.\n");
+	fprintf(fp, "\t\tWithout --error, provide base name of file to output haplotypes (extension .fa) and information (extension .out) or provide names for both files, fasta first.\n");
 	/* fprintf(fp, "\t--most <mint>\n\t\tReport top m-most abundant sequences and quit. [DEFAULT: %i]\n", opt->most_abundant); */
-	fprintf(fp, "\t-z \n\t\tTurn off the alignment-free.  [DEFAULT: none]\n");	 /* KSD: And turn on what? If not alignment-free, what do you get? XY: pairwise alignment of each reads and haplotypes*/
-	fprintf(fp, "\t-h\n\t\tThis help.\n");
+	fprintf(fp, "\t--align | -z \n\t\tAlign all reads to haplotypes (slow).  [DEFAULT: none]\n");	 /* KSD:  --align | -a */
+	fprintf(fp, "\t--help | -h\n\t\tThis help.\n");
 	fprintf(fp, "\n");
 	for (size_t i = start; i < strlen(cmdname); ++i)
 		fputc(toupper(cmdname[i]), fp);

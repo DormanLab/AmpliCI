@@ -94,29 +94,29 @@ AmpliCI runs in two major steps:
 1. Use AmpliCI to estimate the error profile directly from the data (the executable is called run_AmpliCI):
 
 ```sh
-./run_AmpliCI -f <input_fastq_file> -o <output_error_profile_file> --error
+./run_AmpliCI --fastq <input_fastq_file> --outfile <output_error_profile_file> --error
 ```
 
 2.  Use Amplici to estimate the haplotypes and their abundance using the estimated error profile:
 
 ```sh
-./run_AmpliCI -f <input_fastq_file> -o <output_base_filename> -lb 2 -p <input_error_profile_file>
+./run_AmpliCI --fastq <input_fastq_file> --outfile <output_base_filename> --abundance 2 --profile <input_error_profile_file>
 ```
 
-If you provide no input error profile with the `-p` option, AmpliCI will assume the error rates are the error rates dictated by [Phred quality scores](https://www.illumina.com/documents/products/technotes/technote_Q-Scores.pdf).
+If you provide no input error profile with the `--profile` option, AmpliCI will assume the error rates are the error rates dictated by [Phred quality scores](https://www.illumina.com/documents/products/technotes/technote_Q-Scores.pdf).
 Assuming Phred quality scores is not a good idea.
 Using Phred quality scores tends to generate high numbers of false positives and runs very slowly.
 
-- You can also use AmpliCI to reassign reads given input haplotypes. You can provide your haplotype set with '-i' option and give the number of haplotypes with '-k' option (under development):
+- You can also use AmpliCI to reassign reads given input haplotypes. You can provide your haplotype set with '--haplotypes' option:
 
 ```sh
-./run_AmpliCI -f <input_fastq_file> -o <output_assignment_filename> -p <input_error_profile_file> -i <input_haplotypes_fasta_file> -k <input_number_of_haplotypes>
+./run_AmpliCI --fastq <input_fastq_file> --outfile <output_assignment_filename> --profile <input_error_profile_file> --haplotypes <input_haplotypes_fasta_file>
 ```
 
 - Detailed help can be obtained with:
 
 ```sh
-./run_AmpliCI -h
+./run_AmpliCI --help
 ```
 
 # Output Files <a name = "output" />
@@ -131,9 +131,9 @@ When run to estimate the error profile, AmpliCI will output an error profile `<o
 
 ## Estimating haplotypes.
 
-When run to estimate haplotypes and their abundances with argument `-o <output_base_filename>`, there will be two output files:
+When run to estimate haplotypes and their abundances with argument `--outfile <output_base_filename>` or `--outfile <fasta_output_file> <information_output_file>`, there will be two output files:
 
-***1.`output_base_filename.fa`***
+***1.`output_base_filename.fa` or `fasta_output_file`***
 
 FASTA-formatted file (will be used in the downstream analysis) containing denoised sequences (or haplotypes).  For each sequence, we also provide `size` (scaled true abundance), `DiagP` (diagnostic probability), `ee` (mean expected number of errors in reads), useful for chimera detection and *post hoc* filtering. For example for the first haplotype, the FASTA header might look like:
 
@@ -148,7 +148,7 @@ FASTA-formatted file (will be used in the downstream analysis) containing denois
 - `ee`: mean expected number of errors per read. Edgar and Flyvbjerg ([Edgar and Flyvbjerg, 2015](https://academic.oup.com/bioinformatics/article/31/21/3476/194979)) suggested a strategy to filter reads according to their expected number of errors.  For example, you could remove haplotypes with `ee` > 1. Though this strategy works for most of mock datasets, we did observe `ee` > 1 for several true haplotypes with very low abundance when analyzing a specific mock dataset (stag1, see [our paper](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1)). You can read [more about `ee`](https://www.drive5.com/usearch/manual/exp_errs.html).
 
 
-***2.`output_base_filename.out`***
+***2.`output_base_filename.out` or `information_output_file`***
 
 A text file with the following information provided as key: value pairs, one per line.  The keys are:
 
