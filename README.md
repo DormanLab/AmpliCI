@@ -40,6 +40,7 @@ AmpliCI has been tested under Linux and MacOS.
 2. Configure the project.
 
    ```sh
+   cd AmpliCI
    cd src
    cmake .
    ```
@@ -97,10 +98,22 @@ AmpliCI runs in two major steps:
 ./run_AmpliCI --fastq <input_fastq_file> --outfile <output_error_profile_file> --error
 ```
 
+A example:
+
+```sh
+./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/error.out  --error
+```
+
 2.  Use Amplici to estimate the haplotypes and their abundance using the estimated error profile:
 
 ```sh
 ./run_AmpliCI --fastq <input_fastq_file> --outfile <output_base_filename> --abundance 2 --profile <input_error_profile_file>
+```
+
+A example:
+
+```sh
+./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/test --abundance 2 --profile ../test/error.out
 ```
 
 If you provide no input error profile with the `--profile` option, AmpliCI will assume the error rates are the error rates dictated by [Phred quality scores](https://www.illumina.com/documents/products/technotes/technote_Q-Scores.pdf).
@@ -112,6 +125,13 @@ Using Phred quality scores tends to generate high numbers of false positives and
 ```sh
 ./run_AmpliCI --fastq <input_fastq_file> --outfile <output_assignment_filename> --profile <input_error_profile_file> --haplotypes <input_haplotypes_fasta_file>
 ```
+
+A example:
+
+```sh
+./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/test.id --profile ../test/error.out --haplotypes ../test/test.fa
+```
+
 
 - Detailed help can be obtained with:
 
