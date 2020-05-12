@@ -236,11 +236,39 @@ The algorithm may stop if your:
 
 - reads contain ambiguous nucleotides
 
-- reads vary in length	<!-- Actually, in our experience, your program is fine with this. -->
-
 - reads are not in the right FASTQ input format, for example reads and quality scores cannot contain newline characters
 
-- there are too few reads or reads are so noisy that there are no sequences observed more than the lower bound number of times (option `-lb`, default 2.0)
+- there are too few reads or reads are so noisy that there are no sequences observed more than the lower bound number of times (option `--abundance`, default 2.0)
+
+# Detailed options <a name = "options" />
+
+Main options:
+ 
+- `--fastq` The fastq input file.  [REQUIRED]
+
+- `--outfile` Output file(s) for best clustering solution or estimated error profile.  [REQUIRED]
+
+- `--profile` The input error profile. If none, treat quality score literally.  [DEFAULT: none]
+
+- `--error` Estimate the error profile. [Used in error estimation only]
+
+- `--haplotypes` FASTA file with haplotypes. [Used in reads assignment only]
+
+Options for sensitivity: 
+
+- `--abundance` Lower bound for scaled true abundance during haplotype reconstruction.  [DEFAULT: 2.0]
+
+- `--contaminants` Baseline count abundance of contaminating or noise sequences.  [DEFAULT: 1]
+
+- `--indel` Indel sequencing error rate.  Cannot also use --insertion or --deletion.  [DEFAULT: 0.00006]
+
+- `--diagnostic`  Threshold of probability in the diagnostic test.  [DEFAULT: 0.001 / number_candidates]
+
+Other important options:
+
+- `--align`  Align all reads to haplotypes (slow).  [DEFAULT: none]
+
+- `--log_likelihood`  Lower bound for reads maximum posterior assignment probability screening during reads assignment. [DEFAULT: -100.0]
 
 
 # Acknowledgments <a name = "acknowledgements" />

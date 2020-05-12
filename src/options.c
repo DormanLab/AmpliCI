@@ -447,10 +447,10 @@ void fprint_usage(FILE *fp, const char *cmdname, void *obj)
 	fprintf(fp, "\t--profile | -p <estr>\n\t\tThe input error profile. If none, treat quality score literally.  [DEFAULT: none]\n");
 	fprintf(fp, "\t--diagnostic | -a <ddbl>\n\t\tThreshold of probability in the diagnostic test.  [DEFAULT: %f].\n", opt->alpha);
 	fprintf(fp, "\t--per_candidate | --pdiag <pdbl>\n\t\tChange diagnostic threshold to %f / number_candidates.  [DEFAULT: %s]\n", opt->alpha, opt->per_candidate ? "yes" : "no");
-	fprintf(fp, "\t-k <kuint>\n\t\tNumber of haplotypes in the haplotype set (used with -i <hstr>).  [DEFAULT: %i]\n", opt->K);	/* KSD: get rid of this option */
+//	fprintf(fp, "\t-k <kuint>\n\t\tNumber of haplotypes in the haplotype set (used with -i <hstr>).  [DEFAULT: %i]\n", opt->K);	/* KSD: get rid of this option */
 	fprintf(fp, "\t--kmax <kuint>\n\t\tSet maximum number of clusters K.  [DEFAULT: %i]\n", opt->K_max);
 	fprintf(fp, "\t--abundance | -lb <adbl>\n\t\tLower bound for scaled true abundance during haplotype reconstruction.  [DEFAULT: %f]\n", opt->low_bound);
-	fprintf(fp, "\t--contaminants | -c <ctuint>\n\t\t baseline count abundance of contaminating or noise sequences.  [DEFAULT: %i]\n", opt->contamination_threshold);
+	fprintf(fp, "\t--contaminants | -c <ctuint>\n\t\tBaseline count abundance of contaminating or noise sequences.  [DEFAULT: %i]\n", opt->contamination_threshold);
 	fprintf(fp, "\t--log_likelihood | -ll <lldbl>\n\t\tLower bound for reads maximum posterior assignment probability screening during reads assignment. [DEFAULT: %f]\n", opt->ll_cutoff);
 	fprintf(fp, "\t--indel <inddbl>\n\t\tIndel sequencing error rate.  Cannot also use --insertion or --deletion.  [DEFAULT: %f]\n", opt->indel_error);
 	fprintf(fp, "\t--insertion <insdbl>\n\t\tInsertion sequencing error rate.  [DEFAULT: %f]\n", opt->insertion_error);
