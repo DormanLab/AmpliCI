@@ -20,7 +20,7 @@ AmpliCI, Amplicon Clustering Inference, denoises Illumina amplicon data by appro
 
 # Prerequisites <a name = "preresuisites" />
 
-- AmpliCI requires [cmake](https://cmake.org) (3.5.0 or higher version) and [gcc](https://gcc.gnu.org) (5.4.0 or higher version). 
+- AmpliCI requires [cmake](https://cmake.org) (3.5.0 or higher version) and [gcc](https://gcc.gnu.org) (5.4.0 or higher version).
 - AmpliCI requires some C and FORTRAN libraries provided by R.  You can download and install R from [https://www.r-project.org](https://www.r-project.org).
 - AmpliCI requires Rmath, the [R Standalone Math Library](https://cran.r-project.org/doc/manuals/r-release/R-admin.html#The-standalone-Rmath-library).  Often, the Rmath library (libRmath.a or libRmath.so for Linux or libRmath.dylib for MacOS) will be installed with R, but not always.  Here are some other locations for the library.
 	- r-mathlib on [Ubuntu](https://ubuntu.com/) and [Debian](https://www.debian.org/)
@@ -90,7 +90,7 @@ If your read or quality scores are split over multiple lines, AmpliCI will not w
 
 # Usage
 
-AmpliCI runs in two major steps: 
+AmpliCI runs in two major steps:
 
 1. Use AmpliCI to estimate the error profile directly from the data (the executable is called run_AmpliCI):
 
@@ -98,7 +98,7 @@ AmpliCI runs in two major steps:
 ./run_AmpliCI --fastq <input_fastq_file> --outfile <output_error_profile_file> --error
 ```
 
-A example:
+An example:
 
 ```sh
 ./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/error.out  --error
@@ -110,7 +110,7 @@ A example:
 ./run_AmpliCI --fastq <input_fastq_file> --outfile <output_base_filename> --abundance 2 --profile <input_error_profile_file>
 ```
 
-A example:
+An example:
 
 ```sh
 ./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/test --abundance 2 --profile ../test/error.out
@@ -126,7 +126,7 @@ Using Phred quality scores tends to generate high numbers of false positives and
 ./run_AmpliCI --fastq <input_fastq_file> --outfile <output_assignment_filename> --profile <input_error_profile_file> --haplotypes <input_haplotypes_fasta_file>
 ```
 
-A example:
+An example:
 
 ```sh
 ./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/test.id --profile ../test/error.out --haplotypes ../test/test.fa
@@ -161,7 +161,7 @@ FASTA-formatted file (will be used in the downstream analysis) containing denois
 >H0;size=516.000;DiagP=0.00e+00;ee=0.405;
 ```
 
-- `size`: scaled true abundance estimated for each selected haplotype, required for the subsequent chimera detection with UCHIME3. 
+- `size`: scaled true abundance estimated for each selected haplotype, required for the subsequent chimera detection with UCHIME3.
 
 - `DiagP`: diagnostic probability, which could be used as a criterion to check false positives. We suggest post hoc removal of haplotypes with `DiagP` > 1e-40 when applying AmpliCI on real datasets with more than 1 million reads to reduce false positives. For further information of the diagnostic probability, please see [our paper](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1).
 
@@ -216,7 +216,7 @@ The output FASTA file contains denoised raw haplotype sequences, which may inclu
 
 ## **Chimera Detection** <a name="chimera" />
 
-The AmpliCI-outputted FASTA file is in acceptable format to input into the [uchime3_denovo](https://www.drive5.com/usearch/manual/cmd_uchime3_denovo.html) method implemented in [usearch](https://drive5.com/usearch/). 
+The AmpliCI-outputted FASTA file is in acceptable format to input into the [uchime3_denovo](https://www.drive5.com/usearch/manual/cmd_uchime3_denovo.html) method implemented in [usearch](https://drive5.com/usearch/).
 
 Haplotype sorting by abundance
 ```sh
@@ -241,7 +241,7 @@ There are multiple methods.
 
 1. [DECIPHER](https://bioconductor.org/packages/release/bioc/html/DECIPHER.html) contains [IDTAXA](https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-018-0521-5), a novel approach for taxonomic classification.
 
-2. [RDP classifier](http://rdp.cme.msu.edu), a Naive Bayesian Classifier. 
+2. [RDP classifier](http://rdp.cme.msu.edu), a Naive Bayesian Classifier.
 
 ## **Futher Analysis**	<a name = "further" />
 
@@ -252,7 +252,7 @@ There are multiple methods.
 
 The algorithm may stop if your:
 
-- quality scores are not in the typical range for Illumina datasets [33,73]  
+- quality scores are not in the typical range for Illumina datasets [33,73]
 
 - reads contain ambiguous nucleotides
 
@@ -263,7 +263,7 @@ The algorithm may stop if your:
 # Detailed options <a name = "options" />
 
 Main options:
- 
+
 - `--fastq` The fastq input file.  [REQUIRED]
 
 - `--outfile` Output file(s) for best clustering solution or estimated error profile.  [REQUIRED]
@@ -274,7 +274,7 @@ Main options:
 
 - `--haplotypes` FASTA file with haplotypes. [Used in reads assignment only]
 
-Options for sensitivity: 
+Options for sensitivity:
 
 - `--abundance` Lower bound for scaled true abundance during haplotype reconstruction.  [DEFAULT: 2.0]
 
