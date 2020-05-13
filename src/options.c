@@ -67,8 +67,9 @@ int make_options(options **opt) {
 	op->estimate_K =1;
 	op->K_space=100;
 	op->K_fix_err = 0;   
+	op->filter_reads = 0; 
 
-	
+
 	/* error profile estimation */
 	op->error_estimation = 0;  // estimate error profile in current run, default is 0
 	op->min_cosdist = log(0.999);
@@ -178,6 +179,7 @@ int parse_options(options *opt, int argc, const char **argv)
 					opt->K = read_uint(argc, argv, ++i,
 						(void *)opt);
 					opt->estimate_K = 0;  // if K is provided, not estimate K anymore, 
+					opt->K_fix_err = 1;   // fix the maximum number of clusters, K to estimated error profile.
 				//	opt->run_amplici = 0;  // not run_amplici to select K
 			} 
 			if (errno)
@@ -255,11 +257,15 @@ int parse_options(options *opt, int argc, const char **argv)
 				goto CMDLINE_ERROR;
 			break;
 		case 'f':
-			if (i == argc - 1) {
+			if (!strcmp(&argv[i][j], "filter")) {
+				opt->filter_reads = 1;
+				i++;
+			}else if (i == argc - 1){
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
+			}else{
+				opt->fastq_file = argv[++i];
 			}
-			opt->fastq_file = argv[++i];
 			break;
 		case 'm':	/* hidden option: --most */
 			if (i == argc - 1) {
@@ -420,7 +426,7 @@ void fprint_usage(FILE *fp, const char *cmdname, void *obj)
 	for (size_t i = start; i < strlen(cmdname); ++i)
 		fputc(toupper(cmdname[i]), fp);
 	//fprintf(fp, "(%d)\n", 1);
-	fprintf(fp, "(v1.0.0)\n");
+	fprintf(fp, "(v1.0.1)\n");
 	fprintf(fp, "\nNAME\n\t%s - Amplicon Clustering Inference\n",
 		&cmdname[start]);
 	fprintf(fp, "\nSYNOPSIS\n\t%s [-e -p <pstr> "

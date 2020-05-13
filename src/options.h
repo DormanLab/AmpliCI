@@ -65,6 +65,8 @@ struct _options {
 	unsigned int K_max;  /*<! only select first K_max haplotypes */
 	int K_fix_err;  /*<! fix the maximum K when estimate error profiles */
 	unsigned int K_space;  /*<! record the size of memory */
+	int filter_reads; /*<! filter reads in error estimation */
+
 
 	/* running criterion */
 	unsigned int n_iter_amplici;  /*<! max. number of AmpliCI iterations */

@@ -16,7 +16,7 @@
 
 #define DEBUG 0
 #define WEIGHTS_LOESS
-//#define FILTER
+#define FILTER
 
 int err_per_nuc(unsigned int nuc, unsigned int n_quality,
 				unsigned int *count_sum, unsigned int *err_cnt,unsigned int self_lines[4],
@@ -218,7 +218,8 @@ int error_count_generator(options *opt, data *dat, model *mod,
 
 		/* likelihood filter: filtered into group options::K */
 		#ifdef FILTER
-		likelihood_filter(opt->K, opt->ll_cutoff, NULL, mod->pi, ini->e_trans,
+		if(opt->filter_reads)
+			likelihood_filter(opt->K, opt->ll_cutoff, NULL, mod->pi, ini->e_trans,
 							dat->sample_size, ri);
 		#endif
 
