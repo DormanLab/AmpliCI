@@ -429,9 +429,10 @@ void fprint_usage(FILE *fp, const char *cmdname, void *obj)
 	fprintf(fp, "(v1.0.1)\n");
 	fprintf(fp, "\nNAME\n\t%s - Amplicon Clustering Inference\n",
 		&cmdname[start]);
-	fprintf(fp, "\nSYNOPSIS\n\t%s [-e -p <pstr> "
-		"--abundance <adbl> --log_likelihood <lldbl> --diagnostic <ddbl> --per_candidate --haplotypes <hstr> --align] "
-		"--fastq <fstr> --outfile <ostr>\n",
+	fprintf(fp, "\nSYNOPSIS\n\t%s [--error | --profile <pstr>]"
+		" [--abundance <adbl> --log_likelihood <lldbl> --diagnostic <ddbl> --per_candidate --align]"
+		" [--haplotypes <hstr>]"
+		" --fastq <fstr> --outfile <ostr>\n",
 		&cmdname[start]);
 	fprintf(fp, "\nDESCRIPTION\n\tProgram %s clusters amplicon sequences presented "
 		"as reads in fastq file <fstr> in two steps.\n"
@@ -442,32 +443,37 @@ void fprint_usage(FILE *fp, const char *cmdname, void *obj)
 
 		"\n\n\tBy default, %s will automatically select K true haplotypes with estimated scaled "
 		"true abundance greater than or equal to <adbl> using an alignment-free strategy. "
-		"A Diagnostic test is used to screen false positives with provided threshold."
+		"A Diagnostic test is used to screen false positives with provided threshold.  The "
+		"default diagnostic test threshold is quite liberal.  "
 		"Reads with log likelihood higher than <lldbl> under the current model are assigned "
 		"to clusters.\n", &cmdname[start], &cmdname[start]);
+	fprintf(fp, "\n\n\t%s can also be used to assign reads to user-provided haplotypes by using the "
+		"--haplotypes option.  This can be helpful if there are known haplotypes in the sample, "
+		" but it is also useful for careful abundance estimation.", &cmdname[start]);
 		
 	/* KSD: Maybe we should make AmpliCI-cons the default. */
 	fprintf(fp, "\nOPTIONS\n");
+	fprintf(fp, "\t--abundance | -lb <adbl>\n\t\tLower bound for scaled true abundance during haplotype reconstruction.  [DEFAULT: %f]\n", opt->low_bound);
+	fprintf(fp, "\t--align | -z \n\t\tAlign all reads to haplotypes (slow).  [DEFAULT: no]\n");	 /* KSD:  --align | -a */
+	fprintf(fp, "\t--contaminants | -c <ctuint>\n\t\tBaseline count abundance of contaminating or noise sequences.  [DEFAULT: %i]\n", opt->contamination_threshold);
+	fprintf(fp, "\t--deletion <deldbl>\n\t\tSequencing deletion error rate.  [DEFAULT: %f]\n", opt->deletion_error);
+	fprintf(fp, "\t--diagnostic | -a <ddbl>\n\t\tThreshold for diagnostic probability in the diagnostic/contamination test.  [DEFAULT: %f].\n", opt->alpha);
 	fprintf(fp, "\t--error | -e\n\t\tEstimate the error profile.\n");
 	fprintf(fp, "\t--fastq | -f <fstr>\n\t\tThe fastq input file.  [REQUIRED]\n");
-	fprintf(fp, "\t--profile | -p <estr>\n\t\tThe input error profile. If none, treat quality score literally.  [DEFAULT: none]\n");
-	fprintf(fp, "\t--diagnostic | -a <ddbl>\n\t\tThreshold of probability in the diagnostic test.  [DEFAULT: %f].\n", opt->alpha);
-	fprintf(fp, "\t--per_candidate | --pdiag <pdbl>\n\t\tChange diagnostic threshold to %f / number_candidates.  [DEFAULT: %s]\n", opt->alpha, opt->per_candidate ? "yes" : "no");
-//	fprintf(fp, "\t-k <kuint>\n\t\tNumber of haplotypes in the haplotype set (used with -i <hstr>).  [DEFAULT: %i]\n", opt->K);	/* KSD: get rid of this option */
-	fprintf(fp, "\t--kmax <kuint>\n\t\tSet maximum number of clusters K.  [DEFAULT: %i]\n", opt->K_max);
-	fprintf(fp, "\t--abundance | -lb <adbl>\n\t\tLower bound for scaled true abundance during haplotype reconstruction.  [DEFAULT: %f]\n", opt->low_bound);
-	fprintf(fp, "\t--contaminants | -c <ctuint>\n\t\tBaseline count abundance of contaminating or noise sequences.  [DEFAULT: %i]\n", opt->contamination_threshold);
-	fprintf(fp, "\t--log_likelihood | -ll <lldbl>\n\t\tLower bound for reads maximum posterior assignment probability screening during reads assignment. [DEFAULT: %f]\n", opt->ll_cutoff);
-	fprintf(fp, "\t--indel <inddbl>\n\t\tIndel sequencing error rate.  Cannot also use --insertion or --deletion.  [DEFAULT: %f]\n", opt->indel_error);
-	fprintf(fp, "\t--insertion <insdbl>\n\t\tInsertion sequencing error rate.  [DEFAULT: %f]\n", opt->insertion_error);
-	fprintf(fp, "\t--deletion <deldbl>\n\t\tDeletion sequencing error rate.  [DEFAULT: %f]\n", opt->deletion_error);
 	fprintf(fp, "\t--haplotypes | -i <hstr>\n\t\tFASTA file with haplotypes.  [DEFAULT: none]\n");
-	fprintf(fp, "\t--outfile | -o <ostr>|<ostr1> <ostr2>\n\t\tOutput file(s) for best clustering solution or estimated error profile.  [REQUIRED]\n");
-	fprintf(fp, "\t\tWith --error, provide name of file to output error profile.\n");
-	fprintf(fp, "\t\tWithout --error, provide base name of file to output haplotypes (extension .fa) and information (extension .out) or provide names for both files, fasta first.\n");
-	/* fprintf(fp, "\t--most <mint>\n\t\tReport top m-most abundant sequences and quit. [DEFAULT: %i]\n", opt->most_abundant); */
-	fprintf(fp, "\t--align | -z \n\t\tAlign all reads to haplotypes (slow).  [DEFAULT: none]\n");	 /* KSD:  --align | -a */
 	fprintf(fp, "\t--help | -h\n\t\tThis help.\n");
+	fprintf(fp, "\t--indel <inddbl>\n\t\tSequencing indel error rate.  Cannot also use options --insertion or --deletion.  [DEFAULT: %f]\n", opt->indel_error);
+	fprintf(fp, "\t--insertion <insdbl>\n\t\tSequencing insertion error rate.  [DEFAULT: %f]\n", opt->insertion_error);
+	fprintf(fp, "\t--kmax <kuint>\n\t\tSet maximum number of clusters K.  [DEFAULT: %i]\n", opt->K_max);
+	fprintf(fp, "\t--log_likelihood | -ll <lldbl>\n\t\tLower bound for screening reads during cluster assignment.  This is the minimum log assignment likelihood, ln pi_k + ln Pr(r_i|h_k). [DEFAULT: %f]\n", opt->ll_cutoff);
+	fprintf(fp, "\t--outfile | -o <ostr>|<ostr1> <ostr2>\n\t\tOutput file(s) for haplotype discovery, estimated error profile (when used with --error), or cluster assignments (when used with --haplotypes).  [REQUIRED]\n");
+	fprintf(fp, "\t\tBy default, provide base name of file to output haplotypes (extension .fa) and information (extension .out) or provide names for both files, FASTA first.\n");
+	fprintf(fp, "\t\tWith --error, provide name of file to output error profile.\n");
+	fprintf(fp, "\t\tWith --haplotypes, provide name of file to output read cluster assignments.\n");
+	fprintf(fp, "\t--per_candidate | --pdiag <pdbl>\n\t\tAdjust diagnostic threshold (--diagnostic) to %f / number_candidates.  [DEFAULT: %s]\n", opt->alpha, opt->per_candidate ? "yes" : "no");
+	fprintf(fp, "\t--profile | -p <estr>\n\t\tThe input error profile. If none, convert quality score to Phred error probability.  [DEFAULT: none]\n");
+//	fprintf(fp, "\t-k <kuint>\n\t\tNumber of haplotypes in the haplotype set (used with -i <hstr>).  [DEFAULT: %i]\n", opt->K);	/* KSD: get rid of this option */
+	/* fprintf(fp, "\t--most <mint>\n\t\tReport top m-most abundant sequences and quit. [DEFAULT: %i]\n", opt->most_abundant); */
 	fprintf(fp, "\n");
 	for (size_t i = start; i < strlen(cmdname); ++i)
 		fputc(toupper(cmdname[i]), fp);

@@ -265,7 +265,7 @@ int haplotype_selection(options * opt, data * dat, model *mod, initializer *ini,
 	} else {
 		low_bound = 2.0;   // avoid singletons 
 		mmessage(WARNING_MSG, INVALID_USER_INPUT, "User low bound on "
-			"abundance set <= 1: resetting to %f.", low_bound);
+			"abundance set <= 1: resetting to %f.\n", low_bound);
 		if (opt->contamination_threshold != 1) {
 			opt->contamination_threshold = 1; 
 			mmessage(WARNING_MSG, INVALID_USER_INPUT,
@@ -2377,7 +2377,7 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 	/* update mod->eik with new estimated mod->pi */
 	for (unsigned int r = 0; r<dat->sample_size; ++r)
 		for (unsigned int k = 0; k < opt->K; ++k)
-			mod->eik[k*dat->sample_size+r]+= mod->pi[k];
+			mod->eik[k*dat->sample_size+r] += mod->pi[k];
 
 	/* reassign reads with updated mod->eik (unnormalized ) */
 	assign_clusters(mod->eik, opt->K, dat->sample_size, ri->optimal_cluster_size,

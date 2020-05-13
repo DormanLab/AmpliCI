@@ -40,12 +40,11 @@ AmpliCI has been tested under Linux and MacOS.
 2. Configure the project.
 
    ```sh
-   cd AmpliCI
-   cd src
+   cd AmpliCI/src
    cmake .
    ```
 
-3. Compile AmpliCI.
+3. Compile AmpliCI.  The executable is called ```run_AmpliCI```.  It will appear in the ```src``` directory you are currently in.
 
    ```sh
    make
@@ -98,7 +97,7 @@ AmpliCI runs in two major steps:
 ./run_AmpliCI --fastq <input_fastq_file> --outfile <output_error_profile_file> --error
 ```
 
-An example:
+An example (from the ```src``` directory):
 
 ```sh
 ./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/error.out  --error
@@ -110,7 +109,7 @@ An example:
 ./run_AmpliCI --fastq <input_fastq_file> --outfile <output_base_filename> --abundance 2 --profile <input_error_profile_file>
 ```
 
-An example:
+An example (from the ```src``` directory):
 
 ```sh
 ./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/test --abundance 2 --profile ../test/error.out
@@ -126,7 +125,7 @@ Using Phred quality scores tends to generate high numbers of false positives and
 ./run_AmpliCI --fastq <input_fastq_file> --outfile <output_assignment_filename> --profile <input_error_profile_file> --haplotypes <input_haplotypes_fasta_file>
 ```
 
-An example:
+An example (from the ```src``` directory):
 
 ```sh
 ./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/test.id --profile ../test/error.out --haplotypes ../test/test.fa
@@ -163,9 +162,9 @@ FASTA-formatted file (will be used in the downstream analysis) containing denois
 
 - `size`: scaled true abundance estimated for each selected haplotype, required for the subsequent chimera detection with UCHIME3.
 
-- `DiagP`: diagnostic probability, which could be used as a criterion to check false positives. We suggest post hoc removal of haplotypes with `DiagP` > 1e-40 when applying AmpliCI on real datasets with more than 1 million reads to reduce false positives. For further information of the diagnostic probability, please see [our paper](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1).
+- `DiagP`: diagnostic probability, which could be used as a criterion to check false positives. We suggest post hoc removal of haplotypes with `DiagP` > 1e-40 when applying AmpliCI on real datasets with more than 1 million reads to reduce false positives. The diagnostic probability may contain an allowance for contaminating sequences (see option `--contaminants`). For further information of the diagnostic probability and contamination screening, please see [our paper](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1).
 
-- `ee`: mean expected number of errors per read. Edgar and Flyvbjerg ([Edgar and Flyvbjerg, 2015](https://academic.oup.com/bioinformatics/article/31/21/3476/194979)) suggested a strategy to filter reads according to their expected number of errors.  For example, you could remove haplotypes with `ee` > 1. Though this strategy works for most of mock datasets, we did observe `ee` > 1 for several true haplotypes with very low abundance when analyzing a specific mock dataset (stag1, see [our paper](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1)). You can read [more about `ee`](https://www.drive5.com/usearch/manual/exp_errs.html).
+- `ee`: mean expected number of errors per read. Edgar and Flyvbjerg ([Edgar and Flyvbjerg, 2015](https://academic.oup.com/bioinformatics/article/31/21/3476/194979)) suggested a strategy to filter reads according to their expected number of errors.  For example, you could remove haplotypes with `ee` > 1. Though this strategy works for some mock datasets, we have observed `ee` > 1 for several true haplotypes with very low abundance when analyzing a specific mock dataset (stag1, see [our paper](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1)). You can read [more about `ee`](https://www.drive5.com/usearch/manual/exp_errs.html).
 
 
 ***2.`output_base_filename.out` or `information_output_file`***
@@ -174,19 +173,19 @@ A text file with the following information provided as key: value pairs, one per
 
 - `K`: Number of haplotypes selected by AmpliCI.
 
-- `assignments`: AmpliCI-assigned haplotype by posterior probability for each read in FASTQ-determined input order.  Haplotypes are numbered 0, 1, ..., and match the sequences H0, H1, ... in the output FASTA file of haplotypes.  NA is output if the read's maximum conditional log likelihood (given the source haplotype) does not exceed a user-defined threshold (option `-ll`; default -100).  These assignments are not based on alignment of reads to the haplotypes, so some reads, particularly indel errors, may not be assigned (NA).  See option `-i` for more careful read assignment.
+- `assignments`: AmpliCI-assigned haplotype by posterior probability for each read in FASTQ-determined input order.  Haplotypes are numbered 0, 1, ..., and match the sequences H0, H1, ... in the output FASTA file of haplotypes.  NA is output if the read's maximum conditional log likelihood (given the source haplotype) does not exceed a user-defined threshold (option `-ll`; default -100).  These assignments are not based on alignment of reads to the haplotypes, so some reads, particularly indel errors, may not be assigned (NA).  See option `--haplotypes` for more careful read assignment.
 
 - `sizes`: Number of reads assigned to each haplotype.
 
-- `pi`: Estimated $\boldsymbol{\pi}$ from AmpliCI.  Each read is assigned to a haplotype by maximum transition probability (distinct from posterior probability used for assignments) and $\pi_k$ is the proportion of reads assigned to haplotype $k$.
+- `pi`: Estimated $\boldsymbol{\pi}$ from AmpliCI.  Each read is assigned to a haplotype by maximum transition probability $\Pr(r_i|h_k)$ (distinct from posterior probability used for assignments) and $\pi_k$ is the proportion of reads assigned to haplotype $k$.
 
-- `reads ll`: The maximum conditional log likelihood given haplotype source for each read, maximizing over haplotype source.
+- `reads ll`: For each read, the maximum transition probability $\Pr(r_i|h_k)$ across haplotype source $h_k$.
 
 - There is also a fasta listing of the haplotypes reported in this file.
 
-- `ee`: Mean expected number of errors. See discussion on `ee` in ***`output_base_filename.fa`*** above.
+- `ee`: For each read, the mean expected number of errors. See discussion on `ee` in ***`output_base_filename.fa`*** above.
 
-- `uniq seq id`: The index of each selected haplotype's sequence in the order of unique sequences from highest abundance to lowest.
+- `uniq seq id`: The index of each selected haplotype in the unique sequence list, ordered from highest abundance to lowest.  If the haplotypes were selected in observed abundance order, then these will be increasing integers from 0.  If any unique sequence was discarded, some integers will be skipped.  For example, this line is `0   1   2   3   4   5   6   7  10  42  45` for test file `test/sim3.8.1.fastq`, indicating that the first 8 most observed sequences were selected as haplotypes, but the 9th and 10th most observed sequences were discarded, and so on.
 
 - `scaled true abun`: The estimated scaled true abundances of each selected haplotype.
 
@@ -198,13 +197,13 @@ A text file with the following information provided as key: value pairs, one per
 
 - `log likelihood from JC69 model`: The log likelihood of the JC69 hierarchical model computed on the final, fitted model.
 
-- `Diagnostic Probability threshold`: The threshold used to reject candidate haplotypes in the contamination test.  This is the value input through option `-a` divided by the number of possible candidate haplotypes.
+- `Diagnostic Probability threshold`: The threshold used to reject candidate haplotypes in the contamination test.  This is the value input through option `--abundance` divided by the number of possible candidate haplotypes.
 
 - `aic`: The estimated [Akaike Information Criterion](https://en.wikipedia.org/wiki/Akaike_information_criterion) value from the final fitted model.
 
 - `bic`: The estimated [Bayesian Information Criterion](https://en.wikipedia.org/wiki/Bayesian_information_criterion) value from the final fitted model.
 
-When run with option `-i` to reassign reads to the user-provided **haplotype set** (a FASTA-formatted file), AmpliCI will output a read assignment file `<output_assignment_filename>` in text format. The keys are
+When run with option `--haplotypes` to reassign reads to the user-provided **haplotype set** (a FASTA-formatted file), AmpliCI will output a read assignment file `<output_assignment_filename>` in text format. The keys are
 
 - `assignments`: See the description above for outfile `output_base_filename.out`.  There should be fewer NA assignments because reads with low log likelihood are aligned to the haplotypes to detect indel sequencing errors.
 
@@ -232,7 +231,7 @@ You may also use other chimera detection algorithms to remove chimeras.
 
 ## **Generate Amplicon Sequence Variant (ASV or sOTU) Table** <a name = "otu" />
 
-We have provided a [R script](https://github.com/DormanLab/AmpliCI/tree/master/script/Make_ASV_Tables.R) to help to generate the ASV (sOTU) table, where scaled true abundances (see `size`) per sample per ASVs/sOTUs are reported.
+We have provided an [R script](https://github.com/DormanLab/AmpliCI/tree/master/script/Make_ASV_Tables.R) to help to generate the ASV (sOTU) table, where scaled true abundances (see `size`) per sample per ASVs/sOTUs are reported.
 
 ## **Taxa Assignment** <a name = "taxa" />
 
@@ -266,9 +265,9 @@ Main options:
 
 - `--fastq` The fastq input file.  [REQUIRED]
 
-- `--outfile` Output file(s) for best clustering solution or estimated error profile.  [REQUIRED]
+- `--outfile` Output file(s) for haplotype discovery, estimated error profile (when used with --error), or cluster assignments (when used with --haplotypes).  [REQUIRED]
 
-- `--profile` The input error profile. If none, treat quality score literally.  [DEFAULT: none]
+- `--profile` The input error profile. If none, convert quality score to Phred error probability.  [DEFAULT: none]
 
 - `--error` Estimate the error profile. [Used in error estimation only]
 
@@ -280,15 +279,15 @@ Options for sensitivity:
 
 - `--contaminants` Baseline count abundance of contaminating or noise sequences.  [DEFAULT: 1]
 
-- `--indel` Indel sequencing error rate.  Cannot also use --insertion or --deletion.  [DEFAULT: 0.00006]
+- `--indel` Indel sequencing error rate.  Cannot also use options --insertion or --deletion.  [DEFAULT: 0.00006]
 
-- `--diagnostic`  Threshold of probability in the diagnostic test.  [DEFAULT: 0.001 / number_candidates]
+- `--diagnostic`  Threshold of diagnostic probability in the diagnostic/contamination test.  [DEFAULT: 0.001 / number_candidates]
 
 Other important options:
 
 - `--align`  Align all reads to haplotypes (slow).  [DEFAULT: none]
 
-- `--log_likelihood`  Lower bound for reads maximum posterior assignment probability screening during reads assignment. [DEFAULT: -100.0]
+- `--log_likelihood`  Lower bound for screening reads during cluster assignment.  This is the minimum log assignment likelihood, $\ln \pi_k + \ln \Pr(r_i|h_k)$. [DEFAULT: -100.000000]
 
 
 # Acknowledgments <a name = "acknowledgements" />
