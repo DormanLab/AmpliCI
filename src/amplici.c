@@ -303,6 +303,10 @@ int haplotype_selection(options * opt, data * dat, model *mod, initializer *ini,
 		}
 
 	}
+
+	if(!n_candidate)
+		return mmessage(ERROR_MSG, INTERNAL_ERROR, "Abundance of all unique sequences are under %f\n",opt->low_bound);
+
 	/* determine the threshold of diagnostic test */
 	if (opt->per_candidate)
 		opt->p_threshold = opt->alpha / n_candidate;
