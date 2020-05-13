@@ -67,8 +67,8 @@ construct_ASVtable<-function(foldername,p.threshold = 1){
   length(ref.seq.all)
 
 ### generate ASV/sOTU table
-  count.mat<-matrix(0,length(ref.seq.all),157)
-  for (i in 1:157){
+  count.mat<-matrix(0,length(ref.seq.all),n.sample)
+  for (i in 1:n.sample){
     for(j in 1:length[i]){
       indiv<-data[[i]][j]
       idx<-which(ref.seq.all==data[[i]][j])
@@ -80,3 +80,4 @@ construct_ASVtable<-function(foldername,p.threshold = 1){
 
   return(list(ASVs = ref.seq.all, ASV.table = count.mat,n.samples = n.sample, n.ASVs = length((ref.seq.all))))
 }
+
