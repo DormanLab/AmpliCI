@@ -111,9 +111,8 @@ int make_options(options **opt) {
  */
 void free_options(options *opt)
 {
-	if(opt) {
+	if (opt)
 		free(opt);
-	}
 } /* free_options */
 
 /**
@@ -329,6 +328,31 @@ int parse_options(options *opt, int argc, const char **argv)
 		case 'w':
 			opt->use_curses = 1;
 			break;
+		case 's':
+			if (i + 3 >= argc) {
+				err = INVALID_CMD_OPTION;
+				goto CMDLINE_ERROR;
+			}
+			int as = read_int(argc, argv, ++i, (void *)opt);
+			opt->score[0][0] = opt->score[1][1] = opt->score[2][2]
+							= opt->score[3][3] = as;
+			as = read_int(argc, argv, ++i, (void *)opt);
+			opt->score[0][3] = opt->score[3][0] = opt->score[1][2]
+							= opt->score[2][1] = as;
+			if (i + 2 < argc && strlen(argv[i+2]) > 1
+				&& argv[i + 2][1] >= 49 && argv[i + 2][1] <= 57)
+				as = read_int(argc, argv, ++i, (void *)opt);
+			opt->score[0][1] = opt->score[1][0]
+				= opt->score[0][2] = opt->score[2][0]
+				= opt->score[1][3] = opt->score[3][1]
+				= opt->score[2][3] = opt->score[3][2] = as;
+			as = read_int(argc, argv, ++i, (void *)opt);
+			opt->gap_p = as;
+			mmessage(INFO_MSG, NO_ERROR, "Alignment parameters: "
+				"match = %d, transition = %d, transversion = %d"
+				", gap = %d\n", opt->score[0][0],
+				opt->score[0][3], opt->score[0][1], opt->gap_p);
+			break;
 		case 'h':
 			if (!strncmp(&argv[i][j], "hap", 3)) {
 				if (i == argc - 1) {
@@ -430,7 +454,7 @@ void fprint_usage(FILE *fp, const char *cmdname, void *obj)
 	fprintf(fp, "\nNAME\n\t%s - Amplicon Clustering Inference\n",
 		&cmdname[start]);
 	fprintf(fp, "\nSYNOPSIS\n\t%s [--error | --profile <pstr>]"
-		" [--abundance <adbl> --log_likelihood <lldbl> --diagnostic <ddbl> --per_candidate --align]"
+		" [--abundance <adbl> --log_likelihood <lldbl> --diagnostic <ddbl> --per_candidate --align --scores <smint> <smmint> <sgint>]"
 		" [--haplotypes <hstr>]"
 		" --fastq <fstr> --outfile <ostr>\n",
 		&cmdname[start]);
@@ -472,6 +496,7 @@ void fprint_usage(FILE *fp, const char *cmdname, void *obj)
 	fprintf(fp, "\t\tWith --haplotypes, provide name of file to output read cluster assignments.\n");
 	fprintf(fp, "\t--per_candidate | --pdiag <pdbl>\n\t\tAdjust diagnostic threshold (--diagnostic) to %f / number_candidates.  [DEFAULT: %s]\n", opt->alpha, opt->per_candidate ? "yes" : "no");
 	fprintf(fp, "\t--profile | -p <estr>\n\t\tThe input error profile. If none, convert quality score to Phred error probability.  [DEFAULT: none]\n");
+	fprintf(fp, "\t--scores <match> <mismatch> [<transversion_mismatch>] <gap>\n\t\tSet scores of the Needleman-Wunsch aligner.  [DEFAULT: %d %d %d %d]\n", opt->score[0][0], opt->score[0][3], opt->score[0][1], opt->gap_p);
 //	fprintf(fp, "\t-k <kuint>\n\t\tNumber of haplotypes in the haplotype set (used with -i <hstr>).  [DEFAULT: %i]\n", opt->K);	/* KSD: get rid of this option */
 	/* fprintf(fp, "\t--most <mint>\n\t\tReport top m-most abundant sequences and quit. [DEFAULT: %i]\n", opt->most_abundant); */
 	fprintf(fp, "\n");
