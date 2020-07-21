@@ -52,12 +52,14 @@ int make_model(model **mod, data *dat, options *opt)
 
 
 	/* haplotypes */
-	rm->haplotypes = malloc(dat->max_read_length * opt->K
-		* sizeof *rm->haplotypes);
+	/* [XY] Currently use ini->seeds to store haplotypes */
+	rm -> haplotypes = NULL;  
+	//rm->haplotypes = malloc(dat->max_read_length * opt->K
+	//	* sizeof *rm->haplotypes);
 
-	if (!rm->haplotypes)
-		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
-			"model::haplotypes");
+	//if (!rm->haplotypes)
+	//	return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+	//		"model::haplotypes");
 
 	/* eik */
 	rm->eik = malloc(dat->sample_size * rm->K * sizeof *rm->eik);
@@ -167,7 +169,7 @@ int realloc_model(model *mod, data *dat, options *opt)
 	if (!dat->max_read_position || !mod->K)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 			"realloc.model.haplotypes");
-
+	/* 
 	unsigned char *haplotypes = realloc(mod->haplotypes,
 		dat->max_read_length * mod->K * sizeof *mod->haplotypes);
 
@@ -175,6 +177,7 @@ int realloc_model(model *mod, data *dat, options *opt)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 						"realloc.model.haplotypes");
 	mod->haplotypes = haplotypes;
+	*/
 
 	/* e_ik */
 	if (!dat->sample_size || !mod->K)

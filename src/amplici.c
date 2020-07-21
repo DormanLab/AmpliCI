@@ -137,7 +137,7 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 									3, 1);
 
 		//[TODO] output ini->seeds directly
-		fprint_fasta(fp, mod->haplotypes, opt->K, 
+		fprint_fasta(fp, ini->seeds[0], opt->K, 
 					 dat->max_read_length, "H");
 		
 		fprintf(fp,"ee: ");   // mean expected number of errors
@@ -212,12 +212,12 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 							opt->outfile_fasta);
 		
 		if (use_size)
-			fprint_haplotypes_size(fp2, mod->haplotypes, opt->K,
+			fprint_haplotypes_size(fp2, ini->seeds[0], opt->K,
 				dat->max_read_length, opt->p_threshold, "H",
 					ini->H_pvalue, ri->optimal_cluster_size,
 								ini->H_ee);
 		else
-			fprint_haplotypes_abun(fp2, mod->haplotypes, opt->K,
+			fprint_haplotypes_abun(fp2,ini->seeds[0], opt->K,
 				dat->max_read_length, opt->p_threshold, "H", 
 					ini->H_pvalue, ini->H_abun, ini->H_ee);
 
@@ -860,8 +860,8 @@ int amplici_realloc(options *opt, initializer *ini, model *mod,
 
 		/* haplotype, pi, eik */
 		double *pi = realloc(mod->pi, K * sizeof *mod->pi);
-		unsigned char *haplotypes = realloc(mod->haplotypes,
-			max_read_length * K * sizeof *mod->haplotypes);  
+		//unsigned char *haplotypes = realloc(mod->haplotypes,
+		//	max_read_length * K * sizeof *mod->haplotypes);  
 		double *eik = realloc(mod->eik,
 					sample_size * K * sizeof *mod->eik);
 		double *distance = realloc(mod->distance,
@@ -871,10 +871,10 @@ int amplici_realloc(options *opt, initializer *ini, model *mod,
  		unsigned int *cluster_size = realloc(ini->cluster_size,
 						K * sizeof *ini->cluster_size);
 
-		if (!pi || !haplotypes || !eik || !distance || !cluster_size
+		if (!pi || !eik || !distance || !cluster_size
 								|| !JC_ll_K) {
 			if (pi) free(pi);
-			if (haplotypes) free(haplotypes);
+			//if (haplotypes) free(haplotypes);
 			if (eik) free(eik);
 			if (distance) free(distance);
 			if (cluster_size) free(cluster_size);
@@ -883,7 +883,7 @@ int amplici_realloc(options *opt, initializer *ini, model *mod,
 							"amplici.realloc.mod");
 		}
 		mod->pi = pi;
-		mod->haplotypes = haplotypes;
+		//mod->haplotypes = haplotypes;
 		mod->eik = eik;
 		mod->distance = distance;
 		mod->JC_ll_K  = JC_ll_K;
@@ -891,7 +891,7 @@ int amplici_realloc(options *opt, initializer *ini, model *mod,
 
 		/* seeds, seeds_length, seed_idx */
 		//size_t *seed_idx = realloc(ini->seed_idx, K * sizeof *ini->seed_idx);   
-		unsigned int *seed_lengths = realloc(ini->seed_lengths,K * sizeof *ini->seed_lengths);
+		unsigned int *seed_lengths = realloc(ini->seed_lengths, K * sizeof *ini->seed_lengths);
 		data_t **seeds = realloc(ini->seeds, K * sizeof *ini->seeds); 
 
 		if ( !seeds || !seed_lengths) {
@@ -905,12 +905,12 @@ int amplici_realloc(options *opt, initializer *ini, model *mod,
 		ini->seed_lengths = seed_lengths;   // Uninitialized 
 		ini->seeds = seeds;
 
-		data_t *dptr = realloc(ini->seeds[0], max_read_length * K * sizeof **ini->seeds);
+		data_t *dptr = malloc(max_read_length * K_change * sizeof **ini->seeds);
 		if (!dptr)
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 				"reallloc.initializer.seeds");
-		for (size_t i = 0; i < opt->K; i++) {
-			ini->seeds[i] = dptr;
+		for (size_t k = preK; k < opt->K; k++) {
+			ini->seeds[k] = dptr;
 			dptr += max_read_length;
 		}
 		/*
@@ -1535,9 +1535,9 @@ int evaluate_haplotype(options *opt, data *dat, model *mod, initializer *ini,
 	/* update haplotypes */
 	/* [TODO] modify the function and not use mod->haplotypes (just for Acceleration) */
 	//for (unsigned int k = 0; k < K; k++)	/* [KSD] Haven't the first K-1 already been copied? */
-	memcpy(&mod->haplotypes[curr_K * dat->max_read_length],
-			ini->seeds[curr_K], dat->max_read_length
-						* sizeof *mod->haplotypes);
+	//memcpy(&mod->haplotypes[curr_K * dat->max_read_length],
+	//		ini->seeds[curr_K], dat->max_read_length
+	//					* sizeof *mod->haplotypes);
 
 	/* update pi */
 	Est_pi(ini, mod->pi, dat->sample_size, K, 1);
@@ -1547,7 +1547,7 @@ int evaluate_haplotype(options *opt, data *dat, model *mod, initializer *ini,
 
 	/* calculate aic and bic */
 	if (opt->JC69_model) {
-		modified_ic(mod->haplotypes, mod->est_ancestor, mod->distance,
+		modified_ic(ini->seeds[0], mod->est_ancestor, mod->distance,
 				mod->ll, K, &JC_ll, &new_aic, &new_bic, n_param,
 					dat->max_read_length, dat->sample_size);
 	} else {

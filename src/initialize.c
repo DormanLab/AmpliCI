@@ -399,6 +399,7 @@ void free_initializer(initializer *ini, options *opt)
 			if (ini->seeds[0])
 				free(ini->seeds[0]);	
 			free(ini->seeds);
+			ini->seeds = NULL;
 		}
 		if (ini->seed_lengths) free(ini->seed_lengths);
 		if (ini->uniq_seq_count) free(ini->uniq_seq_count);
