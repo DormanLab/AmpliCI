@@ -890,25 +890,35 @@ int amplici_realloc(options *opt, initializer *ini, model *mod,
 		ini->cluster_size = cluster_size;
 
 		/* seeds, seeds_length, seed_idx */
-		size_t *seed_idx = realloc(ini->seed_idx, K * sizeof *ini->seed_idx);   
+		//size_t *seed_idx = realloc(ini->seed_idx, K * sizeof *ini->seed_idx);   
 		unsigned int *seed_lengths = realloc(ini->seed_lengths,K * sizeof *ini->seed_lengths);
 		data_t **seeds = realloc(ini->seeds, K * sizeof *ini->seeds); 
 
-		if (!seed_idx || !seeds || !seed_lengths) {
-			if (seed_idx) free(seed_idx);
+		if ( !seeds || !seed_lengths) {
+			//if (seed_idx) free(seed_idx);
 			if (seeds) free(seeds);
 			if (seed_lengths) free(seed_lengths);
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 							"amplici.realloc.seed");
 		}
-		ini->seed_idx = seed_idx;
+		// ini->seed_idx = seed_idx;
 		ini->seed_lengths = seed_lengths;   // Uninitialized 
+		ini->seeds = seeds;
 
+		data_t *dptr = realloc(ini->seeds[0], max_read_length * K * sizeof **ini->seeds);
+		if (!dptr)
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+				"reallloc.initializer.seeds");
+		for (size_t i = 0; i < opt->K; i++) {
+			ini->seeds[i] = dptr;
+			dptr += max_read_length;
+		}
+		/*
 		for (unsigned int k = preK; k < K; k++) {
 			seeds[k] = NULL;
 			seeds[k] = calloc(max_read_length, sizeof **ini->seeds);    
 			if (!seeds[k]) {
-				free(seed_idx);
+				//free(seed_idx);
 				free(seeds);
 				free(seed_lengths);
 				for (unsigned int i = preK; i < k; ++i)
@@ -918,6 +928,7 @@ int amplici_realloc(options *opt, initializer *ini, model *mod,
 			}
 		}
 		ini->seeds = seeds;
+		*/
 	}
 
 	return err;
@@ -1648,7 +1659,7 @@ int Est_pi(initializer *ini, double *pi, size_t sample_size,
  **/
 int update_seeds(data *dat, initializer *ini, unsigned int select, unsigned int ord){
 
-	ini->seed_idx[select] = ini->uniq_seq_idx[ord];  // idx in dmat and qmat
+	//ini->seed_idx[select] = ini->uniq_seq_idx[ord];  // idx in dmat and qmat
 	ini->seed_lengths[select] = dat->lengths[ini->uniq_seq_idx[ord]];
 	memcpy(ini->seeds[select], dat->dmat[ini->uniq_seq_idx[ord]],
 		dat->max_read_length * sizeof **ini->seeds);

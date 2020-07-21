@@ -477,7 +477,7 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
 	unsigned int self_lines[4], double *error_prob_temp, int if_loess,
 					double *qual, double *error_profile)
 {
-	UNUSED(if_loess)
+	UNUSED(if_loess);
 
 	/* structs for regression */
 	loess *lo = NULL;
@@ -574,6 +574,5 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
 int err_cnt_gen_wpartition(options *opt, data *dat, model *mod,
 					initializer *ini, run_info *ri)
 {
-	
-	return NO_ERROR
+	return NO_ERROR;
 }

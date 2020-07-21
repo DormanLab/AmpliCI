@@ -48,17 +48,18 @@ int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf
 	in->K = opt->K;
 	in->cluster_id = NULL;
 
-	in->seed_idx = calloc(opt->K, sizeof *in->seed_idx);
+	in->seed_idx = NULL;  //calloc(opt->K, sizeof *in->seed_idx);
 
-	if (!in->seed_idx)
-		return message(stderr, __FILE__, __func__, __LINE__, ERROR_MSG,
-			MEMORY_ALLOCATION, "initializer::seed_idx");
+	//if (!in->seed_idx)
+	//	return message(stderr, __FILE__, __func__, __LINE__, ERROR_MSG,
+	//		MEMORY_ALLOCATION, "initializer::seed_idx");
 
-	in->criterion = malloc(opt->K * sizeof *in->criterion);
+	in->criterion = NULL; // malloc(opt->K * sizeof *in->criterion);
 
-	if (!in->criterion)
-		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
-			"initializer::criterion");
+	//if (!in->criterion)
+	//	return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+	//		"initializer::criterion");
+
 	in->cluster_size = malloc((opt->K)
 		* sizeof *in->cluster_size);
 	
@@ -88,11 +89,13 @@ int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf
 	 *	free(in->seeds);
 	 * }
 	 * */
+
+	data_t *dptr = malloc(dat->max_read_length * opt->K * sizeof **in->seeds);
+	if(!dptr)
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,"initializer.seeds");
 	for (size_t i = 0; i < opt->K; i++) {
-		in->seeds[i] = calloc(dat->max_read_length, sizeof **in->seeds);
-		if (in->seeds[i] == NULL )
-			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
-				"initializer.seeds");
+		in->seeds[i] = dptr;
+		dptr += dat->max_read_length;
 	}
 
 	/* allocate room for cluster assignments */
@@ -192,52 +195,57 @@ int realloc_initializer(initializer *ini, data *dat, options *opt)
 	if(pre_K <2)
 		return mmessage(ERROR_MSG, INTERNAL_ERROR,"realloc.initializer");
 	ini->K = opt->K;
+	size_t *seed_idx = NULL;
+	double *criterion = NULL;
 
-	size_t *seed_idx = realloc(ini->seed_idx,
-					opt->K * sizeof *ini->seed_idx);
+	//size_t *seed_idx = realloc(ini->seed_idx,
+	//				opt->K * sizeof *ini->seed_idx);
 
-	if (!seed_idx )
-		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
-			"realloc.initializer.seed_idx");
+	//if (!seed_idx )
+	//	return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+	//		"realloc.initializer.seed_idx");
 
-	ini->seed_idx = seed_idx;
+	//ini->seed_idx = seed_idx;
 
 	/* criterion */
-	double *criterion = realloc(ini->criterion,
-					opt->K * sizeof *ini->criterion);
+	//double *criterion = realloc(ini->criterion,
+	//				opt->K * sizeof *ini->criterion);
 
-	if (!criterion)
-		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
-			"realloc.initializer.criterion");
+	//if (!criterion)
+	//	return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+	//		"realloc.initializer.criterion");
 
-	ini->criterion = criterion;
+	//ini->criterion = criterion;
 
 	/* seeds, best_modes,seed_lengths*/
 	/* free previous points */
 	/* [TODO] easier if you allocate ini->{seeds, best_modes, etc} in one block (see other TODOs) */
 
-	if (ini->seeds) {
-		for (unsigned int i = 0; i < pre_K; ++i){
-			if (ini->seeds[i])
-				free(ini->seeds[i]);
-		}
-		free(ini->seeds);
-
-	}
-	ini->seeds = NULL;
-
-	data_t **seeds = malloc(opt->K * sizeof *ini->seeds);
+	data_t **seeds = realloc(ini->seeds, opt->K * sizeof *ini->seeds);
 
 	unsigned int *seed_lengths = realloc(ini->seed_lengths,
 				opt->K * sizeof *ini->seed_lengths);
 
-	if (!seeds || !seed_lengths)
+	if (!seeds || !seed_lengths){
+		if (seeds) free(seeds);
+		if (seed_lengths) free(seed_lengths);
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 				"reallloc.initializer.seeds");
+	}
 
 	ini->seeds = seeds;
 	ini->seed_lengths = seed_lengths;
 
+	data_t *dptr = realloc(ini->seeds[0], dat->max_read_length * opt->K * sizeof **ini->seeds);
+	if (!dptr)
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+				"reallloc.initializer.seeds");
+	for (size_t i = 0; i < opt->K; i++) {
+		ini->seeds[i] = dptr;
+		dptr += dat->max_read_length;
+	}
+
+	/*
 	for (unsigned int i = 0; i < opt->K; ++i) {
 		if (!dat->max_read_length)
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
@@ -247,6 +255,7 @@ int realloc_initializer(initializer *ini, data *dat, options *opt)
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 						"realloc.initializer.seeds");
 	}
+	*/
 
 	/* cluster_size */
 	unsigned int *cluster_size = realloc(ini->cluster_size,
@@ -386,17 +395,11 @@ void free_initializer(initializer *ini, options *opt)
 
 		if (ini->cluster_size) free(ini->cluster_size);
 
-		unsigned int size;
 		if (ini->seeds) {
-			size = opt->run_amplici?opt->K_space:opt->K;
-			for (size_t i = 0; i < size; ++i)
-			{
-				if(ini->seeds[i])
-					free(ini->seeds[i]);
-			}
+			if (ini->seeds[0])
+				free(ini->seeds[0]);	
 			free(ini->seeds);
 		}
-
 		if (ini->seed_lengths) free(ini->seed_lengths);
 		if (ini->uniq_seq_count) free(ini->uniq_seq_count);
 		if (ini->uniq_seq_idx) free(ini->uniq_seq_idx);
