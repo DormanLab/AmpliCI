@@ -905,11 +905,14 @@ int amplici_realloc(options *opt, initializer *ini, model *mod,
 		ini->seed_lengths = seed_lengths;   // Uninitialized 
 		ini->seeds = seeds;
 
-		data_t *dptr = malloc(max_read_length * K_change * sizeof **ini->seeds);
+		data_t *dptr = realloc(ini->seeds[0], max_read_length * K * sizeof **ini->seeds);
 		if (!dptr)
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 				"reallloc.initializer.seeds");
-		for (size_t k = preK; k < opt->K; k++) {
+		size_t s = 0;
+		if (ini->seeds[0] == dptr)  s = preK;
+
+		for (size_t k = s; k < K; k++) {
 			ini->seeds[k] = dptr;
 			dptr += max_read_length;
 		}
