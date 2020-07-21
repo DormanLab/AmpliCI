@@ -48,6 +48,7 @@ struct _options {
 
 	/* error profile estimation */
 	int error_estimation;  /*<! run error estimate function */
+	char const *partition_file; /*<! given partition file */
 	int use_error_profile;  /*<! if we choose to use an input error profile */
 	int err_encoding;  /*<! how nucleotides encoded in error profile */
 	char const *error_profile_name;  /*<! name of file name of error profile */

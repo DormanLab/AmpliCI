@@ -34,17 +34,17 @@ int error_profile_generator(options *opt, data *dat, model *mod,
 	/* number of distinct quality scores */
 	unsigned int err_length = MAX_ASCII_QUALITY_SCORE
 				- MIN_ASCII_QUALITY_SCORE + 1;
-	unsigned int self_lines[4] = {0, 5, 10, 15};
+	unsigned int self_lines[4] = {0, 5, 10, 15}; // idx of lines for A->A, T->T, G->G, C->C 
 
-	double *error_profile  = NULL;
-	double *error_profile_p = NULL;
+	double *error_profile  = NULL;  // For final output 
+	double *error_profile_p = NULL;  // estimated error rates 
 
 /* [KSD] What is the difference between model::n_quality and err_length?
  * [KSD] The former is the realized range in the given fastq file, the latter
  * [KSD] is the theoretical range given our hard-coded assumptions about FASTQ.
  * [KSD] Why use both?
+ * [XY] Allow users to better interpret the output error profile ? 
  */
-
 
 	/* memory allocation for error profile */
 	ini->err_cnt = calloc(NUM_NUCLEOTIDES * NUM_NUCLEOTIDES
@@ -119,7 +119,7 @@ int error_profile_generator(options *opt, data *dat, model *mod,
 }/* error_profile_generator */
 
 /**
- * ...
+ * iteratively generate error count profile, which is stored in ini->err_cnt
  *
  * @param opt 	options object
  * @param dat	data object
@@ -195,10 +195,7 @@ int error_count_generator(options *opt, data *dat, model *mod,
 		assign_clusters(mod->eik, opt->K, dat->sample_size,
 			ri->optimal_cluster_size, ri->optimal_cluster_id, 1);
 
-		/* count number of reads that have ll > ll_cutoff */
-		/* [KSD] This is not the log likelihood.  It is the maximum 
-		 * [KSD] posterior probability of assignment.
-		 */
+		/* count number of reads that have maximum posterior probability of assignment > cutoff */
 		unsigned int count = 0;
 		for (unsigned int i = 0 ; i < dat->sample_size; i++){
 			ri->optimal_cluster_ll[i] =
@@ -213,6 +210,8 @@ int error_count_generator(options *opt, data *dat, model *mod,
 						"ll> ll_cutoff:%i \n", count);
 
 		/* use estimated errors for next haplotype addition */
+		/* [TODO] It is arbitrary to set the cutoff is 0.5 */
+
 		if (count > dat->sample_size * 0.5)
 			opt->use_error_profile = 1;
 
@@ -223,7 +222,8 @@ int error_count_generator(options *opt, data *dat, model *mod,
 							dat->sample_size, ri);
 		#endif
 
-		/* count all (n,m,q) combinations for true base n, read base m
+		/*  Generate current error count profile. 
+		 *	count all (n,m,q) combinations for true base n, read base m
 		 * and quality score q, assuming assigned haplotype is true
 		 */
 		for (size_t i = 0; i < dat->sample_size; ++i) {
@@ -243,7 +243,7 @@ int error_count_generator(options *opt, data *dat, model *mod,
 
 		/* compare the distance between err_cnt_cur and err_cnt_pre */
 		double min_cos_dist = cos_dist(err_cnt_prev, err_cnt_cur, nrow,
-								mod->n_quality);
+								mod->n_quality);  
 
 		/* cosine distance close enough to 1 terminates the loop */
 		if (min_cos_dist > opt->min_cosdist) {
@@ -370,6 +370,7 @@ EXIT_COS_DIST:
 	return min_cos_dist;
 }/* cos_dist */
 
+/* print error profile   */
 void fprint_error_profile(FILE *fp, double *mat, unsigned int n, unsigned int l){
 	unsigned int i, j;
 
@@ -384,11 +385,11 @@ void fprint_error_profile(FILE *fp, double *mat, unsigned int n, unsigned int l)
 /**
  * Predict error rates based on the observed error counts.
  *
- * @param err_cnt	error counts
- * @param error_profile	error profile to be computed
- * @param n_quality	number of distinct quality scores
- * @param self_lines	??
- * @return		error status
+ * @param err_cnt	     error counts
+ * @param error_profile	 error profile to be computed
+ * @param n_quality	     number of distinct quality scores
+ * @param self_lines	 idx of lines of self-transitions, like A->A, T->T, C->C, G->G 
+ * @return		         error status
  */
 int error_predict(unsigned int *err_cnt, double *error_profile,
 			unsigned int n_quality, unsigned int self_lines[4])
@@ -458,13 +459,13 @@ int loess_est(loess *lo,double *y,double *x, unsigned int* weights, unsigned int
 }/* loess_est */
 
 /**
- * ??
+ * Estimate error profile for nucleotides A, T, C, G
  *
  * @param nuc			current nucleotide
  * @param n_quality		number of distinct quality scores
  * @param count_sum		room for one column of err_cnt
  * @param err_cnt		counts of all (n,m,q) combinations
- * @param self_lines		??
+ * @param self_lines		idx of lines of self-transitions, like A->A, T->T, C->C, G->G 
  * @param error_prob_temp	vector of length n_quality
  * @param if_loess		use loess regression
  * @param qual			all possible quality values
@@ -476,6 +477,7 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
 	unsigned int self_lines[4], double *error_prob_temp, int if_loess,
 					double *qual, double *error_profile)
 {
+	UNUSED(if_loess)
 
 	/* structs for regression */
 	loess *lo = NULL;
@@ -505,38 +507,35 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
 			error_prob_temp[q] = log10((double)
 				(err_cnt[k*n_quality + q] + 1)
 				/ (count_sum[q] + 4));   //avoid numerical bugs
-		
-		if (if_loess) {	/* [KSD] There is nothing else! */
 
-			/* malloc space for lo and pre */
-			lo = malloc(sizeof *lo);	
-			if (!lo)
-				return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
-								"loess object");
+		/* malloc space for lo and pre */
+		lo = malloc(sizeof *lo);	
+		if (!lo)
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+							"loess object");
 
-			pre = malloc(sizeof *pre);
-			if (!pre) {
-				free(lo);
-				return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
-							"prediction object");
-			}
-			
-			/* weighted loess regression */
-			loess_est(lo, error_prob_temp, qual, count_sum,
-								n_quality);
-
-			predict(qual, n_quality, lo, pre, 0);
-
-			for (unsigned int q = 0; q < n_quality; ++q) {
-				idx = k * n_quality + q;
-				error_profile[idx] = pre->fit[q] * l10;  //log(error_prob)
-				if (error_profile[idx] > lquarter)
-					error_profile[idx] = lquarter; //avoid bugs
-				if (error_profile[idx] < lepsilon)
-					error_profile[idx] = lepsilon;
-			}
-		
+		pre = malloc(sizeof *pre);
+		if (!pre) {
+			free(lo);
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+						"prediction object");
 		}
+		
+		/* weighted loess regression */
+		loess_est(lo, error_prob_temp, qual, count_sum,
+							n_quality);
+
+		predict(qual, n_quality, lo, pre, 0);
+
+		for (unsigned int q = 0; q < n_quality; ++q) {
+			idx = k * n_quality + q;
+			error_profile[idx] = pre->fit[q] * l10;  //log(error_prob)
+			if (error_profile[idx] > lquarter)
+				error_profile[idx] = lquarter; //avoid bugs
+			if (error_profile[idx] < lepsilon)
+				error_profile[idx] = lepsilon;
+		}
+	
 
 		if (lo)
 			loess_free_mem(lo);
@@ -555,11 +554,26 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
 		for (unsigned int k = lb; k < ub; k++)
 			if (k != self_lines[nuc])
 				error_profile[idx] -= exp(error_profile[k*n_quality+q]);
-		//if (error_profile[idx] < 0.)
-		//	error_profile[idx] = -12; // [TODO] determine a small value. But in practice, this would not be used.
-		//else
 			error_profile[idx] = log(error_profile[idx]); // log version
 	}
 
 	return NO_ERROR;
 }/* err_per_nuc */
+
+/**
+ * 
+ * Generate error count profile with given partitions
+ *
+ * @param opt 	options object
+ * @param dat	data object
+ * @param mod	error model object
+ * @param ini	initializer object
+ * @param ri	run initializer
+ * @return			error status
+ */
+int err_cnt_gen_wpartition(options *opt, data *dat, model *mod,
+					initializer *ini, run_info *ri)
+{
+	
+	return NO_ERROR
+}

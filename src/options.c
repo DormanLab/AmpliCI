@@ -315,7 +315,11 @@ int parse_options(options *opt, int argc, const char **argv)
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
 			}
-			if (!strcmp(&argv[i][j], "pdiag")) {
+			if (!strcmp(&argv[i][j], "partition")){
+				opt->partition_file = argv[++i];
+				mmessage(INFO_MSG, NO_ERROR, "Partition file: "
+					"%s\n", opt->partition_file);
+			}else if (!strcmp(&argv[i][j], "pdiag")) {
 				opt->alpha = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
 				opt->per_candidate = 0;

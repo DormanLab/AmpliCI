@@ -372,32 +372,6 @@ int read_initialization_file(char const * const filename, data *dat,
 						"invalid input haplotype set");
 	}
 
-	//mmessage(INFO_MSG, NO_ERROR, "number of haplotypes in '%s' is "
-	//		"%u!\n", filename, fqd->n_reads);
-
-	/* KSD: Why not just set opt->K = fqd->n_reads? You just need to call this function earlier, like during make_initializer(). */
-	/*
-	if (fqd->n_reads != opt->K) {	
-		fclose(fp);
-		mmessage(INFO_MSG, NO_ERROR, "number of haplotypes in '%s' is "
-			"%u! Rerun with -k %u !\n", filename, fqd->n_reads,
-								fqd->n_reads);
-		return mmessage(ERROR_MSG, INVALID_USER_INPUT, "invalid input K");
-	}
-	*/
-
-	/* move to make_initializer */
-	/*
-	for (unsigned int k = 0; k < opt->K; ++k){
-		memcpy(ini->seeds[k],
-			&fqd->reads[k * fqd->n_max_length],
-			fqd->n_max_length * sizeof *fqd->reads);
-		ini->seed_lengths[k] = fqd->n_max_length;			
-	}
-	*/
-
-	//free_fastq(fqd);
-
 	fclose(fp);
 	return err;
 } /* read_initialization_file */

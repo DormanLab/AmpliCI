@@ -1524,8 +1524,8 @@ int evaluate_haplotype(options *opt, data *dat, model *mod, initializer *ini,
 	/* update haplotypes */
 	/* [TODO] modify the function and not use mod->haplotypes (just for Acceleration) */
 	//for (unsigned int k = 0; k < K; k++)	/* [KSD] Haven't the first K-1 already been copied? */
-		memcpy(&mod->haplotypes[curr_K * dat->max_read_length],
-					ini->seeds[curr_K], dat->max_read_length
+	memcpy(&mod->haplotypes[curr_K * dat->max_read_length],
+			ini->seeds[curr_K], dat->max_read_length
 						* sizeof *mod->haplotypes);
 
 	/* update pi */
