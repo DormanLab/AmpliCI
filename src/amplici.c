@@ -2397,6 +2397,9 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 	opt->outfile_info = opt->outfile_base;
 
 	fp = fopen(opt->outfile_info, "w");
+	if (!fp)
+		return mmessage(ERROR_MSG, FILE_OPEN_ERROR, opt->outfile_info);
+
 	fprintf(fp, "assignments: ");
 	fprint_assignment(fp, ri->optimal_cluster_id, dat->sample_size,
 								opt->K, 2, 1);
