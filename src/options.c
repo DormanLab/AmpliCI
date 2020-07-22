@@ -33,7 +33,7 @@ int make_options(options **opt) {
 
 	op = *opt;
 
-	op->info = DEBUG_I;//DEBUG_I;  // control DEBUG message 
+	op->info = DEBUG_III;//DEBUG_I;  // control DEBUG message 
 	op->use_curses = 0;
 	op->wp = NULL;
 	op->active_fp = NULL;
@@ -47,6 +47,7 @@ int make_options(options **opt) {
 	op->outfile_info = NULL;
 	op->initialization_file = NULL;
 	op->trans_matrix = NULL;
+	op->partition_file = NULL;
 
 	op->run_amplici =ALGORITHM_AMPLICI; 
 	op->low_bound = 2.0;

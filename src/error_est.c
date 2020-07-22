@@ -23,6 +23,7 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
 				unsigned int *count_sum, unsigned int *err_cnt,unsigned int self_lines[4],
 				double *error_prob_temp, int if_loess, double *qual, double *error_profile);
 int error_count_generator(options *opt,data *dat, model *mod, initializer *ini, run_info *ri);
+int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini);
 
 int error_profile_generator(options *opt, data *dat, model *mod,
 					initializer *ini, run_info *ri)
@@ -63,7 +64,10 @@ int error_profile_generator(options *opt, data *dat, model *mod,
 
 	/* find the optimum error count matrix for different K */
 	/* place in ini->err_cnt */
-	if ((err = error_count_generator(opt, dat, mod, ini, ri)))
+	if(opt->partition_file){
+		if ((err = err_cnt_gen_wpartition(opt, dat, ini)))
+			return err;
+	}else if ((err = error_count_generator(opt, dat, mod, ini, ri)))
 		return err;
 
 	/* Below call regression function to predict errors */
@@ -227,8 +231,10 @@ int error_count_generator(options *opt, data *dat, model *mod,
 		 *	count all (n,m,q) combinations for true base n, read base m
 		 * and quality score q, assuming assigned haplotype is true
 		 */
+		err_count_with_assignment(dat, ri->optimal_cluster_id, ini->seeds, err_cnt_cur,opt->K);
+		/*
 		for (size_t i = 0; i < dat->sample_size; ++i) {
-			/* ignore any filtered */
+			// ignore any filtered 
 			if (ri->optimal_cluster_id[i] == opt->K)
 				continue;
 
@@ -237,7 +243,7 @@ int error_count_generator(options *opt, data *dat, model *mod,
 					ini->seeds[ri->optimal_cluster_id[i]][j]
 					* NUM_NUCLEOTIDES + dat->dmat[i][j])
 					+ dat->qmat[i][j]]++;// order of A,C,T,G
-		}
+		} */
 
 		if (K_max == opt->K_max)
 			break;
@@ -562,7 +568,7 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
 }/* err_per_nuc */
 
 /** 
- * Generate error count profile with given partitions
+ * Generate error count profile (ini->err_cnt) with given partitions
  *
  * @param opt 	options object
  * @param dat	data object
@@ -571,34 +577,108 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
  * @param ri	run initializer
  * @return			error status
  */
-int err_cnt_gen_wpartition(options *opt, data *dat, model *mod,
-					initializer *ini, run_info *ri)
-{
+int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
+{	
+	int err = NO_ERROR;
+
+	/*  read the partition file, start from 0*/
+	read_partition_file(opt->partition_file,ini->cluster_id,dat->sample_size);
+	unsigned int max = 0;
+	for(unsigned int i = 0; i < dat->sample_size; i++) 
+		if (ini->cluster_id[i] > max) max = ini->cluster_id[i];
+
+	unsigned int new_K = max + 1;  // new K 
+	
+	/* find the most abundant sequence in K partitions */
+
+	/* realloc space for seeds */
+	if (new_K > opt->K)
+		if((err = realloc_seeds(ini, dat->max_read_length, opt->K, new_K)))
+			return err;
+
+	/* find the most abundant sequence for each partition */
+	hash ** hash_list = NULL;
+	hash_list = malloc(new_K* sizeof *hash_list);
+	if(!hash_list)
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "Err_cnt.hash_list");
+
+	for (unsigned int k =0 ; k < new_K; k++)
+		hash_list[k] = NULL;
+	
+	for (size_t i = 0; i < dat->sample_size; ++i) {
+		add_sequence(&hash_list[ini->cluster_id[i]], dat->dmat[i],
+					dat->lengths[i], i);
+	}
+
+	for (unsigned int k =0 ; k < new_K; k++){
+		unsigned int max_abun = 0;
+		hash *s;
+		for (s = hash_list[k]; s != NULL; s = s->hh.next) {
+			if(s->count > max_abun){
+				max_abun = s->count;
+				memcpy(ini->seeds[k], s->sequence,
+					dat->max_read_length * sizeof **ini->seeds);
+			}
+		}
+		if(hash_list[k])
+			delete_all(hash_list[k]);
+	}
+
+	/* count error types with given assignment */
+	err_count_with_assignment(dat, ini->cluster_id, ini->seeds, ini->err_cnt, new_K);
+
+	/* free space */
+	if(hash_list) free(hash_list);
+
 	return NO_ERROR;
-}
+}/* err_cnt_gen_wpartition */
 
 /** 
  * read the partition file 
  *
- * @param filename 	partition file
- * @param ri	    run initializer
- * @return			error status
+ * @param filename 	  partition file
+ * @param cluster_id  array for storing id
+ * @param sample_size length of the array  
+ * @return 	  error status
  */
-int read_partition_file(char const * const filename, initializer *ini, unsigned int sample_size)
+int read_partition_file(char const * const filename, unsigned int *cluster_id, unsigned int sample_size)
 {
-	int fxn_debug = ABSOLUTE_SILENCE ;	//DEBUG_III;	//
 	int err = NO_ERROR;
 
 	FILE *fp = fopen(filename, "r");
 
-	debug_msg(DEBUG_III, fxn_debug, "Opening file '%s'\n", filename);
-
 	if (!fp)
 		return mmessage(ERROR_MSG, FILE_OPEN_ERROR, filename);
 
-	err = fread_uints(fp, ini->cluster_id,sample_size);
+	err = fread_uints(fp, cluster_id,sample_size);
 	
 	fclose(fp);
 	return NO_ERROR;
-}
+}/* read_partition_file */
+
+/**
+ * count error types with given assignment 
+ * 
+ * @param dat            data object
+ * @param cluster_id     reads assignment id
+ * @param seeds          haplotypes
+ * @param count_mat      array for count 
+ * @param K              maximum number of clusters
+ */
+int err_count_with_assignment(data *dat, unsigned int *cluster_id, data_t** seeds, unsigned int *count_mat, unsigned int K)
+{
+	for (size_t i = 0; i < dat->sample_size; ++i) {
+		/* ignore any filtered reads */
+		if (cluster_id[i] >= K)
+			continue;
+		
+		for (size_t j = 0; j < dat->lengths[i]; ++j)
+			count_mat[dat->n_quality * (
+				seeds[cluster_id[i]][j]
+				* NUM_NUCLEOTIDES + dat->dmat[i][j])
+				+ dat->qmat[i][j]]++;// order of A,C,T,G
+		
+		}
+	return NO_ERROR;
+}/* err_count_with_assignment */
 

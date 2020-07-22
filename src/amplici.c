@@ -889,8 +889,12 @@ int amplici_realloc(options *opt, initializer *ini, model *mod,
 		mod->JC_ll_K  = JC_ll_K;
 		ini->cluster_size = cluster_size;
 
+		if((err = realloc_seeds(ini, max_read_length, preK, K)))
+			return err;
+
 		/* seeds, seeds_length, seed_idx */
 		//size_t *seed_idx = realloc(ini->seed_idx, K * sizeof *ini->seed_idx);   
+		/* 
 		unsigned int *seed_lengths = realloc(ini->seed_lengths, K * sizeof *ini->seed_lengths);
 		data_t **seeds = realloc(ini->seeds, K * sizeof *ini->seeds); 
 
@@ -915,7 +919,7 @@ int amplici_realloc(options *opt, initializer *ini, model *mod,
 		for (size_t k = s; k < K; k++) {
 			ini->seeds[k] = dptr;
 			dptr += max_read_length;
-		}
+		} */
 		/*
 		for (unsigned int k = preK; k < K; k++) {
 			seeds[k] = NULL;

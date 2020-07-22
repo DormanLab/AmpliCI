@@ -190,9 +190,10 @@ int realloc_initializer(initializer *ini, data *dat, options *opt)
 	/* reallocate the room for a new K*/
 	/* seed_idx */
 	/* claculate the previous K */
-	unsigned int pre_K = ini->K;
+	unsigned int preK = ini->K;
+	unsigned int err;
 
-	if(pre_K <2)
+	if(preK <2)
 		return mmessage(ERROR_MSG, INTERNAL_ERROR,"realloc.initializer");
 	ini->K = opt->K;
 	size_t *seed_idx = NULL;
@@ -220,7 +221,9 @@ int realloc_initializer(initializer *ini, data *dat, options *opt)
 	/* seeds, best_modes,seed_lengths*/
 	/* free previous points */
 	/* [TODO] easier if you allocate ini->{seeds, best_modes, etc} in one block (see other TODOs) */
-
+	if((err = realloc_seeds(ini, dat->max_read_length, preK, opt->K)))
+		return err;
+	/* 
 	data_t **seeds = realloc(ini->seeds, opt->K * sizeof *ini->seeds);
 
 	unsigned int *seed_lengths = realloc(ini->seed_lengths,
@@ -243,7 +246,7 @@ int realloc_initializer(initializer *ini, data *dat, options *opt)
 	for (size_t i = 0; i < opt->K; i++) {
 		ini->seeds[i] = dptr;
 		dptr += dat->max_read_length;
-	}
+	} */
 
 	/*
 	for (unsigned int i = 0; i < opt->K; ++i) {
@@ -319,8 +322,52 @@ int realloc_initializer(initializer *ini, data *dat, options *opt)
 
 	ini->optimal_total = INFINITY;
 	
-	return NO_ERROR;
+	return err;
 }/* realloc_initializer */
+
+
+/**
+ * reallloc ini->seeds, ini->seeds_length for larger K 
+ * 
+ * @param ini  initializer object
+ * @param max_read_length space for each seed
+ * @param preK  Previous malloc spaces for K haplotypes
+ * @param K     realloc space for K haplotypes
+ * 
+ * return 
+ */
+int realloc_seeds(initializer *ini, unsigned int max_read_length, unsigned int preK, unsigned int K){
+	
+	
+	unsigned int *seed_lengths = realloc(ini->seed_lengths, K * sizeof *ini->seed_lengths);
+
+	data_t **seeds = realloc(ini->seeds, K * sizeof *ini->seeds); 
+
+	if ( !seeds || !seed_lengths) {
+		//if (seed_idx) free(seed_idx);
+		if (seeds) free(seeds);
+		if (seed_lengths) free(seed_lengths);
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+						"amplici.realloc.seed");
+	}
+	// ini->seed_idx = seed_idx;
+	ini->seed_lengths = seed_lengths;   // Uninitialized 
+	ini->seeds = seeds;
+
+	data_t *dptr = realloc(ini->seeds[0], max_read_length * K * sizeof **ini->seeds);
+	if (!dptr)
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+			"reallloc.initializer.seeds");
+	size_t s = 0;
+	if (ini->seeds[0] == dptr)  s = preK;
+
+	for (size_t k = s; k < K; k++) {
+		ini->seeds[k] = dptr;
+		dptr += max_read_length;
+	}
+
+	return NO_ERROR;
+}/* realloc_seeds */
 
 
 /**

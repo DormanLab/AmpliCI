@@ -76,6 +76,7 @@ struct _initializer {
 int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf);
 int sync_initializer(initializer *ini, data *dat);
 int realloc_initializer(initializer *ini, data *dat, options *opt);
+int realloc_seeds(initializer *ini, unsigned int max_read_length, unsigned int preK, unsigned int K);
 void free_initializer(initializer *ini, options *opt);
 int read_initialization_file(char const * const filename, data *dat,
 	options *opt, fastq_data **fqdf);
