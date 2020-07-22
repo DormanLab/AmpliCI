@@ -33,6 +33,7 @@ struct _options {
 	char const *offset_file;  /*<! name of offset file */
 	char const *fastq_file;  /*<! name of fastq input file */
 	char const *initialization_file;  /*<! name of initialization file */
+	char const *trans_matrix; /*<! output transition matrix file */
 	/* output */
 	char const *outfile_base;  /*<! basename of outfiles */
 	char const *outfile_info;  /*<! name of informational outfile */

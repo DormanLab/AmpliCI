@@ -2324,6 +2324,7 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 {
 	int err = NO_ERROR;
 	int fxn_debug = opt->info;
+	double l1third = 1./3;
 
 	/* maybe use error profile */
 	double *error_profile = NULL;
@@ -2346,40 +2347,88 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 
 		/* align to haplotypes  */
 		for (unsigned int h = 0; h < opt->K; ++h){
+
 			unsigned char *hap_seq = ini->seeds[h];
-			size_t alen = dat->max_read_length;
-			unsigned int nindels = 0;
-			unsigned int nmismatch = 0;
 
-			unsigned char **aln = nwalign(hap_seq, read,
-			(size_t) ini->seed_lengths[h],
-			(size_t) rlen,
-			opt->score, opt->gap_p, opt->band, 1, NULL,
-								&err, &alen);
-
-			/* count for number of indels */
-			ana_alignment(aln, alen, rlen, &nindels, 
-					&nmismatch, opt->info);
-
-			for(unsigned int r = 0; r<count;++r){
-
-				mod->eik[h*dat->sample_size+ idx_array[r]] = trans_nw(opt, aln,
-					alen, nmismatch, nindels, error_profile, mod->err_encoding,
-					dat->qmat[idx_array[r]], dat->n_quality, mod->adj_trunpois,
-									rlen, dat->error_prob);
+			if(opt->nw_align == NO_ALIGNMENT){
 				
-				debug_msg(DEBUG_III, fxn_debug, "num of indels: %i; num of "
-						"mismatch: %i\n", nindels, nmismatch);
+				for(unsigned int r = 0; r < count; ++r){
+					double eik = 0.;
+					size_t id = idx_array[r];
+					for (unsigned int j = 0; j < dat->lengths[r]; j++) {
 
-			}
-			/* free */
-			if(aln){
-				free(aln[0]);
-				free(aln[1]);
-				free(aln);
-				aln = NULL;
+						if (error_profile) {
+							if (opt->err_encoding == STD_ENCODING)
+								eik += translate_error_STD_to_XY(
+									error_profile,
+									dat->n_quality, hap_seq[j],
+									dat->dmat[id][j],
+									dat->qmat[id][j]);
+						else if (opt->err_encoding == XY_ENCODING)
+							eik += error_profile[(NUM_NUCLEOTIDES
+								* hap_seq[j] + dat->dmat[id][j])
+								* dat->n_quality
+								+ dat->qmat[id][j]];
+						} else {
+							//double ep = adj * error_prob(dat->fdata, dat->qmat[r][j]);
+							double ep = dat->error_prob[dat->qmat[id][j]];	
+							if (dat->dmat[id][j] == hap_seq[j] )			
+								eik += log(1 - ep);
+							else
+								eik += log(ep) + l1third;
+						}
+					}
+					mod->eik[h*dat->sample_size+ id] = eik;		
+				}
+
+			}else{
+				size_t alen = dat->max_read_length;
+				unsigned int nindels = 0;
+				unsigned int nmismatch = 0;
+
+				unsigned char **aln = nwalign(hap_seq, read,
+				(size_t) ini->seed_lengths[h],
+				(size_t) rlen,
+				opt->score, opt->gap_p, opt->band, 1, NULL,
+									&err, &alen);
+
+				/* count for number of indels */
+				ana_alignment(aln, alen, rlen, &nindels, 
+						&nmismatch, opt->info);
+
+				for(unsigned int r = 0; r<count;++r){
+
+					mod->eik[h*dat->sample_size+ idx_array[r]] = trans_nw(opt, aln,
+						alen, nmismatch, nindels, error_profile, mod->err_encoding,
+						dat->qmat[idx_array[r]], dat->n_quality, mod->adj_trunpois,
+										rlen, dat->error_prob);
+					
+					debug_msg(DEBUG_III, fxn_debug, "num of indels: %i; num of "
+							"mismatch: %i\n", nindels, nmismatch);
+
+				}
+				/* free */
+				if(aln){
+					free(aln[0]);
+					free(aln[1]);
+					free(aln);
+					aln = NULL;
+				}
 			}
 		}
+	}
+
+	if(opt->trans_matrix){
+		FILE *fp = fopen(opt->trans_matrix, "w");
+		//fprint_vectorized_matrix(fp,mod->eik,dat->sample_size,opt->K,0);  not work 
+		for (size_t i = 0; i < dat->sample_size; ++i) {
+		    fprintf(fp, "%3lu", i);
+			for (unsigned int j = 0; j < opt->K; ++j) {
+				fprintf(fp, " %8.2e", mod->eik[j*dat->sample_size + i]);
+			}
+			fprintf(fp, "\n");
+		}
+		fclose(fp);
 	}
 
 	/* simply update mod->pi */
@@ -2411,6 +2460,9 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 	opt->outfile_info = opt->outfile_base;
 
 	fp = fopen(opt->outfile_info, "w");
+    if (!fp)
+		return mmessage(ERROR_MSG, FILE_OPEN_ERROR, opt->outfile_info);
+
 	fprintf(fp, "assignments: ");
 	fprint_assignment(fp, ri->optimal_cluster_id, dat->sample_size,
 								opt->K, 2, 1);

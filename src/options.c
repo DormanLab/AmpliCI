@@ -33,7 +33,7 @@ int make_options(options **opt) {
 
 	op = *opt;
 
-	op->info = SILENT;//DEBUG_I;  // control DEBUG message 
+	op->info = DEBUG_I;//DEBUG_I;  // control DEBUG message 
 	op->use_curses = 0;
 	op->wp = NULL;
 	op->active_fp = NULL;
@@ -46,6 +46,8 @@ int make_options(options **opt) {
 	op->outfile_fasta = NULL;
 	op->outfile_info = NULL;
 	op->initialization_file = NULL;
+	op->trans_matrix = NULL;
+
 	op->run_amplici =ALGORITHM_AMPLICI; 
 	op->low_bound = 2.0;
 	op->contamination_threshold = 1;
@@ -163,6 +165,14 @@ int parse_options(options *opt, int argc, const char **argv)
 			break;
 		case 'z':
 			opt->nw_align = ALIGNMENT_UNIQ_SEQ;
+			break;
+		case 'n':
+			if (!strcmp(&argv[i][j], "nJC69")) {
+				opt->JC69_model = 0;
+				i++;
+			}else{
+				opt->nw_align = NO_ALIGNMENT;
+			}
 			break;
 		case 'k':
 			if (i == argc - 1) {
@@ -356,6 +366,16 @@ int parse_options(options *opt, int argc, const char **argv)
 				"match = %d, transition = %d, transversion = %d"
 				", gap = %d\n", opt->score[0][0],
 				opt->score[0][3], opt->score[0][1], opt->gap_p);
+			break;
+		case 't':
+			if (i == argc - 1) {
+				err = INVALID_CMD_OPTION;
+				goto CMDLINE_ERROR;
+			} else {
+				opt->trans_matrix = argv[++i];
+				mmessage(INFO_MSG, NO_ERROR, "Output transition matrix: "
+					"%s\n", opt->trans_matrix);
+			}
 			break;
 		case 'h':
 			if (!strncmp(&argv[i][j], "hap", 3)) {

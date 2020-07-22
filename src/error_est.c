@@ -12,6 +12,7 @@
 #include "io.h"
 #include "error.h"
 #include "error_est.h"
+#include "util.h"
 #include <R.h>
 
 #define DEBUG 0
@@ -560,8 +561,7 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
 	return NO_ERROR;
 }/* err_per_nuc */
 
-/**
- * 
+/** 
  * Generate error count profile with given partitions
  *
  * @param opt 	options object
@@ -576,3 +576,29 @@ int err_cnt_gen_wpartition(options *opt, data *dat, model *mod,
 {
 	return NO_ERROR;
 }
+
+/** 
+ * read the partition file 
+ *
+ * @param filename 	partition file
+ * @param ri	    run initializer
+ * @return			error status
+ */
+int read_partition_file(char const * const filename, initializer *ini, unsigned int sample_size)
+{
+	int fxn_debug = ABSOLUTE_SILENCE ;	//DEBUG_III;	//
+	int err = NO_ERROR;
+
+	FILE *fp = fopen(filename, "r");
+
+	debug_msg(DEBUG_III, fxn_debug, "Opening file '%s'\n", filename);
+
+	if (!fp)
+		return mmessage(ERROR_MSG, FILE_OPEN_ERROR, filename);
+
+	err = fread_uints(fp, ini->cluster_id,sample_size);
+	
+	fclose(fp);
+	return NO_ERROR;
+}
+
