@@ -16,6 +16,7 @@ AmpliCI, Amplicon Clustering Inference, denoises Illumina amplicon data by appro
 1. [Troubleshooting](#troubleshooting)
 1. [Detailed options](#options)
 1. [Acknowledgements](#acknowledgements)
+1. [Citation](#citation)
 1. [Contact](#contact)
 
 # Prerequisites <a name = "preresuisites" />
@@ -296,8 +297,9 @@ Other important options:
 
 - We used the hash implemented in [uthash.h](https://troydhanson.github.io/uthash/userguide.html).
 
-- This work is under review.  Please see [bioRxiv](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1).
+# Citation <a name = "citation" />
 
+- Peng, X. and Dorman, K. (2020) ‘AmpliCI: A High-resolution Model-Based Approach for Denoising Illumina Amplicon Data’, Bioinformatics. doi: [10.1093/bioinformatics/btaa648](https://academic.oup.com/bioinformatics/article/doi/10.1093/bioinformatics/btaa648/5875058).
 
 # Contact <a name = "contact" />
 
