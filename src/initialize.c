@@ -87,7 +87,7 @@ int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf
 	 *	if (in->seeds[0])
 	 *		 free(in->seeds[0])
 	 *	free(in->seeds);
-	 * }
+	 * }                                              
 	 * */
 
 	data_t *dptr = malloc(dat->max_read_length * opt->K * sizeof **in->seeds);

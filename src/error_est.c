@@ -342,8 +342,10 @@ double cos_dist(unsigned int *mat1, unsigned int *mat2, unsigned int nrow,
 		}
 	}
 
-	if (!sum1 || !sum2)
-		return log(epsilon);
+	if (!sum1 || !sum2){
+		min_cos_dist = log(epsilon);
+		goto EXIT_COS_DIST;
+	}
 
 	/* cos distance */
 	for (unsigned int j = 0; j < ncol; j++) {
@@ -581,8 +583,10 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 {	
 	int err = NO_ERROR;
 
-	/*  read the partition file, start from 0*/
-	read_partition_file(opt->partition_file,ini->cluster_id,dat->sample_size);
+	/*  read the partition file, start from 0 */
+	if((err = read_partition_file(opt->partition_file,ini->cluster_id,dat->sample_size)))
+		return err;
+	
 	unsigned int max = 0;
 	for(unsigned int i = 0; i < dat->sample_size; i++) 
 		if (ini->cluster_id[i] > max) max = ini->cluster_id[i];
@@ -618,6 +622,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 				max_abun = s->count;
 				memcpy(ini->seeds[k], s->sequence,
 					dat->max_read_length * sizeof **ini->seeds);
+				in->seed_lengths[k] = dat->max_read_length
 			}
 		}
 		if(hash_list[k])
@@ -653,7 +658,7 @@ int read_partition_file(char const * const filename, unsigned int *cluster_id, u
 	err = fread_uints(fp, cluster_id,sample_size);
 	
 	fclose(fp);
-	return NO_ERROR;
+	return err;
 }/* read_partition_file */
 
 /**

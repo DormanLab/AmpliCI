@@ -95,7 +95,7 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 	/* [KSD] For some reason you do not actually use read log likelihood.
 	 * Instead, you use the maximum conditional log likelihood.
 	 */
-	/* cannot use posterior probabilities. they sum to 1 across all clusters */
+	/* Since it cannot use posterior probabilities. they sum to 1 across all clusters */
 	/* [KSD] I was just proposing that this function do as advertised. */
 	likelihood_filter(opt->K, opt->ll_cutoff, NULL, mod->pi, ini->e_trans,
 							dat->sample_size, ri);
@@ -1858,8 +1858,6 @@ int check_fp_with_indels(options *opt, data *dat, model *mod, initializer *ini,
 	debug_msg(DEBUG_I, fxn_debug,"observe abundance: %i; previous "
 				"abundance: %f; new_abundance: %f \n", count,
 					ini->H_abun[select], true_abun_new);
-	
-	/* [TODO] Calculate p value is really time consuming, think about acceleration */
 	if (!(*fp))
 		/* use true_abun_new as the current abundance */
 		ini->H_abun[select] = true_abun_new;
