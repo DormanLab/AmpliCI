@@ -69,7 +69,7 @@ int make_model(model **mod, data *dat, options *opt)
 	rm->err_encoding = opt->err_encoding;  
 
 	/* compute Pr(#{indel} <= dat->max_read_length) */
-	rm->adj_trunpois = ppois(dat->max_read_length, dat->max_read_length * opt->indel_error, 1, 0);
+	rm->adj_trunpois = ppois(dat->max_read_length, dat->max_read_length * opt->indel_error, 1, 1); //log version
 
 	//debug_msg(DEBUG_I, DEBUG_I, "adj: %8.2e\n", rm->adj_trunpois);
 
