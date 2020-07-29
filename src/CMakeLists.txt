@@ -4,7 +4,7 @@ project (AmpliCI VERSION 1.0.0)
 
 SET(CMAKE_CC_COMPILER  gcc)
 
-set(CMAKE_BUILD_TYPE release)
+set(CMAKE_BUILD_TYPE DEBUG)
 set(CMAKE_CXX_STANDARD 11)
 
 include(FindPackageHandleStandardArgs)
@@ -17,6 +17,11 @@ SET(CMAKE_FORTRAN_COMPILER gfortran)
 set(F_OBJ ./libblas_lite.f ./linpack_lite.f ./loessf.f)
 set(C_OBJ ./loessc.c)
 add_library(loess_raw STATIC ${F_OBJ} ${C_OBJ})
+
+set(C_OBJ2 ./amplici.c ./ampliclust.c ./align.c ./cmdline.c ./data.c 
+   ./error.c ./fastq.c ./hash.c ./initialize.c ./io.c ./libamplici.c
+   ./lmath.c ./model.c ./options.c ./statistics.c ./util.c)
+add_library(amplici STATIC ${C_OBJ2} )
 
 # below modified from RStudio's FindLibR.cmake to find R include and lib path 
 # https://github.com/rstudio/rstudio/blob/master/cmake/modules/FindLibR.cmake 
@@ -104,7 +109,9 @@ link_directories(${LIBR_LIB_DIR})
 # compile option 
 add_compile_options(-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500)
 #add_compile_options(-Wall -Wextra -pedantic)
-add_executable(run_AmpliCI ${DIR_SRCS})
+
+set(C_OBJ3 ./loess.c ./predict.c ./error_est.c ./run_amplici.c)
+add_executable(run_AmpliCI ${C_OBJ3})
 
 # libgfortran    
 ## perfer to use libgfortran.a first. If libgfortran.a is not found, use the default shared lib.
@@ -117,10 +124,6 @@ else()
    target_link_libraries(run_AmpliCI ${GFORTRAN_LIBRARY})
 endif()
 
-# loess_raw (our dependencies)
-add_dependencies(run_AmpliCI loess_raw)
-target_link_libraries(run_AmpliCI loess_raw)
-
 # Rmath
 find_library(RMATH_LIBRARY NAMES Rmath  HINTS ${LIBR_LIB_DIR} ${_LIBR_EXECUTABLE_DIR}/lib ${_LIBR_EXECUTABLE_DIR}/lib64)
 find_package_handle_standard_args(LibRmath DEFAULT_MSG RMATH_LIBRARY)
@@ -132,6 +135,14 @@ endif()
 
 # math
 TARGET_LINK_LIBRARIES(run_AmpliCI -lm)
+
+
+# loess_raw (our dependencies)
+add_dependencies(run_AmpliCI loess_raw)
+target_link_libraries(run_AmpliCI loess_raw)
+add_dependencies(run_AmpliCI amplici)
+target_link_libraries(run_AmpliCI amplici)
+
 
 
 
