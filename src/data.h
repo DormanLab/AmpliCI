@@ -92,5 +92,7 @@ int sync_state(data *dat, options *opt);
 int sync_data(data *dat, options *opt);
 void free_data(data *dat);
 
+int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen, 
+			size_t sample_size, unsigned int n_quality);
 
 #endif

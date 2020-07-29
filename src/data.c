@@ -72,12 +72,14 @@ int sync_state(data *dat, options *opt)
 {
 	int fxn_debug = ABSOLUTE_SILENCE;
 	int err = NO_ERROR;
+	UNUSED(opt);
 
 	/* currently, the sample is the complete data */
 	dat->sample_size = dat->fdata->n_reads;
 
 	dat->max_read_length = dat->fdata->n_max_length;
 	dat->min_read_length = dat->fdata->n_min_length;
+	dat->max_read_position = dat->max_read_length;
 	/* warning message */
 	if (dat->max_read_length != dat->min_read_length)
 		mmessage(WARNING_MSG, NO_ERROR,
@@ -147,7 +149,7 @@ int sync_state(data *dat, options *opt)
 	debug_msg(DEBUG_I, fxn_debug, "Allocated %dx(%d) quality matrix\n",
 		  dat->sample_size, dat->max_read_length);
 
-	dat->max_read_position = dat->max_read_length;
+	/*
 	if (opt->offset_file) {
 		dat->offset = malloc(dat->fdata->n_reads * sizeof *dat->offset);
 		if (!dat->offset)
@@ -187,6 +189,7 @@ int sync_state(data *dat, options *opt)
 		for (size_t j = 0; j < dat->max_read_position; ++j)
 			dat->coverage[j] = dat->sample_size;
 	}
+	*/
 	
 	if (!dat->fdata->empty)
 		err = sync_data(dat, opt);
@@ -266,3 +269,46 @@ int sync_data(data *dat, options *opt)
 
 	return err;
 } /* sync_data */
+
+/* fill data object with provided dmat and qmat */
+int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen, 
+			size_t sample_size, unsigned int n_quality){
+
+	int err = NO_ERROR;
+
+	 dat->sample_size = sample_size;
+     dat->max_read_length = rlen;
+	 dat->max_read_position = rlen;
+     dat->n_quality = n_quality;
+     dat->dmat = dmat;
+     dat->qmat = qmat;
+
+    dat->error_prob = malloc(dat->n_quality * sizeof * dat->error_prob);
+	if(!dat->error_prob)
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,"dat.error_prob");
+
+	for (unsigned int q = 0; q < dat->n_quality; q++)
+		dat->error_prob[q] = error_prob(dat->fdata, q);
+
+	dat->lengths = malloc(dat->sample_size * sizeof *dat->lengths);
+
+	if (!dat->lengths)
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "data.lengths");
+
+    for (size_t i = 0; i < dat->sample_size; ++i)
+        dat->lengths[i] = dat->max_read_length;
+
+	/* allocate the index array of reads */
+	dat->read_idx = malloc(dat->fdata->n_reads * sizeof *dat->read_idx);
+
+	if (!dat->read_idx)
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "dat.read_idx");
+
+	for (size_t i = 0; i < dat->fdata->n_reads; ++i)
+		dat->read_idx[i] = i;
+
+    if ((err = build_hash(dat)))
+		return err;
+
+	return NO_ERROR;
+}/* fill_data */
