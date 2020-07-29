@@ -622,7 +622,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 				max_abun = s->count;
 				memcpy(ini->seeds[k], s->sequence,
 					dat->max_read_length * sizeof **ini->seeds);
-				in->seed_lengths[k] = dat->max_read_length
+				ini->seed_lengths[k] = dat->max_read_length;
 			}
 		}
 		if(hash_list[k])
