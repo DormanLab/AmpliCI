@@ -16,6 +16,7 @@ AmpliCI, Amplicon Clustering Inference, denoises Illumina amplicon data by appro
 1. [Troubleshooting](#troubleshooting)
 1. [Detailed options](#options)
 1. [Acknowledgements](#acknowledgements)
+1. [Citation](#citation)
 1. [Contact](#contact)
 
 # Prerequisites <a name = "preresuisites" />
@@ -175,7 +176,7 @@ A text file with the following information provided as key: value pairs, one per
 
 - `assignments`: AmpliCI-assigned haplotype by posterior probability for each read in FASTQ-determined input order.  Haplotypes are numbered 0, 1, ..., and match the sequences H0, H1, ... in the output FASTA file of haplotypes.  NA is output if the read's maximum conditional log likelihood (given the source haplotype) does not exceed a user-defined threshold (option `-ll`; default -100).  These assignments are not based on alignment of reads to the haplotypes, so some reads, particularly indel errors, may not be assigned (NA).  See option `--haplotypes` for more careful read assignment.
 
-- `sizes`: Number of reads assigned to each haplotype.
+- `cluster sizes`: Number of reads assigned to each haplotype.
 
 - `pi`: Estimated $\boldsymbol{\pi}$ from AmpliCI.  Each read is assigned to a haplotype by maximum transition probability $\Pr(r_i|h_k)$ (distinct from posterior probability used for assignments) and $\pi_k$ is the proportion of reads assigned to haplotype $k$.
 
@@ -207,7 +208,7 @@ When run with option `--haplotypes` to reassign reads to the user-provided **hap
 
 - `assignments`: See the description above for outfile `output_base_filename.out`.  There should be fewer NA assignments because reads with low log likelihood are aligned to the haplotypes to detect indel sequencing errors.
 
-- `sizes`: See the description above for outfile `output_base_filename.out`.  The sizes should be higher if more reads are successfully assigned to haplotypes.
+- `cluster sizes`: See the description above for outfile `output_base_filename.out`.  The sizes should be higher if more reads are successfully assigned to haplotypes.
 
 # Downstream Analysis <a name="downstream" />
 
@@ -296,8 +297,9 @@ Other important options:
 
 - We used the hash implemented in [uthash.h](https://troydhanson.github.io/uthash/userguide.html).
 
-- This work is under review.  Please see [bioRxiv](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1).
+# Citation <a name = "citation" />
 
+- Peng, X. and Dorman, K. (2020) ‘AmpliCI: A High-resolution Model-Based Approach for Denoising Illumina Amplicon Data’, Bioinformatics. doi: [10.1093/bioinformatics/btaa648](https://academic.oup.com/bioinformatics/article/doi/10.1093/bioinformatics/btaa648/5875058).
 
 # Contact <a name = "contact" />
 

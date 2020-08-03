@@ -124,7 +124,7 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 		fprintf(fp, "assignments: ");
 		fprint_assignment(fp, ri->optimal_cluster_id, dat->sample_size,
 								opt->K, 2, 1);
-		fprintf(fp, "sizes: ");
+		fprintf(fp, "cluster sizes: ");
 		fprint_uints(fp, ri->optimal_cluster_size, opt->K, 3, 1);
 		
 		fprintf(fp,"pi: ");
@@ -1155,7 +1155,7 @@ int Expected_SelfTrans(options *opt, data *dat, double *self_trans,
 		if (opt->indel_model == INDEL_PER_READ
 					&& opt->nw_align == ALIGNMENT_UNIQ_SEQ)
 			self_trans[r] += dpois(0, opt->indel_error
-						* dat->lengths[r], 1) / adj;
+						* dat->lengths[r], 1) - adj;
 
 		for (unsigned int j = 0; j < dat->lengths[r]; j++) {
 			
@@ -1288,7 +1288,7 @@ double trans_nw(options *opt, unsigned char **aln, size_t alen,
 
 	/* prob of an indel event */
 	if (opt->indel_model == INDEL_PER_READ)
-		e_trans += dpois(ngap, opt->indel_error * rlen, 1) / adj;
+		e_trans += dpois(ngap, opt->indel_error * rlen, 1) - adj;
 
 	/* may be used later */
 	unsigned int pre_nmismatch = mismatch;
@@ -1823,7 +1823,7 @@ int check_fp_with_indels(options *opt, data *dat, model *mod, initializer *ini,
 
 			/* modify self trans rate if we consider indels */
 			if (opt->indel_model == INDEL_PER_READ)
-				self_ts += dpois(0, opt->indel_error * rlen, 1) / mod->adj_trunpois;
+				self_ts += dpois(0, opt->indel_error * rlen, 1) - mod->adj_trunpois;
 
 			sum_pro_H = 0.;
 			for (unsigned int k =0 ; k < select; k++)
@@ -2468,7 +2468,7 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 	fprintf(fp, "assignments: ");
 	fprint_assignment(fp, ri->optimal_cluster_id, dat->sample_size,
 								opt->K, 2, 1);
-	fprintf(fp, "sizes: ");
+	fprintf(fp, "cluster sizes: ");
 	fprint_uints(fp, ri->optimal_cluster_size, opt->K, 3, 1);
 
 	fclose(fp);
