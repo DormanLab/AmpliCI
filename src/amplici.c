@@ -124,7 +124,7 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 		fprintf(fp, "assignments: ");
 		fprint_assignment(fp, ri->optimal_cluster_id, dat->sample_size,
 								opt->K, 2, 1);
-		fprintf(fp, "sizes: ");
+		fprintf(fp, "cluster sizes: ");
 		fprint_uints(fp, ri->optimal_cluster_size, opt->K, 3, 1);
 		
 		fprintf(fp,"pi: ");
@@ -2403,7 +2403,7 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 	fprintf(fp, "assignments: ");
 	fprint_assignment(fp, ri->optimal_cluster_id, dat->sample_size,
 								opt->K, 2, 1);
-	fprintf(fp, "sizes: ");
+	fprintf(fp, "cluster sizes: ");
 	fprint_uints(fp, ri->optimal_cluster_size, opt->K, 3, 1);
 
 	fclose(fp);
