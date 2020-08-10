@@ -138,7 +138,7 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 
 		//[TODO] output ini->seeds directly
 		fprint_fasta(fp, ini->seeds[0], opt->K, 
-					 dat->max_read_length, "H");
+					 dat->max_read_length,ini->seed_lengths, "H");
 		
 		fprintf(fp,"ee: ");   // mean expected number of errors
 		fprint_doubles(fp, ini->H_ee, opt->K ,3,1);
@@ -169,7 +169,7 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 		if (opt->JC69_model) {
 			fprintf(fp, "Estimated common ancestor: \n");
 			fprint_fasta(fp, mod->est_ancestor, 1,
-					 dat->max_read_length, "Ancestor");
+					 dat->max_read_length, &dat->max_read_length, "Ancestor");
 			fprintf(fp, "Evolution_rate: ");
 			fprint_doubles(fp, mod->distance, opt->K, 3, 1);
 			fprintf(fp, "log likelihood from JC69 model:%f\n",

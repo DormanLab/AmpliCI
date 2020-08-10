@@ -33,7 +33,7 @@ int make_options(options **opt) {
 
 	op = *opt;
 
-	op->info = DEBUG_III;//DEBUG_I;  // control DEBUG message 
+	op->info = SILENT; //DEBUG_III;//DEBUG_I;  // control DEBUG message 
 	op->use_curses = 0;
 	op->wp = NULL;
 	op->active_fp = NULL;

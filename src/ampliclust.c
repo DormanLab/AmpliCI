@@ -63,10 +63,10 @@ int assign_clusters(double *eik, unsigned int K, size_t n,
 /**
  * [KSD: stays here because uses data_t data format, which fastq.[ch] do not know]
  */
-void fprint_fasta(FILE *fp, data_t *data, size_t n, size_t p, char const * const prefix) {
+void fprint_fasta(FILE *fp, data_t *data, size_t n, size_t p, unsigned int*len, char const * const prefix) {
 	for (size_t i = 0; i < n; ++i) {
 		fprintf(fp, ">%s%lu\n", prefix, i);
-		for (size_t j = 0; j < p; ++j)
+		for (size_t j = 0; j < len[i]; ++j)
 			fprintf(fp, "%c", xy_to_char[(int)data[i*p + j]]);
 		fprintf(fp, "\n");
 	}

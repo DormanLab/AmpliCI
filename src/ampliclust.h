@@ -46,7 +46,7 @@ struct _run_info {
 };
 
 int assign_clusters(double *eik, unsigned int K, size_t sample_size, unsigned int *cs, unsigned int *ci,int by_K); 
-void fprint_fasta(FILE *fp, data_t *data, size_t n, size_t p, char const * const prefix);  
+void fprint_fasta(FILE *fp, data_t *data, size_t n, size_t p, unsigned int*len, char const * const prefix);  
 void fprint_alignment2(FILE *fp, data_t **data, size_t n, size_t p);
 #ifdef USE_CURSES
 void wprint_fasta(WINDOW *wp, data_t *data, size_t n, size_t p, char const * const prefix);

@@ -117,11 +117,13 @@ add_executable(run_AmpliCI ${C_OBJ3})
 ## perfer to use libgfortran.a first. If libgfortran.a is not found, use the default shared lib.
 find_library(GFORTRAN_LIBRARY gfortran)
 if(NOT GFORTRAN_LIBRARY)
-   target_link_libraries(run_AmpliCI gfortran)     
+   target_link_libraries(run_AmpliCI gfortran)
+#   target_link_libraries(amplici gfortran)     
 else()
    ## cmake with fortran will automatically link to gfortran and quadmath. Now unset it.
    unset(CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES)   
    target_link_libraries(run_AmpliCI ${GFORTRAN_LIBRARY})
+ #  target_link_libraries(amplici ${GFORTRAN_LIBRARY})
 endif()
 
 # Rmath
@@ -129,12 +131,14 @@ find_library(RMATH_LIBRARY NAMES Rmath  HINTS ${LIBR_LIB_DIR} ${_LIBR_EXECUTABLE
 find_package_handle_standard_args(LibRmath DEFAULT_MSG RMATH_LIBRARY)
 if(RMATH_LIBRARY)
    target_link_libraries(run_AmpliCI ${RMATH_LIBRARY})
+#   target_link_libraries(amplici ${RMATH_LIBRARY})
 else()
    message(FATAL_ERROR "Failed to find libRmath !")
 endif()
 
 # math
 TARGET_LINK_LIBRARIES(run_AmpliCI -lm)
+#target_link_libraries(amplici -lm)
 
 
 # loess_raw (our dependencies)
