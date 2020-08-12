@@ -37,7 +37,7 @@
  * @param cluster_size    pointer to cluster size (K x 1) [OUTPUT]
  * @param K               pointer to number of clusters  [OUTPUT]
  * @param sample_size     pointer to sample size (N)  [OUTPUT]
- * @param max_read_length poonter to max read length (l) [OUTPUT]
+ * @param max_read_length poonter to maximum read length (l) [OUTPUT]
  *              (The kth (in [0,1,2,...K-1]) haplotype starts at seeds[k*l])
  * @return err status
  **/

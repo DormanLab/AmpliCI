@@ -15,6 +15,7 @@ AmpliCI, Amplicon Clustering Inference, denoises Illumina amplicon data by appro
 1. [Downstream analysis](#downstream)
 1. [Troubleshooting](#troubleshooting)
 1. [Detailed options](#options)
+1. [C library](#library)
 1. [Acknowledgements](#acknowledgements)
 1. [Citation](#citation)
 1. [Contact](#contact)
@@ -289,6 +290,42 @@ Other important options:
 - `--align`  Align all reads to haplotypes (slow).  [DEFAULT: none]
 
 - `--log_likelihood`  Lower bound for screening reads during cluster assignment.  This is the minimum log assignment likelihood, $\ln \pi_k + \ln \Pr(r_i|h_k)$. [DEFAULT: -100.000000]
+
+
+# C library <a name = "library" />
+
+AmpliCI provides a static C library for users to call function ```amplici_wfile()``` to cluster amplicon sequences from another program. The library `libamplici.a` will appear in the ```src``` directory when you compile AmpliCI.
+
+**Input**
+
+- The fastq input file. [REQUIRED]
+
+- The input error profile. If `NULL`, convert quality score to Phred error probability.
+
+**Output**
+
+- `seeds`: Estimated haplotypes.
+
+- `seeds_length`: Lengths of Estimated haplotypes.
+
+- `cluster_id`: See the description of `assignments` above for outfile `output_base_filename.out`. Note ```amplici_wfile()``` does not filter reads with log assignment likelihood under the given threshold. Instead, it assigns all reads to its closest haplotypes (with the maximum likelihood).
+
+- `cluster sizes`: Number of reads assigned to each haplotype.
+
+- `K`: Number of estimated haplotypes.
+
+- `sample_size`: Number of reads in the fastq input file
+
+- `max_read_length`: maximum read length l. The kth (in [0,1,2,...K-1]) haplotype starts at seeds[k*l].
+
+
+An example to call function ```amplici_wfile()``` is provided in [example_wfile.c](https://github.com/DormanLab/AmpliCI/tree/master/example_wfile.c). You can compile the source file with the C library libamplici.a (in the ```src``` directory):
+
+```
+gcc -o myprog example_wfile.c -lamplici -lRmath -lm -I ./src/ -L ./src/
+```
+
+Use -I to provide path to header file of the library libamplici.h and -L to provide path to the library libamplici.a. You may need to add additional path to Rmath library and header files if needed. Note example_wfile.c needs two more header files in the ```src``` directory, which are not required by the library libamplici.a.
 
 
 # Acknowledgments <a name = "acknowledgements" />
