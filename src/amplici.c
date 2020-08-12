@@ -99,12 +99,15 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 	/* [KSD] I was just proposing that this function do as advertised. */
 	likelihood_filter(opt->K, opt->ll_cutoff, NULL, mod->pi, ini->e_trans,
 							dat->sample_size, ri);
+
+	char *outfile_hap = NULL;
+	char *outfile = NULL;
 	
 	if (opt->outfile_base || opt->outfile_info) {
 		FILE *fp = NULL;
 
 		if (!opt->outfile_info) {
-			char *outfile = malloc((strlen(opt->outfile_base) + 5)
+			outfile = malloc((strlen(opt->outfile_base) + 5)
 							* sizeof (char));
 			if (!outfile)
 				return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
@@ -138,7 +141,7 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 
 		//[TODO] output ini->seeds directly
 		fprint_fasta(fp, ini->seeds[0], opt->K, 
-					 dat->max_read_length,ini->seed_lengths, "H");
+					 dat->max_read_length, ini->seed_lengths, "H");
 		
 		fprintf(fp,"ee: ");   // mean expected number of errors
 		fprint_doubles(fp, ini->H_ee, opt->K ,3,1);
@@ -185,6 +188,7 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 		mmessage(INFO_MSG, NO_ERROR, "Output the final result file: "
 						"%s \n", opt->outfile_info);
 	}
+	if(outfile) free(outfile);
 
 	/* format output fasta file for UCHIME */
 	if (output_hap) {
@@ -195,7 +199,7 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 				return mmessage(ERROR_MSG, INTERNAL_ERROR,
 						"invalid output filenames");
 
-			char *outfile_hap = malloc((strlen(opt->outfile_base)
+			outfile_hap = malloc((strlen(opt->outfile_base)
 							+ 5) * sizeof(char));
 			if (!outfile_hap)
 				return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
@@ -227,6 +231,8 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 					"file: %s \n", opt->outfile_fasta);
 
 	}
+	
+	if(outfile_hap) free(outfile_hap);
 
 	return err;
 }/* ampliCI */
