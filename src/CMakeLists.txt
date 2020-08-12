@@ -107,7 +107,7 @@ include_directories(${LIBR_INCLUDE_DIRS})
 link_directories(${LIBR_LIB_DIR})
 
 # compile option 
-add_compile_options(-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500)
+add_compile_options(-std=c99 -D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500)
 #add_compile_options(-Wall -Wextra -pedantic)
 
 set(C_OBJ3 ./loess.c ./predict.c ./error_est.c ./run_amplici.c)
