@@ -359,7 +359,7 @@ int realloc_seeds(initializer *ini, unsigned int max_read_length, unsigned int p
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 			"reallloc.initializer.seeds");
 	size_t s = 0;
-	if (ini->seeds[0] == dptr)  s = preK;
+	// if (ini->seeds[0] == dptr)  s = preK; // [FIX A BUG, DON'T understand why it is a bug]
 
 	for (size_t k = s; k < K; k++) {
 		ini->seeds[k] = dptr;
