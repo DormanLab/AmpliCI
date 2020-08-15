@@ -64,7 +64,7 @@ int main()
 
     fprintf(fp,"reads ll: ");
 	fprint_doubles(fp, ll, sample_size, 3, 1);
-    
+
     fprintf(fp, "scaled true abun: ");
 		fprint_doubles(fp, abundance, K, 3, 1);
     
@@ -84,6 +84,10 @@ CLEAR_AND_EXIT:
         free(seeds);
     if (seeds_length)
         free(seeds_length);
+    if (abundance)
+        free(abundance);
+    if (ll)
+        free(ll);
 
     return (EXIT_FAILURE);
 } /* main */
