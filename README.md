@@ -315,7 +315,7 @@ AmpliCI provides a static C library for users to call function ```amplici_wfile(
 
 - `seeds_length`: Lengths of Estimated haplotypes.
 
-- `cluster_id`: See the description of `assignments` above for outfile `output_base_filename.out`. Note ```amplici_wfile()``` does not filter reads with log assignment likelihood under the given threshold. Instead, it assigns all reads to its closest haplotypes (with the maximum likelihood).
+- `cluster_id`: See the description of `assignments` above for outfile `output_base_filename.out`. Note ```amplici_wfile()``` does not filter reads with maximal conditional log likelihood under the given threshold. Instead, it assigns all reads to its closest haplotypes with the maximum likelihood.
 
 - `cluster sizes`: Number of reads assigned to each haplotype.
 
@@ -323,7 +323,11 @@ AmpliCI provides a static C library for users to call function ```amplici_wfile(
 
 - `sample_size`: Number of reads in the fastq input file
 
-- `max_read_length`: maximum read length l. The kth (in [0,1,2,...K-1]) haplotype starts at seeds[k*l].
+- `max_read_length`: Maximum read length l. The kth (in [0,1,2,...K-1]) haplotype starts at seeds[k*l].
+
+- `scaled true abun`: See the description of `assignments` above for outfile `output_base_filename.out`.
+
+- `ll`: See the description of `reads ll` above for outfile `output_base_filename.out`.
 
 
 An example to call function ```amplici_wfile()``` is provided in [example_wfile.c](https://github.com/DormanLab/AmpliCI/tree/master/example_wfile.c). You can compile the source file with the C library libamplici.a (in the ```src``` directory):

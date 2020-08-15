@@ -37,9 +37,11 @@ int main()
     unsigned int *seeds_length = NULL;
     size_t sample_size = 0;
     unsigned int max_read_length;
+    double * abundance = NULL;
+    double * ll = NULL;
 
     if ((err = amplici_wfile(fastq_file, error_profile_name, &seeds, &seeds_length, &cluster_id,
-                       &cluster_size, &K, &sample_size, &max_read_length)))
+                       &cluster_size, &K, &sample_size, &max_read_length, &abundance,&ll)))
         goto CLEAR_AND_EXIT;
 
     /* print and check */
@@ -59,6 +61,12 @@ int main()
     fprintf(fp, "cluster sizes: ");
 
     fprint_uints(fp, cluster_size, K, 3, 1);
+
+    fprintf(fp,"reads ll: ");
+	fprint_doubles(fp, ll, sample_size, 3, 1);
+    
+    fprintf(fp, "scaled true abun: ");
+		fprint_doubles(fp, abundance, K, 3, 1);
     
     fprint_fasta(fp, seeds, K, max_read_length, seeds_length, "H");
     
