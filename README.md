@@ -140,7 +140,7 @@ An example (from the ```src``` directory):
 ./run_AmpliCI --help
 ```
 
-- If you apply AmpliCI on longer reads with length > 300 (like merged reads), you may want to decrease the default Lower bound for screening reads during cluster assignment with `--log_likelihood` [DEFAULT: -100.000000]. For example,
+- If you apply AmpliCI on longer reads with length > 300 (like merged reads), you may want to decrease the default Lower bound for screening reads during cluster assignment with `--log_likelihood` [DEFAULT: -100.000000]. For example, you can set the lower bound at -200.
 
 ```sh
 ./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/test.id --profile ../test/error.out --haplotypes ../test/test.fa --log_likelihood -200
@@ -169,7 +169,7 @@ FASTA-formatted file (will be used in the downstream analysis) containing denois
 >H0;size=516.000;DiagP=0.00e+00;ee=0.405;
 ```
 
-- `size`: scaled true abundance estimated for each selected haplotype, required for the subsequent chimera detection with UCHIME3.
+- `size`: scaled true abundance (expected number of error free reads) estimated for each selected haplotype, required for the subsequent chimera detection with UCHIME3.
 
 - `DiagP`: diagnostic probability, which could be used as a criterion to check false positives. We suggest post hoc removal of haplotypes with `DiagP` > 1e-40 when applying AmpliCI on real datasets with more than 1 million reads to reduce false positives. The diagnostic probability may contain an allowance for contaminating sequences (see option `--contaminants`). For further information of the diagnostic probability and contamination screening, please see [our paper](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1).
 
@@ -188,7 +188,7 @@ A text file with the following information provided as key: value pairs, one per
 
 - `pi`: Estimated $\boldsymbol{\pi}$ from AmpliCI.  Each read is assigned to a haplotype by maximum transition probability $\Pr(r_i|h_k)$ (distinct from posterior probability used for assignments) and $\pi_k$ is the proportion of reads assigned to haplotype $k$.
 
-- `reads ll`: For each read, the maximum transition probability $\Pr(r_i|h_k)$ across haplotype source $h_k$.
+- `reads ll`: For each read, the maximum conditional log likelihood (given the source haplotype), $\ln \pi_k + \ln \Pr(r_i|h_k)$.
 
 - There is also a fasta listing of the haplotypes reported in this file.
 
@@ -196,7 +196,7 @@ A text file with the following information provided as key: value pairs, one per
 
 - `uniq seq id`: The index of each selected haplotype in the unique sequence list, ordered from highest abundance to lowest.  If the haplotypes were selected in observed abundance order, then these will be increasing integers from 0.  If any unique sequence was discarded, some integers will be skipped.  For example, this line is `0   1   2   3   4   5   6   7  10  42  45` for test file `test/sim3.8.1.fastq`, indicating that the first 8 most observed sequences were selected as haplotypes, but the 9th and 10th most observed sequences were discarded, and so on.
 
-- `scaled true abun`: The estimated scaled true abundances of each selected haplotype.
+- `scaled true abun`: The estimated scaled true abundances of each selected haplotype (expected number of error free reads).
 
 - `obser abun`: The observed abundance of each selected haplotype.
 
