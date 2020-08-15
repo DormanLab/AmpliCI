@@ -206,7 +206,7 @@ A text file with the following information provided as key: value pairs, one per
 
 - `log likelihood from JC69 model`: The log likelihood of the JC69 hierarchical model computed on the final, fitted model.
 
-- `Diagnostic Probability threshold`: The threshold used to reject candidate haplotypes in the contamination test.  This is the value input through option `--abundance` divided by the number of possible candidate haplotypes.
+- `Diagnostic Probability threshold`: The threshold used to reject candidate haplotypes in the contamination test.  This is the value input through option `--diagnostic` divided by the number of possible candidate haplotypes.
 
 - `aic`: The estimated [Akaike Information Criterion](https://en.wikipedia.org/wiki/Akaike_information_criterion) value from the final fitted model.
 
