@@ -139,6 +139,13 @@ An example (from the ```src``` directory):
 ./run_AmpliCI --help
 ```
 
+- If you apply AmpliCI on longer reads with length > 300 (like merged reads), you may want to decrease the default Lower bound for screening reads during cluster assignment with `--log_likelihood` [DEFAULT: -100.000000]. For example,
+
+```sh
+./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/test.id --profile ../test/error.out --haplotypes ../test/test.fa --log_likelihood -200
+```
+
+
 # Output Files <a name = "output" />
 
 ## Estimating error profile.
