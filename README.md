@@ -325,7 +325,7 @@ AmpliCI provides a static C library for users to call function ```amplici_wfile(
 
 - `max_read_length`: Maximum read length l. The kth (in [0,1,2,...K-1]) haplotype starts at seeds[k*l].
 
-- `scaled true abun`: See the description of `assignments` above for outfile `output_base_filename.out`.
+- `abun`: See the description of `scaled true abun` above for outfile `output_base_filename.out`.
 
 - `ll`: See the description of `reads ll` above for outfile `output_base_filename.out`.
 
