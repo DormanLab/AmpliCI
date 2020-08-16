@@ -305,11 +305,11 @@ AmpliCI provides a static C library for users to call function ```amplici_wfile(
 
 **Input**
 
-- The fastq input file. [REQUIRED]
+- `fastq_file`: The fastq input file. [REQUIRED]
 
-- The input error profile. If `NULL`, convert quality score to Phred error probability.
+- `error_profile_name`: The input error profile. If `NULL`, convert quality score to Phred error probability.
 
-- lower_bound. Allowed lowest abundance. See the description of option `--abundance`. [REQUIRED]
+- `low_bound`: Allowed lowest abundance. See the description of option `--abundance`. [REQUIRED]
 
 **Output**
 

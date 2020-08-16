@@ -30,7 +30,7 @@
  * Cluster amplicon sequences with a given fastq file
  * 
  * @param fastq_file	    Name of the fastq file    [REQUIRED]
- * @param error_profile   Name of the error profile [OPTION]
+ * @param error_profile_name   Name of the error profile [OPTION]
  * @param low_bound       Allowed lowest abundance [REQUIRED]
  * @param seeds           pointer to seeds (haplotypes) (K x l) [OUTPUT]
  * @param seeds_length    pointer to seeds length (K x 1) [OUTPUT]
