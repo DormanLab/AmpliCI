@@ -29,8 +29,9 @@
 /**
  * Cluster amplicon sequences with a given fastq file
  * 
- * @param fastq_file	    the name of the fastq file    [REQUIRED]
- * @param error_profile   the name of the error profile [OPTION]
+ * @param fastq_file	    Name of the fastq file    [REQUIRED]
+ * @param error_profile   Name of the error profile [OPTION]
+ * @param low_bound       Allowed lowest abundance [REQUIRED]
  * @param seeds           pointer to seeds (haplotypes) (K x l) [OUTPUT]
  * @param seeds_length    pointer to seeds length (K x 1) [OUTPUT]
  * @param cluster_id      pointer to reads cluster index (N x 1) [OUTPUT]
@@ -44,7 +45,7 @@
  * 
  * @return err status
  **/
-int amplici_wfile(char *fastq_file, char *error_profile_name, unsigned char **seeds, unsigned int **seeds_length, 
+int amplici_wfile(char *fastq_file, char *error_profile_name, double low_bound, unsigned char **seeds, unsigned int **seeds_length, 
                unsigned int **cluster_id, unsigned int **cluster_size, unsigned int *K, size_t *sample_size,
                unsigned int* max_read_length, double **abun, double **ll){
 
@@ -66,6 +67,7 @@ int amplici_wfile(char *fastq_file, char *error_profile_name, unsigned char **se
 	opt->K = opt->K_space; // set intial max K
   opt->fastq_file = fastq_file;
   opt->error_profile_name = error_profile_name;
+  opt->low_bound = low_bound;
 
 	/* make data object */
 	if ((err = make_data(&dat, opt)))

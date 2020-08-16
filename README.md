@@ -284,7 +284,7 @@ Main options:
 
 Options for sensitivity:
 
-- `--abundance` Lower bound for scaled true abundance during haplotype reconstruction.  [DEFAULT: 2.0]
+- `--abundance` Lower bound for scaled true abundance during haplotype reconstruction (should be >= 2.0).  [DEFAULT: 2.0]
 
 - `--contaminants` Baseline count abundance of contaminating or noise sequences.  [DEFAULT: 1]
 
@@ -308,6 +308,8 @@ AmpliCI provides a static C library for users to call function ```amplici_wfile(
 - The fastq input file. [REQUIRED]
 
 - The input error profile. If `NULL`, convert quality score to Phred error probability.
+
+- lower_bound. Allowed lowest abundance. See the description of option `--abundance`. [REQUIRED]
 
 **Output**
 

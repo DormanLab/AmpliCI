@@ -28,6 +28,7 @@ int main()
     char *fastq_file = "./test/SRR2990088_1_noN_3000_subset1_new.fastq";
     char *error_profile_name = NULL; // or error profile name estimated by run_amplici
     char *output_file = "./test.out";
+    double low_bound = 2.0;
 
     /* initialize output */
     unsigned int K = 0;
@@ -40,7 +41,7 @@ int main()
     double * abundance = NULL;
     double * ll = NULL;
 
-    if ((err = amplici_wfile(fastq_file, error_profile_name, &seeds, &seeds_length, &cluster_id,
+    if ((err = amplici_wfile(fastq_file, error_profile_name, low_bound, &seeds, &seeds_length, &cluster_id,
                        &cluster_size, &K, &sample_size, &max_read_length, &abundance,&ll)))
         goto CLEAR_AND_EXIT;
 
