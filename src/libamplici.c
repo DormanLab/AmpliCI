@@ -102,6 +102,9 @@ int amplici_wfile(char *fastq_file, char *error_profile_name, double low_bound, 
 
   if (error_profile_name)
     opt->use_error_profile = 1;
+  else{
+    opt->use_error_profile = 0;
+  }
 
   if ((err = haplotype_selection(opt, dat, mod, ini, opt->K_max)))
     return err;
@@ -197,8 +200,12 @@ int amplici_core(data_t **dmat, data_t **qmat, size_t sample_size, unsigned int 
   if ((err = make_initializer(&ini, dat, opt, NULL)))
     goto AMPLICI_CLEAR;
 
-  if (error_profile)
+  if (error_profile){
     opt->use_error_profile = 1;
+  }else{
+    opt->use_error_profile = 0;
+  }
+  
 
   if ((err = haplotype_selection(opt, dat, mod, ini, opt->K_max)))
     return err;
