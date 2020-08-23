@@ -24,7 +24,7 @@ struct _hash_dna {
 
 int add_sequence(hash **seq_count, unsigned char *seq, unsigned int length,size_t idx);
 int add_seq_idx(hash *seq_count, unsigned char *seq, unsigned int length, size_t idx);
-void delete_all(hash *seq_count);
+void delete_all(hash **seq_count);
 unsigned int count_sequences(hash *seq_count, unsigned int k);
 int count_sort(hash *a, hash *b);
 void sort_by_count(hash **seq_count);

@@ -241,7 +241,7 @@ void free_data(data *dat)
 		if (dat->lengths) free(dat->lengths);
 		if (dat->offset) free (dat->offset);
 		if (dat->coverage) free (dat->coverage);
-		if (dat->seq_count) delete_all(dat->seq_count);
+		if (dat->seq_count) delete_all(&dat->seq_count);
 		if (dat->error_prob) free(dat->error_prob);
 		free(dat);
 	}
@@ -261,7 +261,7 @@ int sync_data(data *dat, options *opt)
 	
 	/* rebuild a new hash table if previous hash table exist */
 	if(dat->seq_count)
-		delete_all(dat->seq_count);
+		delete_all(&dat->seq_count);
 	dat->seq_count = NULL;
 
 	if ((err = build_hash(dat)))
