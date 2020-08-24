@@ -301,7 +301,7 @@ Other important options:
 
 # C library <a name = "library" />
 
-AmpliCI provides a shared C library for users to call function ```amplici_wfile()``` to cluster amplicon sequences from another program. The library `libamplici.*` (`libamplici.so` or `libamplici.dylib`) will appear in the ```src``` directory when you compile AmpliCI.
+AmpliCI provides both a shared and a static C library for users to call function ```amplici_wfile()``` to cluster amplicon sequences from another program. The library `libamplici.*` (`libamplici.so` for Linux or `libamplici.dylib` for MacOS, and `libamplici.a`) will appear in the ```src``` directory when you compile AmpliCI.
 
 **Input**
 
@@ -340,10 +340,10 @@ gcc -o myprog example_wfile.c -lamplici -lRmath -lm -I ./src/ -L ./src/
 
 Use -I to provide path to header file of the library libamplici.h and -L to provide path to the library libamplici.a. You may need to add additional path to Rmath library and header files if needed. Note example_wfile.c needs two more header files in the ```src``` directory, which are not required by the library libamplici.a.
 
-Add the PATH to the shared library before running your executable file.
+If you use the shared library (`libamplici.so` or `libamplici.dylib`), you need to add the PATH to the shared library before running your executable file.
 
 ```
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./src
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH: /your/full/path/to/library
 ```
 
 
