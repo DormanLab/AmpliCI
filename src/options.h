@@ -39,6 +39,12 @@ struct _options {
 	char const *outfile_info;  /*<! name of informational outfile */
 	char const *outfile_fasta;  /*<! name of fasta outfile */
 
+	/* UMI information */
+	unsigned int UMI_length;  /* length of UMIs (at the beginning of reads ) */
+	char const *initialization_UMI;  /*<! name of initialization file for UMIs */
+	unsigned int K_UMI;  /*<! num of UMI clusters */
+	unsigned int topN;  /*<! top N possible combinations we considered in the model */
+
 	/* model */
 	int convergence_amplici;  /*<! convergence or not when updating abundance */
 	int check_false_positive;  /*<! if we check false positive */

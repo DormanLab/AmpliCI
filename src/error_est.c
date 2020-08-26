@@ -611,7 +611,8 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 	
 	for (size_t i = 0; i < dat->sample_size; ++i) {
 		add_sequence(&hash_list[ini->cluster_id[i]], dat->dmat[i],
-					dat->lengths[i], i);
+					dat->lengths[i], i, &err);
+		if(err) return err;
 	}
 
 	for (unsigned int k =0 ; k < new_K; k++){
@@ -669,6 +670,7 @@ int read_partition_file(char const * const filename, unsigned int *cluster_id, u
  * @param seeds          haplotypes
  * @param count_mat      array for count 
  * @param K              maximum number of clusters
+ * @return               error status
  */
 int err_count_with_assignment(data *dat, unsigned int *cluster_id, data_t** seeds, unsigned int *count_mat, unsigned int K)
 {

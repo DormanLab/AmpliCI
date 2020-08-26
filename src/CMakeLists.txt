@@ -4,7 +4,7 @@ project (AmpliCI VERSION 1.0.1)
 
 SET(CMAKE_CC_COMPILER  gcc)
 
-set(CMAKE_BUILD_TYPE DEBUG)
+set(CMAKE_BUILD_TYPE release)
 set(CMAKE_CXX_STANDARD 11)
 
 include(FindPackageHandleStandardArgs)
@@ -20,7 +20,7 @@ add_library(loess_raw STATIC ${F_OBJ} ${C_OBJ})
 
 set(C_OBJ2 ./amplici.c ./ampliclust.c ./align.c ./cmdline.c ./data.c 
    ./error.c ./fastq.c ./hash.c ./initialize.c ./io.c ./libamplici.c
-   ./lmath.c ./model.c ./options.c ./statistics.c ./util.c)
+   ./lmath.c ./model.c ./options.c ./statistics.c ./util.c ./amplici_umi.c)
 add_library(amplici STATIC ${C_OBJ2} )
 
 # below modified from RStudio's FindLibR.cmake to find R include and lib path 

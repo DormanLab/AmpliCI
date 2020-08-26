@@ -149,6 +149,35 @@ int make_run_info(run_info **ri, data *dat, options *opt)
 	if (!rio->optimal_cluster_size)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 			"run_info::optimal_cluster_size");
+
+
+	rio->UMI_cluster_id = NULL;
+	rio->UMI_cluster_ll = NULL;
+	rio->UMI_cluster_size = NULL;
+
+	if(opt->UMI_length){
+		rio->UMI_cluster_id = calloc(dat->sample_size,
+		sizeof *rio->UMI_cluster_id);
+
+	if (!rio->UMI_cluster_id)
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+			"run_info::UMI_cluster_id");
+
+	rio->UMI_cluster_ll = calloc(dat->sample_size,
+		sizeof *rio->UMI_cluster_ll);
+
+	if (!rio->UMI_cluster_ll)
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+			"run_info::UMI_cluster_ll");
+
+	rio->UMI_cluster_size = calloc(opt->K_UMI,
+		sizeof *rio->UMI_cluster_size);
+
+	if (!rio->UMI_cluster_size)
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+			"run_info::UMI_cluster_size");
+
+	}
 	
 	return NO_ERROR;
 }/* make_run_info*/

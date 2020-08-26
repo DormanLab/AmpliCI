@@ -39,6 +39,11 @@ double Simple_Estep(model *mod, size_t sample_size, double *e_trans,unsigned int
 int update_seeds(data *dat, initializer *ini, unsigned int select, unsigned int ord);
 int likelihood_filter(unsigned int K, double ll_cutoff, double *eik, double *pi, double * e_trans,
 	size_t sample_size, run_info *ri);  
+int trans_expectation(options *opt, data *dat,initializer*ini, double *error_profile, 
+					double adj_trunpois, double *trans_prob);
+double trans_nw(options *opt,unsigned char **align, size_t alen, unsigned int mismatch, unsigned int ngap, 
+	double *error_profile,int err_encoding, unsigned char *rqmat, unsigned char n_quality, double adj, 
+	unsigned int rlen, double *error_prob);
 
 /* print */
 void fprint_assignment(FILE *fp, unsigned int *v, size_t n, unsigned int max, int width, int newline);

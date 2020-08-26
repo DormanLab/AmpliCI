@@ -45,7 +45,7 @@ struct _model {
 
 	unsigned char n_quality;/*<! no. of distinct quality scores after compression */
 
-	double *eik;		/*<! expectations */
+	double *eik;		/*<! expectations or transition prob (used in UMI model) */
 	unsigned int n_param;	/*<! number of parameters */
 	unsigned int K; /*<! number of clusters */
 	double *pi;		/*<! kx1 mixing proportions */
@@ -67,6 +67,17 @@ struct _model {
 	double * distance; /*<! Kx1 distances from haplotypes to the ancestor */
 	unsigned char * est_ancestor; /*<! The estimated ancestor */
 	double *JC_ll_K; /*<! Kx1 log likelihood under JC69 model */
+
+	/* for UMI model */
+	double *eik_umi;   /*<! transition prob of each observed UMIs */
+	double *gamma;    /*<! K_umi x K transiton prob of UMIs to haplotypes (log) */
+	double *eta;      /*<! K_umi proportions of UMIs (log) */
+	unsigned int *E2_sparse_hap_id; /*<! store Hap_id (topN x N) */
+	unsigned int *E2_sparse_umi_id; /*<! store UMI_id (topN x N) */
+	double *E2_sparse_value; /*<! store posterial prob of reads (topN x N) */
+	double ll_UMI;    /*<! current log likelihood for UMI model */
+	double pll_UMI;    /*<! current log likelihood for UMI model (previous copy) */
+
 
 }; /* model */
 

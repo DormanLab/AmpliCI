@@ -92,7 +92,7 @@ int amplici_wfile(char *fastq_file, char *error_profile_name, unsigned char **se
   //mod->error_profile = error_profile;
 
 	/* make initializer */
-	if ((err = make_initializer(&ini, dat, opt, NULL)))
+	if ((err = make_initializer(&ini, dat, opt, NULL, NULL)))
 		goto AMPLICI_CLEAR2;
 
   if (error_profile_name)
@@ -172,7 +172,7 @@ int amplici_core(data_t **dmat, data_t **qmat, size_t sample_size, unsigned int 
     goto AMPLICI_CLEAR;
   mod->error_profile = error_profile;
 
-  if ((err = make_initializer(&ini, dat, opt, NULL)))
+  if ((err = make_initializer(&ini, dat, opt, NULL, NULL)))
     goto AMPLICI_CLEAR;
 
   if (error_profile)
