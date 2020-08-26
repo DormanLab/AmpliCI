@@ -549,8 +549,8 @@ void free_initializer(initializer *ini, options *opt)
 		if (ini->nw_indels) free(ini->nw_indels);
 		if (ini->err_cnt) free(ini->err_cnt); 
 		if(ini->seeds_UMI) free(ini->seeds_UMI);
-		if (ini->seeds_hash) delete_all(ini->seeds_hash);
-		if (ini->UMIs_hash) delete_all(ini->UMIs_hash);
+		if (ini->seeds_hash) delete_all(&ini->seeds_hash);
+		if (ini->UMIs_hash) delete_all(&ini->UMIs_hash);
 		if (ini->reads_hap_id)free(ini->reads_hap_id);
 		if (ini->reads_umi_id) free(ini->reads_umi_id);
 

@@ -140,7 +140,7 @@ An example (from the ```src``` directory):
 ./run_AmpliCI --help
 ```
 
-- If you apply AmpliCI on longer reads with length > 300 (like merged reads), you may want to decrease the default Lower bound for screening reads during cluster assignment with `--log_likelihood` [DEFAULT: -100.000000]. For example,
+- If you apply AmpliCI on longer reads with length > 300 (like merged reads), you may want to decrease the default Lower bound for screening reads during cluster assignment with `--log_likelihood` [DEFAULT: -100.000000]. For example, you can set the lower bound at -200.
 
 ```sh
 ./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/test.id --profile ../test/error.out --haplotypes ../test/test.fa --log_likelihood -200
@@ -169,7 +169,7 @@ FASTA-formatted file (will be used in the downstream analysis) containing denois
 >H0;size=516.000;DiagP=0.00e+00;ee=0.405;
 ```
 
-- `size`: scaled true abundance estimated for each selected haplotype, required for the subsequent chimera detection with UCHIME3.
+- `size`: scaled true abundance (expected number of error free reads) estimated for each selected haplotype, required for the subsequent chimera detection with UCHIME3.
 
 - `DiagP`: diagnostic probability, which could be used as a criterion to check false positives. We suggest post hoc removal of haplotypes with `DiagP` > 1e-40 when applying AmpliCI on real datasets with more than 1 million reads to reduce false positives. The diagnostic probability may contain an allowance for contaminating sequences (see option `--contaminants`). For further information of the diagnostic probability and contamination screening, please see [our paper](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1).
 
@@ -188,7 +188,7 @@ A text file with the following information provided as key: value pairs, one per
 
 - `pi`: Estimated $\boldsymbol{\pi}$ from AmpliCI.  Each read is assigned to a haplotype by maximum transition probability $\Pr(r_i|h_k)$ (distinct from posterior probability used for assignments) and $\pi_k$ is the proportion of reads assigned to haplotype $k$.
 
-- `reads ll`: For each read, the maximum transition probability $\Pr(r_i|h_k)$ across haplotype source $h_k$.
+- `reads ll`: For each read, the maximum conditional log likelihood (given the source haplotype), $\ln \pi_k + \ln \Pr(r_i|h_k)$.
 
 - There is also a fasta listing of the haplotypes reported in this file.
 
@@ -196,7 +196,7 @@ A text file with the following information provided as key: value pairs, one per
 
 - `uniq seq id`: The index of each selected haplotype in the unique sequence list, ordered from highest abundance to lowest.  If the haplotypes were selected in observed abundance order, then these will be increasing integers from 0.  If any unique sequence was discarded, some integers will be skipped.  For example, this line is `0   1   2   3   4   5   6   7  10  42  45` for test file `test/sim3.8.1.fastq`, indicating that the first 8 most observed sequences were selected as haplotypes, but the 9th and 10th most observed sequences were discarded, and so on.
 
-- `scaled true abun`: The estimated scaled true abundances of each selected haplotype.
+- `scaled true abun`: The estimated scaled true abundances of each selected haplotype (expected number of error free reads).
 
 - `obser abun`: The observed abundance of each selected haplotype.
 
@@ -206,7 +206,7 @@ A text file with the following information provided as key: value pairs, one per
 
 - `log likelihood from JC69 model`: The log likelihood of the JC69 hierarchical model computed on the final, fitted model.
 
-- `Diagnostic Probability threshold`: The threshold used to reject candidate haplotypes in the contamination test.  This is the value input through option `--abundance` divided by the number of possible candidate haplotypes.
+- `Diagnostic Probability threshold`: The threshold used to reject candidate haplotypes in the contamination test.  This is the value input through option `--diagnostic` divided by the number of possible candidate haplotypes.
 
 - `aic`: The estimated [Akaike Information Criterion](https://en.wikipedia.org/wiki/Akaike_information_criterion) value from the final fitted model.
 
@@ -284,7 +284,7 @@ Main options:
 
 Options for sensitivity:
 
-- `--abundance` Lower bound for scaled true abundance during haplotype reconstruction.  [DEFAULT: 2.0]
+- `--abundance` Lower bound for scaled true abundance during haplotype reconstruction (should be >= 2.0).  [DEFAULT: 2.0]
 
 - `--contaminants` Baseline count abundance of contaminating or noise sequences.  [DEFAULT: 1]
 
@@ -301,13 +301,15 @@ Other important options:
 
 # C library <a name = "library" />
 
-AmpliCI provides a static C library for users to call function ```amplici_wfile()``` to cluster amplicon sequences from another program. The library `libamplici.a` will appear in the ```src``` directory when you compile AmpliCI.
+AmpliCI provides both a shared and a static C library for users to call function ```amplici_wfile()``` to cluster amplicon sequences from another program. The library `libamplici.*` (`libamplici.so` for Linux or `libamplici.dylib` for MacOS, and `libamplici.a`) will appear in the ```src``` directory when you compile AmpliCI.
 
 **Input**
 
-- The fastq input file. [REQUIRED]
+- `fastq_file`: The fastq input file. [REQUIRED]
 
-- The input error profile. If `NULL`, convert quality score to Phred error probability.
+- `error_profile_name`: The input error profile. If `NULL`, convert quality score to Phred error probability.
+
+- `low_bound`: Allowed lowest abundance. See the description of option `--abundance`. [REQUIRED]
 
 **Output**
 
@@ -315,7 +317,7 @@ AmpliCI provides a static C library for users to call function ```amplici_wfile(
 
 - `seeds_length`: Lengths of Estimated haplotypes.
 
-- `cluster_id`: See the description of `assignments` above for outfile `output_base_filename.out`. Note ```amplici_wfile()``` does not filter reads with log assignment likelihood under the given threshold. Instead, it assigns all reads to its closest haplotypes (with the maximum likelihood).
+- `cluster_id`: See the description of `assignments` above for outfile `output_base_filename.out`. Note ```amplici_wfile()``` does not filter reads with maximal conditional log likelihood under the given threshold. Instead, it assigns all reads to its closest haplotypes with the maximum likelihood.
 
 - `cluster sizes`: Number of reads assigned to each haplotype.
 
@@ -323,7 +325,11 @@ AmpliCI provides a static C library for users to call function ```amplici_wfile(
 
 - `sample_size`: Number of reads in the fastq input file
 
-- `max_read_length`: maximum read length l. The kth (in [0,1,2,...K-1]) haplotype starts at seeds[k*l].
+- `max_read_length`: Maximum read length l. The kth (in [0,1,2,...K-1]) haplotype starts at seeds[k*l].
+
+- `abun`: See the description of `scaled true abun` above for outfile `output_base_filename.out`.
+
+- `ll`: See the description of `reads ll` above for outfile `output_base_filename.out`.
 
 
 An example to call function ```amplici_wfile()``` is provided in [example_wfile.c](https://github.com/DormanLab/AmpliCI/tree/master/example_wfile.c). You can compile the source file with the C library libamplici.a (in the ```src``` directory):
@@ -333,6 +339,12 @@ gcc -o myprog example_wfile.c -lamplici -lRmath -lm -I ./src/ -L ./src/
 ```
 
 Use -I to provide path to header file of the library libamplici.h and -L to provide path to the library libamplici.a. You may need to add additional path to Rmath library and header files if needed. Note example_wfile.c needs two more header files in the ```src``` directory, which are not required by the library libamplici.a.
+
+If you use the shared library (`libamplici.so` or `libamplici.dylib`), you need to add the PATH to the shared library before running your executable file.
+
+```
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH: /your/full/path/to/library
+```
 
 
 # Acknowledgments <a name = "acknowledgements" />

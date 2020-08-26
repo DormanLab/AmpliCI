@@ -627,7 +627,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 			}
 		}
 		if(hash_list[k])
-			delete_all(hash_list[k]);
+			delete_all(&hash_list[k]);
 	}
 
 	/* count error types with given assignment */

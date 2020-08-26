@@ -29,8 +29,9 @@
 /**
  * Cluster amplicon sequences with a given fastq file
  * 
- * @param fastq_file	    the name of the fastq file    [REQUIRED]
- * @param error_profile   the name of the error profile [OPTION]
+ * @param fastq_file	    Name of the fastq file    [REQUIRED]
+ * @param error_profile_name   Name of the error profile [OPTION]
+ * @param low_bound       Allowed lowest abundance [REQUIRED]
  * @param seeds           pointer to seeds (haplotypes) (K x l) [OUTPUT]
  * @param seeds_length    pointer to seeds length (K x 1) [OUTPUT]
  * @param cluster_id      pointer to reads cluster index (N x 1) [OUTPUT]
@@ -39,11 +40,14 @@
  * @param sample_size     pointer to sample size (N)  [OUTPUT]
  * @param max_read_length poonter to maximum read length (l) [OUTPUT]
  *              (The kth (in [0,1,2,...K-1]) haplotype starts at seeds[k*l])
+ * @param abun            pointer to scaled true abundance (expected num of error free reads)
+ * @param ll              pointer to the maximum conditional log likelihood
+ * 
  * @return err status
  **/
-int amplici_wfile(char *fastq_file, char *error_profile_name, unsigned char **seeds, unsigned int **seeds_length, 
+int amplici_wfile(char *fastq_file, char *error_profile_name, double low_bound, unsigned char **seeds, unsigned int **seeds_length, 
                unsigned int **cluster_id, unsigned int **cluster_size, unsigned int *K, size_t *sample_size,
-               unsigned int* max_read_length){
+               unsigned int* max_read_length, double **abun, double **ll){
 
   int err = NO_ERROR;		/* error state */
 	options *opt = NULL;		/* run options */
@@ -63,6 +67,7 @@ int amplici_wfile(char *fastq_file, char *error_profile_name, unsigned char **se
 	opt->K = opt->K_space; // set intial max K
   opt->fastq_file = fastq_file;
   opt->error_profile_name = error_profile_name;
+  opt->low_bound = low_bound;
 
 	/* make data object */
 	if ((err = make_data(&dat, opt)))
@@ -97,6 +102,9 @@ int amplici_wfile(char *fastq_file, char *error_profile_name, unsigned char **se
 
   if (error_profile_name)
     opt->use_error_profile = 1;
+  else{
+    opt->use_error_profile = 0;
+  }
 
   if ((err = haplotype_selection(opt, dat, mod, ini, opt->K_max)))
     return err;
@@ -104,6 +112,21 @@ int amplici_wfile(char *fastq_file, char *error_profile_name, unsigned char **se
   /* assgin reads */
   assign_clusters(mod->eik, opt->K, dat->sample_size, ini->cluster_size,
                   ini->cluster_id, 1);
+
+  /* reads ll */
+  double *cluster_ll = calloc(dat->sample_size,
+		sizeof *cluster_ll);
+
+	if (!cluster_ll)
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+			"cluster_ll");
+    
+  for (unsigned int i = 0 ; i < dat->sample_size; i++) {
+			cluster_ll[i] = mod->pi[ini->cluster_id[i]]
+				+ ini->e_trans[ini->cluster_id[i] * dat->sample_size + i];
+
+	}
+  
 
   /* copy to seeds, cluster_id, cluster_size */
   *K = opt->K;
@@ -113,6 +136,8 @@ int amplici_wfile(char *fastq_file, char *error_profile_name, unsigned char **se
   *seeds_length = ini->seed_lengths;
   *seeds = ini->seeds[0];  // check carefully 
   *max_read_length = dat->max_read_length;
+  *abun = ini->H_abun;
+  *ll = cluster_ll;
 
   /* avoid to be freed */
   /* input */
@@ -124,8 +149,8 @@ int amplici_wfile(char *fastq_file, char *error_profile_name, unsigned char **se
   ini->cluster_size = NULL;
   ini->seeds[0] = NULL;
   ini->seed_lengths = NULL;
+  ini->H_abun = NULL;
   
-
   AMPLICI_CLEAR2:
   if (dat)
     free_data(dat);
@@ -175,8 +200,12 @@ int amplici_core(data_t **dmat, data_t **qmat, size_t sample_size, unsigned int 
   if ((err = make_initializer(&ini, dat, opt, NULL, NULL)))
     goto AMPLICI_CLEAR;
 
-  if (error_profile)
+  if (error_profile){
     opt->use_error_profile = 1;
+  }else{
+    opt->use_error_profile = 0;
+  }
+  
 
   if ((err = haplotype_selection(opt, dat, mod, ini, opt->K_max)))
     return err;

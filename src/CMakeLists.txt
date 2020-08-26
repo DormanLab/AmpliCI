@@ -21,7 +21,9 @@ add_library(loess_raw STATIC ${F_OBJ} ${C_OBJ})
 set(C_OBJ2 ./amplici.c ./ampliclust.c ./align.c ./cmdline.c ./data.c 
    ./error.c ./fastq.c ./hash.c ./initialize.c ./io.c ./libamplici.c
    ./lmath.c ./model.c ./options.c ./statistics.c ./util.c ./amplici_umi.c)
-add_library(amplici STATIC ${C_OBJ2} )
+
+add_library(amplici SHARED ${C_OBJ2} )
+add_library(amplici_static STATIC ${C_OBJ2})
 
 # below modified from RStudio's FindLibR.cmake to find R include and lib path 
 # https://github.com/rstudio/rstudio/blob/master/cmake/modules/FindLibR.cmake 
@@ -131,14 +133,14 @@ find_library(RMATH_LIBRARY NAMES Rmath  HINTS ${LIBR_LIB_DIR} ${_LIBR_EXECUTABLE
 find_package_handle_standard_args(LibRmath DEFAULT_MSG RMATH_LIBRARY)
 if(RMATH_LIBRARY)
    target_link_libraries(run_AmpliCI ${RMATH_LIBRARY})
-#   target_link_libraries(amplici ${RMATH_LIBRARY})
+   target_link_libraries(amplici ${RMATH_LIBRARY})
 else()
    message(FATAL_ERROR "Failed to find libRmath !")
 endif()
 
 # math
 TARGET_LINK_LIBRARIES(run_AmpliCI -lm)
-#target_link_libraries(amplici -lm)
+target_link_libraries(amplici -lm)
 
 
 # loess_raw (our dependencies)
@@ -147,6 +149,16 @@ target_link_libraries(run_AmpliCI loess_raw)
 add_dependencies(run_AmpliCI amplici)
 target_link_libraries(run_AmpliCI amplici)
 
+
+### change the name of the static library 
+set_target_properties(amplici_static PROPERTIES OUTPUT_NAME "amplici")
+### allow ouput both static and shared library 
+set_target_properties(amplici PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+set_target_properties(amplici_static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+
+
+## version for the shared 
+# set_target_properties(amplici PROPERTIES VERSION 1.0)
 
 
 

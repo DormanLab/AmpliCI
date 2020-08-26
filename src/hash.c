@@ -95,14 +95,16 @@ int add_seq_idx(hash *seq_count, unsigned char *seq, unsigned int length,
  *
  * @param seq_count	hash table
  */
-void delete_all(hash *seq_count){
-	hash *tmp, *current;
+void delete_all(hash **seq_count){
+	hash *tmp, *current,*hash_count;
+	hash_count = *seq_count;
 
-	HASH_ITER( hh, seq_count, current, tmp ) {
+	HASH_ITER( hh, hash_count, current, tmp ) {
 		if(current->idx_array) free(current->idx_array);
-		HASH_DEL( seq_count, current );
+		HASH_DEL( hash_count, current );
 		free(current);
 	}
+	*seq_count = NULL;
 }/* delete_all */
 
 /**

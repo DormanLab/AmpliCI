@@ -12,7 +12,7 @@
 
 #include <stdlib.h>
 
-int amplici_wfile(char *fastq_file, char *error_profile_name, unsigned char **seeds, unsigned int **seeds_length, 
+int amplici_wfile(char *fastq_file, char *error_profile_name, double low_bound, unsigned char **seeds, unsigned int **seeds_length, 
                unsigned int **cluster_id, unsigned int **cluster_size, unsigned int *K, size_t *sample_size,
-               unsigned int* max_read_length);
+               unsigned int* max_read_length, double **abun, double **ll);
 

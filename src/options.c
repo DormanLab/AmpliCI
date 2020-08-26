@@ -278,6 +278,7 @@ int parse_options(options *opt, int argc, const char **argv)
 				opt->gap_p = -20;
 				opt->band = 2;
 				opt->JC69_model = 0;
+				mmessage(INFO_MSG, NO_ERROR, "Cluster UMIs .... \n");
 			}else if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
@@ -286,7 +287,6 @@ int parse_options(options *opt, int argc, const char **argv)
 				mmessage(INFO_MSG, NO_ERROR, "UMI set: "
 					"%s\n", opt->initialization_UMI);
 			}
-			mmessage(INFO_MSG, NO_ERROR, "Cluster UMIs .... \n");
 			break;
 		case 'x':
 			if (i == argc - 1) {
