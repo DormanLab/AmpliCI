@@ -17,13 +17,12 @@
 #include "align.h"
 #include "model.h"
 #include "io.h"
-
+#include "amplici_umi.h"
 
 #define MATHLIB_STANDALONE 1
 #include <Rmath.h>
 
 
-int ini_eta_gamma(options *opt, initializer *ini, double *gamma, double *eta, size_t sample_size);
 int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod);
 double E_step(model *mod, size_t sample_size, unsigned int topN, 
                     unsigned int K, unsigned int K_UMI, int *err);
@@ -59,6 +58,7 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
 
 
     /* rewrite below as a function */
+    /* 
     unsigned int idx;
      for (unsigned int b = 0; b < opt->K_UMI; b++){
         for (unsigned int k = 0; k < opt->K; k++){
@@ -75,6 +75,9 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
             mod->eta[b] = -INFINITY;
         }
     }
+    */
+   log_vector(mod->gamma, opt->K*opt->K_UMI);
+   log_vector(mod->eta, opt->K_UMI);
     
     mod->ll_UMI = E_step(mod, dat->sample_size, opt->topN, 
                     opt->K, opt->K_UMI, &err);
@@ -113,8 +116,9 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
     mmessage(INFO_MSG, NO_ERROR, "Final reads assignment.....\n");
 
     /* reads assignment */
-    reads_assign_sparse(mod, ri, dat->sample_size, opt->topN, 
-                    opt->K, opt->K_UMI);
+    if((err = reads_assign_sparse(mod, ri, dat->sample_size, opt->topN, 
+                    opt->K, opt->K_UMI)))
+        return err;
 
      /* print and check */
     FILE *fp = NULL;
@@ -144,11 +148,11 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
 
     fprint_uints(fp, ri->UMI_cluster_size, opt->K_UMI, 3, 1);
 
-    fprintf(fp,"reads optimal posterior likelihood: ");
+    fprintf(fp,"reads posterior likelihood: ");
 	fprint_doubles(fp, ri->optimal_cluster_ll, dat->sample_size, 3, 1);
 
     fprintf(fp,"Eta: ");
-	fprint_doubles(fp, mod->eta, opt->K_UMI, 3, 1);
+	fprint_doubles(fp, mod->eta, opt->K_UMI, 6, 1);
 
     fprintf(fp,"Gamma: ");
     fprint_vectorized_matrix(fp, mod->gamma,
@@ -160,7 +164,7 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
 						"%s \n", opt->outfile_base);
 
     return err;
-}
+}/* EM_algorithm */
 
 
 /* set initial value for gamma and eta */
@@ -201,12 +205,6 @@ int ini_eta_gamma(options *opt, initializer *ini, double *gamma, double *eta, si
             idx = b * K + k;
             debug_msg(DEBUG_II, fxn_debug, "%15.3f / %15.3f\n,",gamma[idx],gamma_sumh);
             gamma[idx] /=  gamma_sumh;
-           // if(gamma[idx]){
-           //     gamma[idx] = log(gamma[idx]);
-           // }else{
-           //     debug_msg(DEBUG_I, fxn_debug, "gamma == 0\n");
-           //     gamma[idx] = -INFINITY;   
-            //}
             debug_msg(DEBUG_III, fxn_debug, "%15.3f,",gamma[idx]);  
         }
           debug_msg(DEBUG_III, fxn_debug, "\n");  
@@ -214,16 +212,11 @@ int ini_eta_gamma(options *opt, initializer *ini, double *gamma, double *eta, si
 
     for (unsigned int b = 0; b < opt->K_UMI; ++b){
         eta[b] /= eta_sum;
-       // if(eta[b]){
-       //     eta[b] = log(eta[b]);
-       // }else{
-       //     eta[b] = -INFINITY;
-       // }
     }
         
 
     return err;
-}
+}/* ini_eta_gamma */
 
 /* calculate transition prob between data and input UMI and Hap */
 int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
@@ -265,6 +258,8 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
     unsigned int nindels,nmismatch;
     double adj_trunpois = ppois(dat->max_read_length, dat->max_read_length * opt->indel_error, 1, 1);
 
+    
+    /* seeks for a more efficient way */
     for (unsigned int r = 0; r < dat->sample_size; ++r)
     {
 
@@ -272,7 +267,7 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
         {
 
 
-            /* always find problems when aligning barcodes. maybe use alignmnet free method ? */
+            /* always find problems when aligning barcodes. maybe just use alignmnet free method ? */
 
             alen = opt->UMI_length;
             nindels = 0;
@@ -281,7 +276,7 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
                                           (size_t)opt->UMI_length,
                                           (size_t)opt->UMI_length,
                                           opt->score, opt->gap_p, 2, 1, NULL,
-                                          &err, &alen);        // set band as 2 ?
+                                          &err, &alen);        // set band = 2 
 
 
             ana_alignment(aln,alen, opt->UMI_length, &nindels, 
@@ -350,10 +345,12 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
 		fclose(fp);
 	}
     */
-    
+
+    normalize(dat->sample_size, opt->K, mod->eik);
+    normalize(dat->sample_size, opt->K_UMI, mod->eik_umi);
 
      /* normalize and restored in log version */
-     /* [DUPLICATE CODES] rewrote below as a function normalize */
+     /*
     double max, sum;
     unsigned int idx;
     for (unsigned int i = 0; i < dat->sample_size; i++){
@@ -379,8 +376,10 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
             mod->eik[idx] = log(mod->eik[idx]);
         }
     }
+    */
 
     /* UMIs */
+    /*
     for (unsigned int i = 0; i < dat->sample_size; i++){
         max = -INFINITY;
         for (unsigned int k = 0; k < opt->K_UMI; k++) {
@@ -404,9 +403,10 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
             mod->eik_umi[idx] = log(mod->eik_umi[idx]);
         }
     }
+    */
 
     return err;
-}
+}/* trans_hap_and_umi */
 
 /* update E2_sparse */
 double E_step(model *mod, size_t sample_size, unsigned int topN, 
@@ -421,8 +421,9 @@ double E_step(model *mod, size_t sample_size, unsigned int topN,
     double sum;
     int fxn_debug = ABSOLUTE_SILENCE;
     double read_ll;
+    // double log_epsilon = - 40;
     
-
+    /* [TODO] temp is sparse, think about a more efficient way to do */
     double *temp = NULL;
     temp = calloc(K* K_UMI, sizeof *temp);
     if(!temp){
@@ -444,10 +445,11 @@ double E_step(model *mod, size_t sample_size, unsigned int topN,
         max = -INFINITY;
         for (unsigned int k = 0; k < K; ++k){
             for (unsigned int b = 0; b < K_UMI; ++b){
-                    if(gamma[b*K+k] > -INFINITY){
+                    if(gamma[b*K+k] > -INFINITY && eta[b] > -INFINITY){
                         cur_value = gamma[b*K + k] + eta[b] 
                             + mod->eik_umi[b*sample_size +i] + mod->eik[k*sample_size + i];
                    }else{
+                        debug_msg(DEBUG_I, fxn_debug, "gamma == 0\n");
                         cur_value = -INFINITY;
                     }
                     temp[b*K+k] = cur_value;
@@ -554,45 +556,134 @@ int M_step(model *mod,size_t sample_size, unsigned int topN,
         for (unsigned int k = 0; k < K; k++){
             idx = b * K + k;
             gamma[idx] /=  (eta[b]+epsilon);  // avoid /0
-           //  if(gamma[idx]){
-            //    gamma[idx] = log(gamma[idx]);   // store in log version
-            //}else{
-             //   gamma[idx] = -INFINITY;   
-            //}
         }
         eta[b] /= sample_size;
-         //if(eta[b]){
-         //   eta[b] = log(eta[b]);   // store in log version 
-        //}else{
-        //    eta[b] = -INFINITY;
-        //}
     }
 
     return err;
 }/* M_step */
 
+int log_vector(double *x, unsigned int len){
+
+    for(unsigned int i = 0; i < len; ++i){
+        if(x[i] > 0.){
+            x[i] = log(x[i]);
+        }else{
+            x[i] = -INFINITY;
+        }
+    }
+    return NO_ERROR;
+}/* log_vector */
+
+int normalize(size_t n, unsigned int K, double * Emat){
+
+    double max, sum;
+    unsigned int idx;
+    int fxn_debug = ABSOLUTE_SILENCE;
+
+     for (unsigned int i = 0; i < n; ++i){
+        max = -INFINITY;
+        for (unsigned int k = 0; k < K; k++) {
+			idx = k * n + i;
+			if (max < Emat[idx])
+				max = Emat[idx];
+		}
+        if(i<10)
+            debug_msg(DEBUG_I, fxn_debug, "%5d th read: %15.3f\n",i, max);
+		sum = 0;
+		for (unsigned int k = 0; k < K; ++k) {
+			idx = k * n + i;
+			Emat[idx] = exp(Emat[idx] - max);
+			sum += Emat[idx];
+		}
+        if(i<10)
+            debug_msg(DEBUG_I, fxn_debug, "%5d th read: %15.3f\n",i, sum);
+        for (unsigned int k = 0; k < K; ++k){
+            idx = k * n + i;
+			Emat[idx] /= sum;
+            Emat[idx] = log(Emat[idx]);
+        }
+    }
+
+    return NO_ERROR;
+}/* normalize */
+
 int reads_assign_sparse(model *mod, run_info *ri, size_t sample_size, unsigned int topN, 
                     unsigned int K, unsigned int K_UMI){
 
-    unsigned int idx;
 
-    for (unsigned int k = 0; k < K; k++)
+    int err = NO_ERROR;
+    int fxn_debug = ABSOLUTE_SILENCE;
+    double *rll = NULL;
+    double *ull = NULL;
+
+    rll = calloc(K, sizeof *rll);
+    ull = calloc(K_UMI, sizeof *ull);
+    if(!rll || !ull)
+        return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "reads assign: rll, ull");
+
+    //[TODO] use the maginal likelihood to assign reads and barcodes                    
+    unsigned int idx;
+    double rmax, umax;
+    unsigned int rmax_id, umax_id;
+
+    for (unsigned int k = 0; k < K; ++k)
         ri->optimal_cluster_size[k] = 0;
 
-    for (unsigned int b = 0; b < K_UMI; b++)
+    for (unsigned int b = 0; b < K_UMI; ++b)
         ri->UMI_cluster_size[b] = 0;
 
-    for(unsigned int i = 0; i < sample_size; ++i){
-        idx = i * topN;
+    for (unsigned int i = 0; i < sample_size; ++i)
+    {
+        for (unsigned int j = 0; j < topN; ++j)
+        {
+            idx = i * topN + j;
+            rll[mod->E2_sparse_hap_id[idx]] += mod->E2_sparse_value[idx];
+            ull[mod->E2_sparse_umi_id[idx]] += mod->E2_sparse_value[idx];
+        }
 
-        ri->optimal_cluster_id[i] = mod->E2_sparse_hap_id[idx];
-        ri->optimal_cluster_size[mod->E2_sparse_hap_id[idx]]++;
+        rmax = 0.;
+        for (unsigned int j = 0; j < K; ++j)
+        {
+            if (rll[j] > rmax)
+            {
+                rmax = rll[j];
+                rmax_id = j;
+            }
+            rll[j] = 0;
+        }
 
-        ri->UMI_cluster_id[i] = mod->E2_sparse_umi_id[idx];
-        ri->UMI_cluster_size[mod->E2_sparse_umi_id[idx]]++;
+        ri->optimal_cluster_id[i] = rmax_id;
+        ri->optimal_cluster_size[rmax_id]++;
+        ri->optimal_cluster_ll[i] = rmax;
 
-        ri->optimal_cluster_ll[i] = mod->E2_sparse_value[idx];
+        if(i<10)
+            debug_msg(DEBUG_I, fxn_debug, "%5d th read: %5d\n",i, rmax_id);
+
+
+        umax = 0.;
+        for (unsigned int j = 0; j < K_UMI; ++j)
+        {
+            if (ull[j] > umax)
+            {
+                umax = ull[j];
+                umax_id = j;
+            }
+            ull[j] = 0;
+        }
+
+        ri->UMI_cluster_id[i] = umax_id;
+        ri->UMI_cluster_size[umax_id]++;
+        ri->UMI_cluster_ll[i] = umax;
+
+        if(i<10)
+            debug_msg(DEBUG_I, fxn_debug, "%5d th barcodes: %5d\n",i, umax_id);
+
     }
-    
-    return NO_ERROR;
-}
+
+    /* free space */
+    if(rll)free(rll);
+    if(ull)free(ull);
+
+    return err;
+}/* reads_assign_sparse */

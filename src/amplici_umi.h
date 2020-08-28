@@ -16,3 +16,5 @@
 
 int ini_eta_gamma(options *opt, initializer *ini, double *gamma, double *eta, size_t sample_size);
 int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info *ri);
+int log_vector(double *x, unsigned int len);
+int normalize(size_t n, unsigned int K, double * Emat);

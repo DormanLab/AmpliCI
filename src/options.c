@@ -177,7 +177,6 @@ int parse_options(options *opt, int argc, const char **argv)
 		case 'n':
 			if (!strcmp(&argv[i][j], "nJC69")) {
 				opt->JC69_model = 0;
-				i++;
 			}else{
 				opt->nw_align = NO_ALIGNMENT;
 			}
