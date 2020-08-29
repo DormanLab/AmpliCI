@@ -30,6 +30,8 @@ int M_step(model *mod,size_t sample_size, unsigned int topN,
                     unsigned int K, unsigned int K_UMI);
 int reads_assign_sparse(model *mod, run_info *ri, size_t sample_size, unsigned int topN, 
                     unsigned int K, unsigned int K_UMI);
+int reads_assign_optimal(model *mod, run_info *ri, size_t sample_size, unsigned int topN, 
+                    unsigned int K, unsigned int K_UMI);
 
 /* main model for UMI */
 int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info *ri){
@@ -116,9 +118,16 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
     mmessage(INFO_MSG, NO_ERROR, "Final reads assignment.....\n");
 
     /* reads assignment */
+    /*
     if((err = reads_assign_sparse(mod, ri, dat->sample_size, opt->topN, 
                     opt->K, opt->K_UMI)))
         return err;
+    */
+
+    /* assignment with the combination with the maximum log likelihood */
+    reads_assign_optimal(mod, ri, dat->sample_size, opt->topN, 
+                    opt->K, opt->K_UMI);
+    
 
      /* print and check */
     FILE *fp = NULL;
@@ -127,6 +136,8 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
         return mmessage(ERROR_MSG, FILE_OPEN_ERROR,
                         opt->outfile_base);        
     }
+
+    fprintf(fp, "log likelihood: %f\n", mod->ll_UMI);
 
     fprintf(fp, "K: %i\n", opt->K);
 
@@ -345,10 +356,10 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
 		fclose(fp);
 	}
     */
-
+   /*
     normalize(dat->sample_size, opt->K, mod->eik);
     normalize(dat->sample_size, opt->K_UMI, mod->eik_umi);
-
+    */
      /* normalize and restored in log version */
      /*
     double max, sum;
@@ -608,6 +619,8 @@ int normalize(size_t n, unsigned int K, double * Emat){
     return NO_ERROR;
 }/* normalize */
 
+
+/* [TODO] write another reads assignment and assign reads to the maximum combination */
 int reads_assign_sparse(model *mod, run_info *ri, size_t sample_size, unsigned int topN, 
                     unsigned int K, unsigned int K_UMI){
 
@@ -621,8 +634,7 @@ int reads_assign_sparse(model *mod, run_info *ri, size_t sample_size, unsigned i
     ull = calloc(K_UMI, sizeof *ull);
     if(!rll || !ull)
         return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "reads assign: rll, ull");
-
-    //[TODO] use the maginal likelihood to assign reads and barcodes                    
+                   
     unsigned int idx;
     double rmax, umax;
     unsigned int rmax_id, umax_id;
@@ -684,6 +696,38 @@ int reads_assign_sparse(model *mod, run_info *ri, size_t sample_size, unsigned i
     /* free space */
     if(rll)free(rll);
     if(ull)free(ull);
+
+    return err;
+}/* reads_assign_sparse */
+
+
+int reads_assign_optimal(model *mod, run_info *ri, size_t sample_size, unsigned int topN, 
+                    unsigned int K, unsigned int K_UMI){
+
+
+    int err = NO_ERROR;
+    
+    //[TODO] use the maginal likelihood to assign reads and barcodes                    
+    unsigned int idx;
+   
+    for (unsigned int k = 0; k < K; ++k)
+        ri->optimal_cluster_size[k] = 0;
+
+    for (unsigned int b = 0; b < K_UMI; ++b)
+        ri->UMI_cluster_size[b] = 0;
+
+    for (unsigned int i = 0; i < sample_size; ++i)
+    {
+        idx = i * topN;
+        ri->optimal_cluster_id[i] = mod->E2_sparse_hap_id[idx];
+        ri->optimal_cluster_size[mod->E2_sparse_hap_id[idx]]++;
+
+        ri->UMI_cluster_id[i] = mod->E2_sparse_umi_id[idx];
+        ri->UMI_cluster_size[mod->E2_sparse_umi_id[idx]]++;
+
+        ri->optimal_cluster_ll[i] = mod->E2_sparse_value[idx];
+
+    }
 
     return err;
 }/* reads_assign_sparse */
