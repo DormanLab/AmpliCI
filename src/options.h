@@ -19,6 +19,11 @@ enum {
 	ALGORITHM_AMPLICI
 };
 
+enum {
+	MLE,
+	MPLE
+};
+
 
 typedef struct _options options;
 /**
@@ -44,6 +49,9 @@ struct _options {
 	char const *initialization_UMI;  /*<! name of initialization file for UMIs */
 	unsigned int K_UMI;  /*<! num of UMI clusters */
 	unsigned int topN;  /*<! top N possible combinations we considered in the model */
+	int trans_penalty;   /*<! penalty on transiton prob */
+	double pho;          /*<! for MPLE */
+	double omega;       /*< ! for MPLE */
 
 	/* model */
 	int convergence_amplici;  /*<! convergence or not when updating abundance */

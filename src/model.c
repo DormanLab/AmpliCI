@@ -151,6 +151,7 @@ int make_model(model **mod, data *dat, options *opt)
 	rm->E2_sparse_value = NULL;
 	rm->ll_UMI = -INFINITY;
     rm->pll_UMI = -INFINITY;
+	rm->penalty_ll = 0.;
 
 	if(opt->UMI_length){
 		/* eik_umi */

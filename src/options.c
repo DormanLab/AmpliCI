@@ -112,6 +112,9 @@ int make_options(options **opt) {
 	op->initialization_UMI = NULL;
 	op->K_UMI = 0;
 	op->topN = 10;
+	op->trans_penalty = MPLE;
+	op->pho = 1.01;
+	op->omega = 1e-20;
 
 	return NO_ERROR;
 } /* make_options */

@@ -18,6 +18,7 @@
 #include "model.h"
 #include "io.h"
 #include "amplici_umi.h"
+#include "error.h"
 
 #define MATHLIB_STANDALONE 1
 #include <Rmath.h>
@@ -26,12 +27,13 @@
 int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod);
 double E_step(model *mod, size_t sample_size, unsigned int topN, 
                     unsigned int K, unsigned int K_UMI, int *err);
-int M_step(model *mod,size_t sample_size, unsigned int topN, 
+int M_step(options* opt, model *mod,size_t sample_size, unsigned int topN, 
                     unsigned int K, unsigned int K_UMI);
 int reads_assign_sparse(model *mod, run_info *ri, size_t sample_size, unsigned int topN, 
                     unsigned int K, unsigned int K_UMI);
 int reads_assign_optimal(model *mod, run_info *ri, size_t sample_size, unsigned int topN, 
                     unsigned int K, unsigned int K_UMI);
+double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s,double pho, double omega);
 
 /* main model for UMI */
 int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info *ri){
@@ -45,8 +47,9 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
 
 
     /* initialize gamma and eta */
-    ini_eta_gamma(opt, ini, mod->gamma, mod->eta, dat->sample_size);
-     
+    mod->penalty_ll = ini_eta_gamma(opt, ini, mod->gamma, mod->eta, dat->sample_size);
+    if (isnan(mod->penalty_ll))
+            fprintf(stderr, "penalty_ll : %15.7f \n", mod->penalty_ll);
 
     /* when ll relative diff > 1e-6 */ 
 
@@ -58,31 +61,12 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
 
     mmessage(INFO_MSG, NO_ERROR, "The E step of the %5d iteration...\n", EM_iter);
 
-
-    /* rewrite below as a function */
-    /* 
-    unsigned int idx;
-     for (unsigned int b = 0; b < opt->K_UMI; b++){
-        for (unsigned int k = 0; k < opt->K; k++){
-             idx = b * opt->K + k;
-             if(mod->gamma[idx]){
-                mod->gamma[idx] = log(mod->gamma[idx]);   // store in log version
-            }else{
-                mod->gamma[idx] = -INFINITY;   
-            }
-        }
-         if(mod->eta[b]){
-            mod->eta[b] = log(mod->eta[b]);   // store in log version 
-        }else{
-            mod->eta[b] = -INFINITY;
-        }
-    }
-    */
    log_vector(mod->gamma, opt->K*opt->K_UMI);
    log_vector(mod->eta, opt->K_UMI);
     
     mod->ll_UMI = E_step(mod, dat->sample_size, opt->topN, 
                     opt->K, opt->K_UMI, &err);
+    mod->ll_UMI -= mod->penalty_ll;
     if(err)
         return err;
 
@@ -94,10 +78,9 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
     mmessage(INFO_MSG, NO_ERROR, "The M step of the %5d iteration...\n", EM_iter);
 
     /* update gamma and eta */
-    if((err = M_step(mod,dat->sample_size, opt->topN, 
+    if((err = M_step(opt,mod,dat->sample_size, opt->topN, 
                     opt->K, opt->K_UMI)))
         return err;
-
 
 
     mod->pll_UMI = mod->ll_UMI;
@@ -124,7 +107,7 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
         return err;
     */
 
-    /* assignment with the combination with the maximum log likelihood */
+    /* assignment with the combination with the joint maximum log likelihood */
     reads_assign_optimal(mod, ri, dat->sample_size, opt->topN, 
                     opt->K, opt->K_UMI);
     
@@ -179,12 +162,17 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
 
 
 /* set initial value for gamma and eta */
-int ini_eta_gamma(options *opt, initializer *ini, double *gamma, double *eta, size_t sample_size)
+double ini_eta_gamma(options *opt, initializer *ini, double *gamma, double *eta, size_t sample_size)
 {
 
-    int err = NO_ERROR;
+    //int err = NO_ERROR;
     unsigned int K = opt->K;
     int fxn_debug = ABSOLUTE_SILENCE;
+    double llp_sum;
+    double rho = 1.01;
+    double omega = 1e-15;
+    double epsilon = 1e-40;
+
 
     for (size_t i = 0; i < sample_size; i++)
     {
@@ -201,6 +189,7 @@ int ini_eta_gamma(options *opt, initializer *ini, double *gamma, double *eta, si
     double eta_sum = 0.;
     unsigned int idx;
 
+    llp_sum = 0.;
     for (unsigned int b = 0; b < opt->K_UMI; ++b)
     {
         eta_sum += eta[b];
@@ -215,8 +204,12 @@ int ini_eta_gamma(options *opt, initializer *ini, double *gamma, double *eta, si
         for (unsigned int k = 0; k < K; ++k){
             idx = b * K + k;
             debug_msg(DEBUG_II, fxn_debug, "%15.3f / %15.3f\n,",gamma[idx],gamma_sumh);
-            gamma[idx] /=  gamma_sumh;
+            gamma[idx] /=  (gamma_sumh+ epsilon); // avoid /0
             debug_msg(DEBUG_III, fxn_debug, "%15.3f,",gamma[idx]);  
+            double llp = rho * log1p(gamma[idx]/omega);
+            llp_sum += llp;
+            if(isnan(llp))
+                fprintf(stderr, "(%d, %d) : gamma = %15.7f, ll = %15.7f \n", b, k, gamma[idx], llp);
         }
           debug_msg(DEBUG_III, fxn_debug, "\n");  
     }
@@ -226,7 +219,7 @@ int ini_eta_gamma(options *opt, initializer *ini, double *gamma, double *eta, si
     }
         
 
-    return err;
+    return llp_sum;
 }/* ini_eta_gamma */
 
 /* calculate transition prob between data and input UMI and Hap */
@@ -271,6 +264,7 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
 
     
     /* seeks for a more efficient way */
+    unsigned int band = 2;   // for UMIs 
     for (unsigned int r = 0; r < dat->sample_size; ++r)
     {
 
@@ -286,7 +280,7 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
             aln = nwalign(&ini->seeds_UMI[b * opt->UMI_length], dat->dmatU[r],
                                           (size_t)opt->UMI_length,
                                           (size_t)opt->UMI_length,
-                                          opt->score, opt->gap_p, 2, 1, NULL,
+                                          opt->score, opt->gap_p, band, 1, NULL,
                                           &err, &alen);        // set band = 2 
 
 
@@ -356,65 +350,12 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
 		fclose(fp);
 	}
     */
+   
    /*
     normalize(dat->sample_size, opt->K, mod->eik);
     normalize(dat->sample_size, opt->K_UMI, mod->eik_umi);
     */
-     /* normalize and restored in log version */
-     /*
-    double max, sum;
-    unsigned int idx;
-    for (unsigned int i = 0; i < dat->sample_size; i++){
-        max = -INFINITY;
-        for (unsigned int k = 0; k < opt->K; k++) {
-			idx = k * dat->sample_size + i;
-			if (max < mod->eik[idx])
-				max = mod->eik[idx];
-		}
-        if(i<10)
-            debug_msg(DEBUG_I, fxn_debug, "%5d th read: %15.3f\n",i, max);
-		sum = 0;
-		for (unsigned int k = 0; k < opt->K; ++k) {
-			idx = k * dat->sample_size + i;
-			mod->eik[idx] = exp(mod->eik[idx] - max);
-			sum += mod->eik[idx];
-		}
-        if(i<10)
-            debug_msg(DEBUG_I, fxn_debug, "%5d th read: %15.3f\n",i, sum);
-        for (unsigned int k = 0; k < opt->K; ++k){
-            idx = k * dat->sample_size + i;
-			mod->eik[idx] /= sum;
-            mod->eik[idx] = log(mod->eik[idx]);
-        }
-    }
-    */
-
-    /* UMIs */
-    /*
-    for (unsigned int i = 0; i < dat->sample_size; i++){
-        max = -INFINITY;
-        for (unsigned int k = 0; k < opt->K_UMI; k++) {
-			idx = k * dat->sample_size + i;
-			if (max < mod->eik_umi[idx])
-				max = mod->eik_umi[idx];
-		}
-        if(i<10)
-            debug_msg(DEBUG_I, fxn_debug, "%5d th barcodes: %15.3f\n",i, max);
-		sum = 0;
-		for (unsigned int k = 0; k < opt->K_UMI; ++k) {
-			idx = k * dat->sample_size + i;
-			mod->eik_umi[idx] = exp(mod->eik_umi[idx] - max);
-			sum += mod->eik_umi[idx];
-		}
-        if(i<10)
-            debug_msg(DEBUG_I, fxn_debug, "%5d th barcodes: %15.3f\n",i, sum);
-        for (unsigned int k = 0; k < opt->K_UMI; ++k){
-            idx = k * dat->sample_size + i;
-			mod->eik_umi[idx] /= sum;
-            mod->eik_umi[idx] = log(mod->eik_umi[idx]);
-        }
-    }
-    */
+    
 
     return err;
 }/* trans_hap_and_umi */
@@ -531,11 +472,13 @@ double E_step(model *mod, size_t sample_size, unsigned int topN,
 
 
 /* estimate new eta and new gamma */
-int M_step(model *mod,size_t sample_size, unsigned int topN, 
+int M_step(options *opt, model *mod,size_t sample_size, unsigned int topN, 
                     unsigned int K, unsigned int K_UMI){
     int err = NO_ERROR;
+    int fxn_debug = DEBUG_I;
     unsigned int idx; 
     double epsilon = 1e-40;
+    int algo = opt->trans_penalty;
 
     double *eta =  mod->eta;
     double *gamma = mod->gamma;
@@ -548,8 +491,6 @@ int M_step(model *mod,size_t sample_size, unsigned int topN,
          
     } 
 
-    
-
     for (unsigned int i= 0; i< sample_size; ++i){
         for (unsigned int t = 0; t < topN;++t){
             idx = i *topN + t;
@@ -559,20 +500,153 @@ int M_step(model *mod,size_t sample_size, unsigned int topN,
 
     for (unsigned int b = 0; b < K_UMI; ++b){  
          for (unsigned int k = 0; k < K; ++k)
-             eta[b] += gamma[b * K + k];
-         
+             eta[b] += gamma[b * K + k]; 
     } 
 
+    //for(unsigned int k = 0; k < K; ++k)
+     //   fprintf(stderr, "Est gamma: %15.3f", gamma[k]);
+    
+   // debug_msg(DEBUG_I, fxn_debug, "\n");
+
+    /* gamma */
+    mod->penalty_ll = 0.;
     for (unsigned int b = 0; b < K_UMI; b++){
-        for (unsigned int k = 0; k < K; k++){
-            idx = b * K + k;
-            gamma[idx] /=  (eta[b]+epsilon);  // avoid /0
+
+        if(algo == MPLE){
+            /* for each row of gamma */
+            double lls = MPLE_gamma_s(gamma, K, &err, b,opt->pho, opt->omega);
+            if(err) return err;
+
+            
+            if (isnan(lls)){
+                debug_msg(DEBUG_I, fxn_debug, "ll penalty: %15.3f\n",lls);
+                
+                // compute MLE instead [XY: it is fine ? ]
+                for (unsigned int k = 0; k < K; k++){
+                    idx = b * K + k;
+                    gamma[idx] /= (eta[b] + epsilon); // avoid /0
+                    double llp = opt->pho * log1p(gamma[idx]/opt->omega);
+                    mod->penalty_ll += llp;
+                }
+                
+            }else{
+                mod->penalty_ll += lls;
+            }
+            
+        }else{
+            for (unsigned int k = 0; k < K; k++){
+                idx = b * K + k;
+                gamma[idx] /= (eta[b] + epsilon); // avoid /0
+            }
         }
+    }
+
+   
+    //for(unsigned int k = 0; k < K; ++k){
+    //    fprintf(stderr, "Est gamma: %15.3f", gamma[k]);
+    //}
+    //debug_msg(DEBUG_I, fxn_debug, "\n");
+
+
+    /* eta */
+    for (unsigned int b = 0; b < K_UMI; b++){
         eta[b] /= sample_size;
     }
 
     return err;
 }/* M_step */
+
+/* Caculate the MPLE for gamma for each s and return the panalty turn */
+double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, double pho, double omega){
+
+    int fxn_debug =DEBUG_I;
+    double lls;
+    int start = s*K;
+
+    /* set up */
+    mstep_data md = {
+		.omega =omega,
+        .pho = pho,
+		.xi = NULL,
+        .idx = NULL,
+		.signs = 0,
+		.n_xi = 0,
+	};
+
+
+    /* count the no-zeros number */
+    for(unsigned int k =0 ; k < K; ++k)
+        if(x_s[start+k] > 0)
+            md.n_xi+= 1;
+
+    if(md.n_xi == 0)
+        return 0;
+
+    if(md.n_xi == 1)
+        return md.pho * log1p(1.0/md.omega);
+
+    md.xi = calloc(md.n_xi, sizeof (*x_s));
+    md.idx = calloc(md.n_xi, sizeof (*md.idx));
+
+    if(!md.xi || !md.idx){
+        *err = MEMORY_ALLOCATION;
+        mmessage(ERROR_MSG, *err,"md\n");
+        return 0;
+    }
+        
+    unsigned int cnt = 0;
+    for(unsigned int k = 0; k < K; ++k){
+       if(x_s[start+k] > 0){
+           md.xi[cnt] = x_s[start+k];
+           md.idx[cnt] = k;
+            cnt ++;
+       }
+    }
+
+    msp_lcstr_func _plfunc = mstep_pen1_lagrange_cstr_func;
+	msp_lcstr_derv _plderv = mstep_pen1_lagrange_cstr_derv;
+
+    // \lambda_0 = md.pho/md.omega
+    double lambda = mstep_newton(_plfunc, _plderv, 1, 1e-6, 100, &md);
+    
+    if (isnan(lambda)){
+        debug_msg(DEBUG_I, fxn_debug, "lambda for the %d th UMI: %15.3f\n", s, lambda);
+        return NAN;
+    }
+
+    double sum_tp = 0.0;
+    lls = 0.0;
+    for (unsigned int base = 0; base < md.n_xi; ++base)
+    {
+        double rho = md.pho;
+        /* compute the MPLE for transition prob. */
+        double _xi = md.xi[base];
+        double b = md.omega * lambda - _xi + rho;
+        double sign = 1;
+        double tp;
+
+        tp = (-b + sign *
+                       sqrt(b * b + 4 * lambda * md.omega * _xi)) /
+             (2 * lambda);
+
+        sum_tp += tp;
+        lls += rho * log1p(tp/md.omega);
+        x_s[start+md.idx[base]] = tp;
+        if (isnan(tp)){
+            debug_msg(DEBUG_I, fxn_debug, "%d tp:%15.3f\n",md.idx[base],tp);
+            debug_msg(DEBUG_I, fxn_debug, "lls :%15.3f\n",lls);
+        }
+    }
+    if (isnan(lls))
+        debug_msg(DEBUG_I, fxn_debug, "sum_tp:%15.3f\n",sum_tp);  
+
+    if(md.xi) free(md.xi);
+    if(md.idx) free(md.idx);
+    md.xi = NULL;
+    md.idx = NULL;
+
+    return lls;
+}/* MPLE_gamma */
 
 int log_vector(double *x, unsigned int len){
 
@@ -620,7 +694,7 @@ int normalize(size_t n, unsigned int K, double * Emat){
 }/* normalize */
 
 
-/* [TODO] write another reads assignment and assign reads to the maximum combination */
+/* Assgin to the maximum maginal likelihood */
 int reads_assign_sparse(model *mod, run_info *ri, size_t sample_size, unsigned int topN, 
                     unsigned int K, unsigned int K_UMI){
 
@@ -700,14 +774,13 @@ int reads_assign_sparse(model *mod, run_info *ri, size_t sample_size, unsigned i
     return err;
 }/* reads_assign_sparse */
 
-
+/* Assgin to the maximum joint likelihood */
 int reads_assign_optimal(model *mod, run_info *ri, size_t sample_size, unsigned int topN, 
                     unsigned int K, unsigned int K_UMI){
 
 
     int err = NO_ERROR;
-    
-    //[TODO] use the maginal likelihood to assign reads and barcodes                    
+
     unsigned int idx;
    
     for (unsigned int k = 0; k < K; ++k)
@@ -731,3 +804,101 @@ int reads_assign_optimal(model *mod, run_info *ri, size_t sample_size, unsigned 
 
     return err;
 }/* reads_assign_sparse */
+
+
+/* gam: gamma ; b : phi; xij = sum e_ij; thresh: pho */
+double mstep_pen1_lagrange_cstr_func(double lambda, void *fdata)
+{   
+    mstep_data *md = fdata;
+	//mstep_data_t *md = fdata;
+    double gam = md->omega;
+	//int32_t sgns = md->signs;
+	int n_xi = md->n_xi;
+	//int sgn_off = n_xi > 4;
+
+	register double sum_root = 0.0;
+	for (int j = 0; j < n_xi; j++) {
+		double thresh = md->pho;
+		double xij = md->xi[j];
+
+		double b = gam * lambda - xij + thresh;
+		double mc = gam * xij;
+
+		double delta = b * b + 4 * lambda * mc;
+		/* sanity check */
+		if (delta < 0){ 
+            fprintf(stderr, "Delta < 0 in func\n");
+            return NAN;
+        }
+
+		delta = sqrt(delta);
+
+        /* try mod->signs later */
+		double sign = 1; //(double) (((((sgns >> j) & 1) + sgn_off) << 1) - 1);
+		sum_root += (-b + sign * delta)/(2 * lambda);
+	}
+
+	return sum_root - 1;
+}
+
+
+double mstep_pen1_lagrange_cstr_derv(double lambda, void *fdata)
+{
+	//register mstep_data_t *md = fdata;
+    mstep_data *md = fdata;
+	register double gam = md->omega;
+	//register int32_t sgns = md->signs;
+	int n_xi = n_xi;
+	//int sgn_off = n_xi > 4;
+
+	register double derv = 0.0;
+	for (int j = 0; j < md->n_xi; j++) {
+		register double thresh =  md->pho; //eta / log1p(1.0/gam);
+		register double xij = md->xi[j];
+
+		double b = gam * lambda - xij + thresh;
+		double mc = gam * xij;
+
+		double delta = b * b + 4 * lambda * mc;
+		/* sanity check */
+		if (delta < 0){ 
+            fprintf(stderr, "Delta < 0 in derv\n");
+            return NAN;
+        }
+
+		delta = sqrt(delta);
+		double sign = 1; //(double) (((((sgns >> j) & 1) + sgn_off) << 1) - 1);
+		derv += (lambda * (-gam + sign / delta * gam * (b + 2 * xij))) - 
+			(-b + sign * delta);
+	}
+
+	return derv / (2 * lambda * lambda);
+}
+
+/* ----- Root finding algorithms ----- */
+double mstep_newton(double (*fx)(double x, void *data), 
+		double (*fderv)(double x, void *data), double x0, double eps,
+		int maxiter, void *fdata)
+{
+	int iter = 1;
+	double x1 = x0 - fx(x0, fdata) / fderv(x0, fdata);
+
+    if (isnan(x1))
+        fprintf(stderr, "%5d iter: x0: %15.3f,x1:%15.3f\n", iter, x0, x1);
+   
+	if (isnan(x1)) return NAN;
+
+	while (fabs(x1 - x0) > eps && iter < maxiter) {
+        if (isnan(x1))
+            fprintf(stderr, "%5d iter: x0: %15.3f,x1:%15.3f\n", iter, x0, x1);
+
+		x0 = x1;
+		x1 = x0 - fx(x0, fdata) / fderv(x0, fdata);
+
+		if (isnan(x1)) return NAN;
+
+		iter++;
+	}
+
+	return x1;
+}

@@ -77,6 +77,7 @@ struct _model {
 	double *E2_sparse_value; /*<! store posterial prob of reads (topN x N) */
 	double ll_UMI;    /*<! current log likelihood for UMI model */
 	double pll_UMI;    /*<! current log likelihood for UMI model (previous copy) */
+	double penalty_ll;   /*<! penalty for transition prob */
 
 
 }; /* model */

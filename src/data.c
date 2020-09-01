@@ -246,8 +246,6 @@ int sync_state(data *dat, options *opt)
 	
 	if (!dat->fdata->empty)
 		err = sync_data(dat, opt);
-
-	/* [TODO] maybe need to create a new hash table for UMIs */
 	
 	return err;
 } /* sync_state */
@@ -323,6 +321,8 @@ int sync_data(data *dat, options *opt)
 
 	if ((err = build_hash(dat)))
 		return err;
+
+	/* [TODO] maybe need to create a new hash table for UMIs */
 
 	return err;
 } /* sync_data */
