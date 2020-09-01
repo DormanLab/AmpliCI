@@ -4,7 +4,7 @@ project (AmpliCI VERSION 1.0.1)
 
 SET(CMAKE_CC_COMPILER  gcc)
 
-set(CMAKE_BUILD_TYPE DEBUG)
+set(CMAKE_BUILD_TYPE release)
 set(CMAKE_CXX_STANDARD 11)
 
 include(FindPackageHandleStandardArgs)
