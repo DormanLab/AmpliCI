@@ -169,7 +169,7 @@ int amplici_wfile(char *fastq_file, char *error_profile_name, double low_bound, 
 
 /* Another function to call haplotype selection [UNDER DEVELOPMENT] */
 int amplici_core(data_t **dmat, data_t **qmat, size_t sample_size, unsigned int rlen, char *error_profile_name, 
-                unsigned int n_quality,unsigned char min_quality, unsigned char **seeds, unsigned int **seeds_length, 
+                unsigned int n_quality, unsigned char min_quality, unsigned char **seeds, unsigned int **seeds_length, 
                   unsigned int **cluster_id, unsigned int **cluster_size, unsigned int *K)
 {
 
@@ -179,8 +179,6 @@ int amplici_core(data_t **dmat, data_t **qmat, size_t sample_size, unsigned int 
   data *dat = NULL;        /* data object */
   model *mod = NULL;       /* model object */
   initializer *ini = NULL; /* initializer */
-
-  mmessage(INFO_MSG, NO_ERROR, "11\n");
 
   /* make option object */
   if ((err = make_options(&opt)))
@@ -195,8 +193,6 @@ int amplici_core(data_t **dmat, data_t **qmat, size_t sample_size, unsigned int 
     opt->use_error_profile = 0;
   }
   
-  mmessage(INFO_MSG, NO_ERROR, "22\n");
-
   /* make data object */
   if ((err = make_data(&dat, opt)))
     goto AMPLICI_CLEAR;
@@ -205,7 +201,6 @@ int amplici_core(data_t **dmat, data_t **qmat, size_t sample_size, unsigned int 
   if ((err = fill_data(dat, dmat, qmat, rlen, sample_size, n_quality, min_quality)))
     goto AMPLICI_CLEAR;
 
-  mmessage(INFO_MSG, NO_ERROR, "33\n");
 
   if ((err = make_model(&mod, dat, opt)))
     goto AMPLICI_CLEAR;

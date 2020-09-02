@@ -27,37 +27,40 @@ int main()
     char *error_profile_name = NULL;
     char *output_file = "test.out";
 
-    fprintf(stderr, "1\n");
+    /* initialize output */
+    unsigned int K = 0;
+    unsigned int *cluster_id = NULL;
+    unsigned int *cluster_size = NULL;
+    unsigned char *seeds = NULL;
+	unsigned int *seeds_length = NULL;
 
-    /* read fastq data file */
+    /* initialize input */
     fastq_options *fqo = NULL;	/* fastq file options */
     fastq_data *fdata = NULL;
-    
+    unsigned char **dmat = NULL;
+    unsigned char **qmat = NULL;
 
     if ((err = make_fastq_options(&fqo)))
 		goto CLEAR_AND_EXIT;
 
-     fprintf(stderr, "2\n");
 
 	/* encode nucleotides in 2-bits: error raised if ambiguous bases */
 	fqo->read_encoding = XY_ENCODING;
 
-    fprintf(stderr, "%s\n",fastq_file);
+
 
 	/* read sequence data */
-	if (fastq_file && (err = read_fastq(fastq_file,
+	if (!fastq_file || (err = read_fastq(fastq_file,
 						&fdata, fqo)))
 		goto CLEAR_AND_EXIT;
 
-     fprintf(stderr, "3\n");
+   
 
     /* read fastq data */
     size_t sample_size = fdata->n_reads;
     unsigned int max_read_length = fdata->n_max_length;
     unsigned int n_quality = fdata->max_quality - fdata->min_quality + 1;
 
-    unsigned char **dmat = NULL;
-    unsigned char **qmat = NULL;
 
     dmat = malloc(sample_size * sizeof *dmat);
 
@@ -82,14 +85,6 @@ int main()
 		qptr += max_read_length;
 	}
 
-    fprintf(stderr, "4\n");
-
-    /* initialize output */
-    unsigned int K = 0;
-    unsigned int *cluster_id = NULL;
-    unsigned int *cluster_size = NULL;
-    unsigned char *seeds = NULL;
-	unsigned int *seeds_length = NULL;
 
     /* amplicon clustering */
     if((amplici_core(dmat, qmat, sample_size, max_read_length, 
@@ -98,8 +93,7 @@ int main()
                 &cluster_size, &K)))
         goto CLEAR_AND_EXIT;
 
-    fprintf(stderr, "5\n");
-
+   
     /* print and check */
 	FILE *fp = NULL;
     fp = fopen(output_file, "w");
