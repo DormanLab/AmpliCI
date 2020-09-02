@@ -69,6 +69,12 @@ int amplici_wfile(char *fastq_file, char *error_profile_name, double low_bound, 
   opt->error_profile_name = error_profile_name;
   opt->low_bound = low_bound;
 
+  if (error_profile_name)
+    opt->use_error_profile = 1;
+  else{
+    opt->use_error_profile = 0;
+  }
+
 	/* make data object */
 	if ((err = make_data(&dat, opt)))
 		goto AMPLICI_CLEAR2;
@@ -99,12 +105,6 @@ int amplici_wfile(char *fastq_file, char *error_profile_name, double low_bound, 
 	/* make initializer */
 	if ((err = make_initializer(&ini, dat, opt, NULL)))
 		goto AMPLICI_CLEAR2;
-
-  if (error_profile_name)
-    opt->use_error_profile = 1;
-  else{
-    opt->use_error_profile = 0;
-  }
 
   if ((err = haplotype_selection(opt, dat, mod, ini, opt->K_max)))
     return err;
