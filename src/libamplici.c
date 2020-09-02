@@ -168,8 +168,8 @@ int amplici_wfile(char *fastq_file, char *error_profile_name, double low_bound, 
 
 
 /* Another function to call haplotype selection [UNDER DEVELOPMENT] */
-int amplici_core(data_t **dmat, data_t **qmat, size_t sample_size, unsigned int rlen, double *error_profile, unsigned int n_quality, 
-            data_t ***seeds, unsigned int **seeds_length, unsigned int **cluster_id, unsigned int **cluster_size, unsigned int *K)
+int amplici_core(unsigned char **dmat, unsigned char **qmat, size_t sample_size, unsigned int rlen, double *error_profile, unsigned int n_quality, 
+             unsigned char **seeds, unsigned int **seeds_length, unsigned int **cluster_id, unsigned int **cluster_size, unsigned int *K)
 {
 
   int err = NO_ERROR;
@@ -218,7 +218,7 @@ int amplici_core(data_t **dmat, data_t **qmat, size_t sample_size, unsigned int 
   *K = opt->K;
   *cluster_id = ini->cluster_id;
   *cluster_size = ini->cluster_size;
-  *seeds = ini->seeds;
+  *seeds = ini->seeds[0];
   *seeds_length = ini->seed_lengths;
 
   /* avoid to be freed */

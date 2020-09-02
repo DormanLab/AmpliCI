@@ -72,7 +72,8 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
 
 
     rdelta = (mod->pll_UMI - mod->ll_UMI)/mod->pll_UMI;
-    mmessage(INFO_MSG, NO_ERROR, "%5d: %15.3f (%5.3e)\n", EM_iter, mod->ll_UMI, rdelta);
+    mmessage(INFO_MSG, NO_ERROR, "%5d: %15.3f (%15.3f - %15.3f, %5.3e)\n", EM_iter, 
+                    mod->ll_UMI,mod->ll_UMI+mod->penalty_ll, mod->penalty_ll, rdelta);
    
 
     mmessage(INFO_MSG, NO_ERROR, "The M step of the %5d iteration...\n", EM_iter);
