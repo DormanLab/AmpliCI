@@ -184,7 +184,7 @@ int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf
 			if(err) return err;
 		}
 
-		/* reads_hap_id */
+		/* reads_hap_id (error free) */
 		in->reads_hap_id = malloc(dat->sample_size * sizeof *in->reads_hap_id);
 		if(!in->reads_hap_id)
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,"initializer.reads_hap_id");
@@ -208,7 +208,7 @@ int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf
 			if(err) return err;
 		}
 
-		/* reads_umi_id */
+		/* reads_umi_id (error free) */
 		in->reads_umi_id = malloc(dat->sample_size * sizeof *in->reads_umi_id);
 		if(!in->reads_umi_id)
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,"initializer.reads_hap_id");

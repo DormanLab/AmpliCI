@@ -89,7 +89,7 @@ struct _data {
 	/* UMI information */
 	data_t **dmatU;  /*<! nucleotide sequences of UMI as matrix */
 	data_t **qmatU; /*<! quality sequences of UMI as matrix */
-	hash *seq_UMI_count; /*<! frequency of unique UMIs (hash table) */
+	hash *UMI_count; /*<! frequency of unique UMIs (hash table) */
 	unsigned int hash_UMI_length;  /*<! num of unique UMIs in hash table */
 
 }; /* data */

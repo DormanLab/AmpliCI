@@ -21,7 +21,8 @@
 #include "error.h"
 #include "hash.h"
 
-int build_hash(data *dat);
+int build_hash(hash **hash_table, data_t **dmat, unsigned int *hash_length, 
+					unsigned int *seq_lengths, unsigned int seq_len, size_t sample_size);
 
 /**
  * Setup data object.
@@ -43,10 +44,6 @@ int make_data(data **dat, options *opt)
 	dp->dmat = NULL;
 	dp->qmat = NULL;
 
-	/* UMI information */
-	dp->dmatU = NULL;
-	dp->qmatU = NULL;
-
 	dp->error_prob = NULL;
 
 	dp->read_idx = NULL;
@@ -65,6 +62,13 @@ int make_data(data **dat, options *opt)
 	
 	dp->seq_count = NULL;
 	dp->hash_length = 0;
+
+	/* UMI info */
+	dp->UMI_count = NULL;
+	dp->dmatU = NULL;
+	dp->qmatU = NULL;
+	dp->hash_UMI_length = 0;
+
 
 	return NO_ERROR;
 } /* make_data */
@@ -257,25 +261,34 @@ int sync_state(data *dat, options *opt)
  * @param dat	pointer to data object
  * @return	error status
  */
-int build_hash(data *dat)
+int build_hash(hash **hash_table, data_t **dmat, unsigned int *hash_length, 
+					unsigned int *seq_lengths, unsigned int seq_len, size_t sample_size)
 {
 	int err = NO_ERROR;
 	/* build hash table */
-	dat->hash_length = 0;
-	for (size_t i = 0; i < dat->sample_size; ++i) {
+	unsigned int hash_len = 0;
+	unsigned int slen;
+
+
+	for (size_t i = 0; i < sample_size; ++i) {
 //fprintf(stderr, "%zu: %s\n", i, display_sequence(dat->dmat[i], dat->lengths[i], dat->fdata->read_encoding));
-		dat->hash_length += add_sequence(&dat->seq_count, dat->dmat[i],
-							dat->lengths[i], i, &err);
+		if(seq_lengths) slen = seq_lengths[i]; else slen = seq_len;
+		hash_len += add_sequence(hash_table, dmat[i],
+							slen, i, &err);
 	}
 
 	/* store index of reads for all unique sequences */
-	for (size_t i = 0; i < dat->sample_size; ++i)
-		if ((err = add_seq_idx(dat->seq_count, dat->dmat[i],
-							dat->lengths[i], i)))
+	for (size_t i = 0; i < sample_size; ++i){
+		if(seq_lengths) slen = seq_lengths[i]; else slen = seq_len;
+		if ((err = add_seq_idx(*hash_table, dmat[i],
+							slen, i)))
 			return err;
+	}
+
+	*hash_length = hash_len;
 			
 	/* sort hash table by count */
-	sort_by_count(&dat->seq_count);
+	sort_by_count(hash_table);
 
 	return err;
 } /* build_hash */
@@ -298,6 +311,7 @@ void free_data(data *dat)
 		if (dat->error_prob) free(dat->error_prob);
 		if (dat->qmatU) free(dat->qmatU);
 		if (dat->dmatU) free(dat->dmatU);
+		if (dat->UMI_count) delete_all(&dat->UMI_count);
 		free(dat);
 	}
 } /* free_data */
@@ -319,13 +333,25 @@ int sync_data(data *dat, options *opt)
 		delete_all(&dat->seq_count);
 	dat->seq_count = NULL;
 
-	if ((err = build_hash(dat)))
+	if ((err = build_hash(&dat->seq_count,dat->dmat, &dat->hash_length,
+						dat->lengths, 0, dat->sample_size )))
 		return err;
 
 	/* [TODO] maybe need to create a new hash table for UMIs */
+	if(dat->UMI_count)
+		delete_all(&dat->UMI_count);
+	dat->UMI_count = NULL;
+	
+	if(opt->UMI_length){
+		if ((err = build_hash(&dat->UMI_count,dat->dmatU, &dat->hash_UMI_length,
+						NULL, opt->UMI_length, dat->sample_size)))
+			return err;
+	}
+	
 
 	return err;
 } /* sync_data */
+
 
 /* fill data object with provided dmat and qmat [CURRENTLY UNUSED] */
 int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen, 
@@ -364,7 +390,8 @@ int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen,
 	for (size_t i = 0; i < dat->fdata->n_reads; ++i)
 		dat->read_idx[i] = i;
 
-    if ((err = build_hash(dat)))
+    if ((err = build_hash(&dat->seq_count,dat->dmat, &dat->hash_length,
+						dat->lengths, 0, dat->sample_size )))
 		return err;
 
 	return NO_ERROR;

@@ -34,6 +34,8 @@ int reads_assign_sparse(model *mod, run_info *ri, size_t sample_size, unsigned i
 int reads_assign_optimal(model *mod, run_info *ri, size_t sample_size, unsigned int topN, 
                     unsigned int K, unsigned int K_UMI);
 double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s,double pho, double omega);
+int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI, double *error_profile, double *trans_prob);
+
 
 /* main model for UMI */
 int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info *ri){
@@ -218,7 +220,9 @@ double ini_eta_gamma(options *opt, initializer *ini, double *gamma, double *eta,
     for (unsigned int b = 0; b < opt->K_UMI; ++b){
         eta[b] /= eta_sum;
     }
-        
+
+    if (opt->trans_penalty == MLE)
+        return 0;
 
     return llp_sum;
 }/* ini_eta_gamma */
@@ -240,10 +244,6 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
      mmessage(INFO_MSG, NO_ERROR, "Calculating the trans prob of reads......\n");
 
 
-   
-    /* [TODO] Need further investigation. It is good to set high gap penalty to reduce gap in alignment */
-    opt->gap_p = -20;
-
     /* For acceleration purpose. Do not allow large gap in amplification and sequencing */
     opt->band = 5;
    
@@ -256,101 +256,17 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
     /* transition probability for UMIs */
     /* implement a naive method, waiting for an efficient one */
 
-     mmessage(INFO_MSG, NO_ERROR, "Calculating the trans prob of UMIs......\n");
+    mmessage(INFO_MSG, NO_ERROR, "Calculating the trans prob of UMIs......\n");
+
+     /* [TODO] Need further investigation. It is good to set high gap 
+            penalty to reduce gap when aligning UMIs */
+    opt->band = 2;   // for UMIs 
+    opt->gap_p = -20;
     
-    size_t alen;
-    unsigned char **aln;
-    unsigned int nindels,nmismatch;
-    double adj_trunpois = ppois(dat->max_read_length, dat->max_read_length * opt->indel_error, 1, 1);
-
-    
-    /* seeks for a more efficient way */
-    unsigned int band = 2;   // for UMIs 
-    for (unsigned int r = 0; r < dat->sample_size; ++r)
-    {
-
-        for (unsigned int b = 0; b < opt->K_UMI; b++)
-        {
-
-
-            /* always find problems when aligning barcodes. maybe just use alignmnet free method ? */
-
-            alen = opt->UMI_length;
-            nindels = 0;
-			nmismatch = 0;
-            aln = nwalign(&ini->seeds_UMI[b * opt->UMI_length], dat->dmatU[r],
-                                          (size_t)opt->UMI_length,
-                                          (size_t)opt->UMI_length,
-                                          opt->score, opt->gap_p, band, 1, NULL,
-                                          &err, &alen);        // set band = 2 
-
-
-            ana_alignment(aln,alen, opt->UMI_length, &nindels, 
-						&nmismatch, opt->info);
-
-           /* 
-             if(r ==0 && b < 10 ){
-					for (size_t j = 0; j < alen; ++j) {
-					fprintf(stderr, "%c", aln[0][j] == '-'
-					? '-' : xy_to_char[(int) aln[0][j]]);
-					}
-					fprintf(stderr, "\n");
-					for (size_t j = 0; j < alen; ++j) {
-					fprintf(stderr, "%c", aln[1][j] == '-'
-					? '-' : xy_to_char[(int) aln[1][j]]);
-					}
-					fprintf(stderr, "\n");
-			} 
-            */
-            
-            
-
-            mod->eik_umi[b * dat->sample_size + r] = trans_nw(opt, aln,
-                                                              alen,nmismatch, nindels, error_profile, opt->err_encoding,
-                                                              dat->qmatU[r], dat->n_quality, adj_trunpois,
-                                                              opt->UMI_length, dat->error_prob);
-            
-            //if(r == 0 && b < 10 ){
-                 //   for (size_t j = 0; j < alen; ++j){
-                  //      fprintf(stderr, " %8.2e\n", error_profile[(
-					//	NUM_NUCLEOTIDES
-				//		* aln[0][j] + aln[1][j])
-			//			* dat->n_quality + dat->qmatU[r][j]]);
-              //          fprintf(stderr, " %c\n", dat->qmatU[r][j]+dat->fdata->min_quality);
-                //    }
-                //    fprintf(stderr, "\n");
-             //       fprintf(stderr, " %8.2e\n", mod->eik_umi[b * dat->sample_size + r]);
-			//}
-            
+    /* transition probability for UMIs */
+    if((err = trans_expect_UMIs(opt, dat, ini->seeds_UMI, error_profile, mod->eik_umi)))
+        return err;
         
-            /* free */
-				if(aln){
-					free(aln[0]);
-					free(aln[1]);
-					free(aln);
-					aln = NULL;
-				}
-				if(err)
-					return err;
-        }
-    }
-    
-    /*
-    if(opt->trans_matrix){
-		FILE *fp = fopen(opt->trans_matrix, "w");
-		if (!fp)
-			return mmessage(ERROR_MSG, FILE_OPEN_ERROR, opt->trans_matrix);
-		//fprint_vectorized_matrix(fp,mod->eik,dat->sample_size,opt->K,0);  not work 
-		for (size_t i = 0; i < dat->sample_size; ++i) {
-		    fprintf(fp, "%3lu", i);
-			for (unsigned int j = 0; j < opt->K_UMI; ++j) {
-				fprintf(fp, " %8.2e", mod->eik_umi[j*dat->sample_size + i]);
-			}
-			fprintf(fp, "\n");
-		}
-		fclose(fp);
-	}
-    */
    
    /*
     normalize(dat->sample_size, opt->K, mod->eik);
@@ -522,7 +438,7 @@ int M_step(options *opt, model *mod,size_t sample_size, unsigned int topN,
             if (isnan(lls)){
                 debug_msg(DEBUG_I, fxn_debug, "ll penalty: %15.3f\n",lls);
                 
-                // compute MLE instead [XY: it is fine ? ]
+                // compute MLE instead [XY: is it fine ? ]
                 for (unsigned int k = 0; k < K; k++){
                     idx = b * K + k;
                     gamma[idx] /= (eta[b] + epsilon); // avoid /0
@@ -902,4 +818,67 @@ double mstep_newton(double (*fx)(double x, void *data),
 	}
 
 	return x1;
+}
+
+int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI, double *error_profile, double *trans_prob){
+
+    int err = NO_ERROR;
+    hash *s;
+	unsigned int u = 0;
+
+    double adj_trunpois = ppois(dat->max_read_length, dat->max_read_length * opt->indel_error, 1, 1);
+
+	for (s = dat->UMI_count; s != NULL; s = s->hh.next) {
+
+		if (u == dat->hash_UMI_length)
+			return mmessage(ERROR_MSG, INTERNAL_ERROR,
+							"exceed the length");
+
+        unsigned char *read = s->sequence;
+		unsigned int rlen = opt->UMI_length;
+
+		unsigned int count = s->count; // num. of reads wih unique seq
+		size_t *idx_array = s->idx_array;  // idx of reads
+
+       for (unsigned int b = 0; b < opt->K_UMI; ++b){
+           
+           unsigned char *hap_seq = &seeds_UMI[b *opt->UMI_length];
+
+            size_t alen = opt->UMI_length;
+		    unsigned int nindels = 0;
+			unsigned int nmismatch = 0;
+
+				unsigned char **aln = nwalign(hap_seq, read,
+				(size_t) opt->UMI_length,
+				(size_t) rlen,
+				opt->score, opt->gap_p, opt->band, 1, NULL,
+									&err, &alen);
+
+				/* count for number of indels */
+				ana_alignment(aln, alen, rlen, &nindels, 
+						&nmismatch, opt->info); // need further check 
+
+				for(unsigned int r = 0; r<count;++r){
+
+					trans_prob[b * dat->sample_size + idx_array[r]] = trans_nw(opt, aln,
+						alen, nmismatch, nindels, error_profile, opt->err_encoding,
+						dat->qmatU[idx_array[r]], dat->n_quality, adj_trunpois,
+										rlen, dat->error_prob);
+				
+				}
+
+                if(aln){
+					free(aln[0]);
+					free(aln[1]);
+					free(aln);
+					aln = NULL;
+				}
+				if(err)
+					return err;
+       }
+
+		u++;
+	}
+
+    return err;
 }
