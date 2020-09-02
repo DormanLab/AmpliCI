@@ -37,7 +37,7 @@ int main()
     unsigned char *seeds = NULL;
     unsigned int *seeds_length = NULL;
     size_t sample_size = 0;
-    unsigned int max_read_length;
+    unsigned int max_read_length = 0;
     double * abundance = NULL;
     double * ll = NULL;
 

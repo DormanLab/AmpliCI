@@ -143,7 +143,7 @@ int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf
 	in->uniq_seq_count = NULL;
 	in->reads_uniq_id = NULL;
 
-	if (!dat->fdata->empty)
+	if (dat->dmat && dat->qmat)
 		err = sync_initializer(in, dat);
 
 	/* UMI information */

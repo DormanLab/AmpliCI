@@ -355,12 +355,13 @@ int sync_data(data *dat, options *opt)
 
 /* fill data object with provided dmat and qmat [CURRENTLY UNUSED] */
 int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen, 
-			size_t sample_size, unsigned int n_quality){
+			size_t sample_size, unsigned int n_quality, unsigned char min_quality){
 
 	int err = NO_ERROR;
 
 	 dat->sample_size = sample_size;
      dat->max_read_length = rlen;
+	 dat->min_read_length = rlen;
 	 dat->max_read_position = rlen;
      dat->n_quality = n_quality;
      dat->dmat = dmat;
@@ -371,7 +372,8 @@ int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen,
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,"dat.error_prob");
 
 	for (unsigned int q = 0; q < dat->n_quality; q++)
-		dat->error_prob[q] = error_prob(dat->fdata, q);
+		dat->error_prob[q] = exp(- ((char) q + min_quality - 33) / 10. * log(10.));
+		// exp(- (q + fqd->min_quality - 33) / 10. * log(10.));
 
 	dat->lengths = malloc(dat->sample_size * sizeof *dat->lengths);
 
@@ -382,12 +384,13 @@ int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen,
         dat->lengths[i] = dat->max_read_length;
 
 	/* allocate the index array of reads */
-	dat->read_idx = malloc(dat->fdata->n_reads * sizeof *dat->read_idx);
+	dat->read_idx = malloc(sample_size * sizeof *dat->read_idx);
 
 	if (!dat->read_idx)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "dat.read_idx");
 
-	for (size_t i = 0; i < dat->fdata->n_reads; ++i)
+
+	for (size_t i = 0; i < sample_size; ++i)
 		dat->read_idx[i] = i;
 
     if ((err = build_hash(&dat->seq_count,dat->dmat, &dat->hash_length,
