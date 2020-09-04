@@ -343,7 +343,7 @@ Use -I to provide path to header file of the library libamplici.h and -L to prov
 If you use the shared library (`libamplici.so` or `libamplici.dylib`), you need to add the PATH to the shared library before running your executable file.
 
 ```
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH: /your/full/path/to/library
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/your/full/path/to/library
 ```
 
 

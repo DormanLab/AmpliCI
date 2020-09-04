@@ -54,9 +54,6 @@ int main()
 						&fdata, fqo)))
 		goto CLEAR_AND_EXIT;
 
-   
-
-    /* read fastq data */
     size_t sample_size = fdata->n_reads;
     unsigned int max_read_length = fdata->n_max_length;
     unsigned int n_quality = fdata->max_quality - fdata->min_quality + 1;
@@ -65,7 +62,7 @@ int main()
     dmat = malloc(sample_size * sizeof *dmat);
 
 	if (!dmat)
-		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "dat.dmat");
+		goto CLEAR_AND_EXIT;
 
 	unsigned char *rptr = fdata->reads;
 	for (size_t i = 0; i < sample_size; ++i) {
@@ -77,7 +74,7 @@ int main()
 	qmat = malloc(sample_size * sizeof *qmat);
 
 	if (!qmat)
-		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "dat.qmat");
+		goto CLEAR_AND_EXIT;
 
 	unsigned char *qptr = fdata->quals;
 	for (size_t i = 0; i < sample_size; i++) {
@@ -98,8 +95,7 @@ int main()
 	FILE *fp = NULL;
     fp = fopen(output_file, "w");
     if (!fp)
-        return mmessage(ERROR_MSG, FILE_OPEN_ERROR,
-                        output_file);
+        goto CLEAR_AND_EXIT;
 
     fprintf(fp, "K: %i\n", K);
 

@@ -9,7 +9,8 @@
  * predeclarations may break this rule so that the entire prototype can be
  * found with a simple grep on the source code.
  */
-
+#ifndef __H_LIBAMPLICI__
+#define __H_LIBAMPLICI__
 #include <stdlib.h>
 #include "constants.h"
 
@@ -20,3 +21,4 @@ int amplici_wfile(char *fastq_file, char *error_profile_name, double low_bound, 
 int amplici_core(data_t **dmat, data_t **qmat, size_t sample_size, unsigned int max_read_length,
                  char *error_profile_name, unsigned int n_quality, unsigned char min_quality, unsigned char **seeds, unsigned int **seeds_length,
                  unsigned int **cluster_id, unsigned int **cluster_size, unsigned int *K);
+#endif
