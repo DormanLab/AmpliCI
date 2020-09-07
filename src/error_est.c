@@ -13,6 +13,7 @@
 #include "error.h"
 #include "error_est.h"
 #include "util.h"
+#include "partition.h"
 #include <R.h>
 
 #define DEBUG 0
@@ -592,6 +593,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 		if (ini->cluster_id[i] > max) max = ini->cluster_id[i];
 
 	unsigned int new_K = max + 1;  // new K 
+	fprintf(stderr, "new K = %d\n", new_K);
 	
 	/* find the most abundant sequence in K partitions */
 
@@ -609,23 +611,27 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 	for (unsigned int k =0 ; k < new_K; k++)
 		hash_list[k] = NULL;
 	
+	// check bugs in hash (currently not find any bugs )
 	for (size_t i = 0; i < dat->sample_size; ++i) {
-		add_sequence(&hash_list[ini->cluster_id[i]], dat->dmat[i],
+		int first = add_sequence(&hash_list[ini->cluster_id[i]], dat->dmat[i],
 					dat->lengths[i], i, &err);
+		//if(first == 1)  fprintf(stderr, "first == 1");
 		if(err) return err;
 	}
 
-	for (unsigned int k =0 ; k < new_K; k++){
+	for (unsigned int k = 0; k < new_K; k++){
 		unsigned int max_abun = 0;
-		hash *s;
+		hash *s = NULL;
 		for (s = hash_list[k]; s != NULL; s = s->hh.next) {
+			//fprintf(stderr, "s->count : %d for the %d th \n", s->count, k);
 			if(s->count > max_abun){
+				if(s->count > 20) fprintf(stderr, "s->count > 20\n");
 				max_abun = s->count;
 				memcpy(ini->seeds[k], s->sequence,
-					dat->max_read_length * sizeof **ini->seeds);
-				ini->seed_lengths[k] = dat->max_read_length;
+					dat->max_read_length * sizeof **ini->seeds);		
 			}
 		}
+		ini->seed_lengths[k] = dat->max_read_length;
 		if(hash_list[k])
 			delete_all(&hash_list[k]);
 	}
@@ -639,28 +645,6 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 	return NO_ERROR;
 }/* err_cnt_gen_wpartition */
 
-/** 
- * read the partition file 
- *
- * @param filename 	  partition file
- * @param cluster_id  array for storing id
- * @param sample_size length of the array  
- * @return 	  error status
- */
-int read_partition_file(char const * const filename, unsigned int *cluster_id, unsigned int sample_size)
-{
-	int err = NO_ERROR;
-
-	FILE *fp = fopen(filename, "r");
-
-	if (!fp)
-		return mmessage(ERROR_MSG, FILE_OPEN_ERROR, filename);
-
-	err = fread_uints(fp, cluster_id,sample_size);
-	
-	fclose(fp);
-	return err;
-}/* read_partition_file */
 
 /**
  * count error types with given assignment 

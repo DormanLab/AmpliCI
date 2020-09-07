@@ -24,6 +24,8 @@ struct _data {
 	fastq_data *fdata;		/*<! contents of fastq file */
 	size_t *coverage;		/*<! coverage at each read position */
 	unsigned char n_quality;	/*<! number quality scores [min, max] */
+	unsigned char min_quality;
+	unsigned char max_quality; 
 	double *error_prob;    /* pre-compute error prob based on quality score */
 
 	/* [KSD] We assume that all reads are trimmed of technical sequence and
@@ -100,6 +102,6 @@ int sync_data(data *dat, options *opt);
 void free_data(data *dat);
 
 int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen, 
-			size_t sample_size, unsigned int n_quality,unsigned char min_quality);
+			size_t sample_size, unsigned char max_quality,unsigned char min_quality);
 
 #endif

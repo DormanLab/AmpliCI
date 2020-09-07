@@ -24,7 +24,6 @@ typedef struct {
 int error_profile_generator(options *opt, data *dat, model *mod, initializer *ini, run_info *ri);
 int error_predict(unsigned int *err_cnt, double *error_profile, unsigned int n_quality,unsigned int self_lines[4]);
 void fprint_error_profile(FILE *fp, double *mat, unsigned int n, unsigned int l);
-int read_partition_file(char const * const filename, unsigned int * cluster_id, unsigned int sample_size);
 int err_count_with_assignment(data *dat, unsigned int *cluster_id, data_t** seeds, unsigned int *count_mat,unsigned int K);
 
 /* functions of regression or to call regression */

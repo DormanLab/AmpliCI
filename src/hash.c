@@ -44,6 +44,7 @@ int add_sequence(hash **seq_count, unsigned char *seq, unsigned int length,
 		new->idx_array = NULL;
 		HASH_ADD_KEYPTR(hh, *seq_count, new->sequence,
 						length * sizeof *seq, new);
+		new->seeds = 0;
 		first = 1;
 	} else {
 		new->count++;

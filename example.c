@@ -24,8 +24,9 @@ int main()
 
     /* read two input files */
     char *fastq_file = "./test/SRR2990088_1_noN_3000_subset1_new.fastq";
-    char *error_profile_name = NULL;
-    char *output_file = "test.out";
+    char *error_profile_name =   NULL;  
+	char *output_file = "test.out";
+    double low_bound = 2.0;
 
     /* initialize output */
     unsigned int K = 0;
@@ -33,6 +34,8 @@ int main()
     unsigned int *cluster_size = NULL;
     unsigned char *seeds = NULL;
 	unsigned int *seeds_length = NULL;
+    double *ll = NULL;
+    double *abun = NULL;
 
     /* initialize input */
     fastq_options *fqo = NULL;	/* fastq file options */
@@ -56,8 +59,6 @@ int main()
 
     size_t sample_size = fdata->n_reads;
     unsigned int max_read_length = fdata->n_max_length;
-    unsigned int n_quality = fdata->max_quality - fdata->min_quality + 1;
-
 
     dmat = malloc(sample_size * sizeof *dmat);
 
@@ -84,10 +85,10 @@ int main()
 
 
     /* amplicon clustering */
-    if((amplici_core(dmat, qmat, sample_size, max_read_length, 
-                error_profile_name, n_quality, fdata->min_quality, 
+    if((amplici_core(dmat, qmat, sample_size, low_bound, max_read_length, 
+                error_profile_name, fdata->max_quality, fdata->min_quality, 
                 &seeds, &seeds_length, &cluster_id, 
-                &cluster_size, &K)))
+                &cluster_size, &K, &ll, &abun)))
         goto CLEAR_AND_EXIT;
 
    
@@ -120,6 +121,8 @@ CLEAR_AND_EXIT:
 	if (cluster_size) free(cluster_size);
 	if (seeds)  free(seeds);		
 	if (seeds_length) free(seeds_length);
+    if (ll) free(ll);
+    if (abun) free(abun);
 
 
     return(EXIT_FAILURE);

@@ -42,6 +42,7 @@
 #include "amplici.h"
 #include "error_est.h"
 #include "amplici_umi.h"
+#include "partition.h"
 
 int main(int argc, const char **argv)
 {
@@ -132,9 +133,14 @@ int main(int argc, const char **argv)
 			return err;
 
 	}else if ((!opt->initialization_file) && opt->run_amplici) {
-
-		if ((err = ampliCI(opt, dat, mod, ini, ri)))
-			goto CLEAR_AND_EXIT;
+		
+		if(opt->partition_file){
+			if ((err = ampliCI_wpartition(opt, dat, mod, ini, ri)))   // currently too slow ....
+				return err;
+		}else{	
+			if ((err = ampliCI(opt, dat, mod, ini, ri)))
+				goto CLEAR_AND_EXIT;
+		}
 
 	/* reads assignment with user-provided haplotypes */
 	} else if(opt->initialization_file) {

@@ -100,9 +100,9 @@ int make_model(model **mod, data *dat, options *opt)
 			for (unsigned int q = MIN_ASCII_QUALITY_SCORE;
 				 q <= MAX_ASCII_QUALITY_SCORE; q++){
 				fscanf(file, "%lf,", &rate);
-				if (q >= dat->fdata->min_quality && q <= dat->fdata->max_quality)
+				if (q >= dat->min_quality && q <= dat->max_quality)
 					rm->error_profile[r * rm->n_quality +
-									  q - dat->fdata->min_quality] = log(rate / 1000); // log(error_rate)
+									  q - dat->min_quality] = log(rate / 1000); // log(error_rate)
 				debug_msg(DEBUG_I, fxn_debug,
 						  "r: %i,q:%i,rate: %f\n", r, q, rate);
 			}

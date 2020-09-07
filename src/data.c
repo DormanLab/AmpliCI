@@ -94,6 +94,8 @@ int sync_state(data *dat, options *opt)
 			"Unequal reads length! \n");
 
 	dat->n_quality = dat->fdata->max_quality - dat->fdata->min_quality + 1;
+	dat->min_quality = dat->fdata->min_quality;
+	dat->max_quality = dat->fdata->max_quality;
 
 	dat->error_prob = malloc(dat->n_quality * sizeof * dat->error_prob);
 	if(!dat->error_prob)
@@ -355,7 +357,7 @@ int sync_data(data *dat, options *opt)
 
 /* fill data object with provided dmat and qmat [CURRENTLY UNUSED] */
 int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen, 
-			size_t sample_size, unsigned int n_quality, unsigned char min_quality){
+			size_t sample_size, unsigned char max_quality, unsigned char min_quality){
 
 	int err = NO_ERROR;
 
@@ -363,7 +365,9 @@ int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen,
      dat->max_read_length = rlen;
 	 dat->min_read_length = rlen;
 	 dat->max_read_position = rlen;
-     dat->n_quality = n_quality;
+     dat->n_quality = max_quality - min_quality + 1;
+	 dat->min_quality = min_quality;
+	 dat->max_quality = max_quality;
      dat->dmat = dmat;
      dat->qmat = qmat;
 

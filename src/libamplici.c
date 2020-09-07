@@ -168,9 +168,9 @@ int amplici_wfile(char *fastq_file, char *error_profile_name, double low_bound, 
 
 
 /* Another function to call haplotype selection [UNDER DEVELOPMENT] */
-int amplici_core(data_t **dmat, data_t **qmat, size_t sample_size, unsigned int rlen, char *error_profile_name, 
-                unsigned int n_quality, unsigned char min_quality, unsigned char **seeds, unsigned int **seeds_length, 
-                  unsigned int **cluster_id, unsigned int **cluster_size, unsigned int *K)
+int amplici_core(data_t **dmat, data_t **qmat, size_t sample_size, double low_bound, unsigned int rlen, char *error_profile_name, 
+                unsigned char max_quality, unsigned char min_quality, unsigned char **seeds, unsigned int **seeds_length, 
+                  unsigned int **cluster_id, unsigned int **cluster_size, unsigned int *K, double **abun, double **ll)
 {
 
   int err = NO_ERROR;
@@ -186,6 +186,7 @@ int amplici_core(data_t **dmat, data_t **qmat, size_t sample_size, unsigned int 
 
   opt->K = opt->K_space; // set intial max K
   opt->error_profile_name = error_profile_name;
+  opt->low_bound = low_bound;
 
   if (error_profile_name){
     opt->use_error_profile = 1;
@@ -198,7 +199,7 @@ int amplici_core(data_t **dmat, data_t **qmat, size_t sample_size, unsigned int 
     goto AMPLICI_CLEAR;
 
   /* fill missing information in data object */
-  if ((err = fill_data(dat, dmat, qmat, rlen, sample_size, n_quality, min_quality)))
+  if ((err = fill_data(dat, dmat, qmat, rlen, sample_size, max_quality, min_quality)))
     goto AMPLICI_CLEAR;
 
 
@@ -215,12 +216,28 @@ int amplici_core(data_t **dmat, data_t **qmat, size_t sample_size, unsigned int 
   assign_clusters(mod->eik, opt->K, dat->sample_size, ini->cluster_size,
                   ini->cluster_id, 1);
 
+  /* reads ll */
+  double *cluster_ll = calloc(dat->sample_size,
+		sizeof *cluster_ll);
+
+	if (!cluster_ll)
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+			"cluster_ll");
+    
+  for (unsigned int i = 0 ; i < dat->sample_size; i++) {
+			cluster_ll[i] = mod->pi[ini->cluster_id[i]]
+				+ ini->e_trans[ini->cluster_id[i] * dat->sample_size + i];
+
+	}
+
   /* copy to seeds, cluster_id, cluster_size */
   *K = opt->K;
   *cluster_id = ini->cluster_id;
   *cluster_size = ini->cluster_size;
   *seeds = ini->seeds[0];
   *seeds_length = ini->seed_lengths;
+  *abun = ini->H_abun;
+  *ll = cluster_ll;
 
   /* avoid to be freed */
   dat->dmat = NULL;
@@ -229,6 +246,7 @@ int amplici_core(data_t **dmat, data_t **qmat, size_t sample_size, unsigned int 
   ini->cluster_size = NULL;
   ini->seeds[0] = NULL;
   ini->seed_lengths = NULL;
+  ini->H_abun = NULL;
 
 AMPLICI_CLEAR:
   if (dat)
