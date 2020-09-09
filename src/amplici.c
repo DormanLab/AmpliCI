@@ -216,13 +216,13 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 							opt->outfile_fasta);
 		
 		if (use_size)
-			fprint_haplotypes_size(fp2, ini->seeds[0], opt->K,
-				dat->max_read_length, opt->p_threshold, "H",
+			fprint_haplotypes_size(fp2, ini->seeds, opt->K,
+				ini->seed_lengths, opt->p_threshold, "H",
 					ini->H_pvalue, ri->optimal_cluster_size,
 								ini->H_ee);
 		else
-			fprint_haplotypes_abun(fp2,ini->seeds[0], opt->K,
-				dat->max_read_length, opt->p_threshold, "H", 
+			fprint_haplotypes_abun(fp2,ini->seeds, opt->K,
+				ini->seed_lengths, opt->p_threshold, "H", 
 					ini->H_pvalue, ini->H_abun, ini->H_ee);
 
 		fclose(fp2);
@@ -2131,7 +2131,7 @@ int mean_exp_errors(data *dat, unsigned int idx, unsigned int count_i,
 
 
 /* output the format fasta file for UCHIME (use size) */
-void fprint_haplotypes_size(FILE *fp, data_t *data, size_t n, size_t p, double pthres, 
+void fprint_haplotypes_size(FILE *fp, data_t **data, size_t n, unsigned int* len, double pthres, 
 			char const * const prefix, double *pvalue, unsigned int *size, double *ee) {
 	for (size_t i = 0; i < n; ++i) {
 		if(pvalue && pvalue[i]>=pthres)
@@ -2141,14 +2141,14 @@ void fprint_haplotypes_size(FILE *fp, data_t *data, size_t n, size_t p, double p
 		if(pvalue) fprintf(fp,"DiagP=%8.2e;",pvalue[i]);
 		if(ee) fprintf(fp, "ee=%.3f;",ee[i]);
 		fprintf(fp, "\n");
-		for (size_t j = 0; j < p; ++j)
-			fprintf(fp, "%c", xy_to_char[(int)data[i*p + j]]);
+		for (unsigned int j = 0; j < len[i]; ++j)
+			fprintf(fp, "%c", xy_to_char[(int)data[i][j]]);
 		fprintf(fp, "\n");
 		}
 } /* fprint_haplotypes_size */
 
 /* output the format fasta file for UCHIME (use relative true abundance */
-void fprint_haplotypes_abun(FILE *fp, data_t *data, size_t n, size_t p, double pthres, char const * const prefix, 
+void fprint_haplotypes_abun(FILE *fp, data_t **data, size_t n, unsigned int* len, double pthres, char const * const prefix, 
 							double *pvalue, double *abun, double *ee) {
 	for (size_t i = 0; i < n; ++i) {
 		if(pvalue && pvalue[i]>=pthres)
@@ -2158,8 +2158,8 @@ void fprint_haplotypes_abun(FILE *fp, data_t *data, size_t n, size_t p, double p
 		if(pvalue) fprintf(fp,"DiagP=%8.2e;",pvalue[i]);
 		if(ee) fprintf(fp, "ee=%.3f;",ee[i]);
 		fprintf(fp, "\n");
-		for (size_t j = 0; j < p; ++j)
-			fprintf(fp, "%c", xy_to_char[(int)data[i*p + j]]);
+		for (unsigned int j = 0; j < len[i]; ++j)
+			fprintf(fp, "%c", xy_to_char[(int)data[i][j]]);
 		fprintf(fp, "\n");
 	}
 } /* fprint_haplotypes_abun */
