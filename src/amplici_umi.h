@@ -19,10 +19,10 @@
 
 typedef struct {
 	double omega;
-	double pho;
+	double rho;
 	double *xi;
 	unsigned int *idx;
-	int32_t signs;   // Is it long enough ?
+	int *signs;   //-1 or 1
 	int n_xi;
 } mstep_data ;
 
@@ -38,6 +38,7 @@ double mstep_newton(double (*fx)(double x, void *data),
 		int maxiter, void *fdata);
 double mstep_pen1_lagrange_cstr_derv(double lambda, void *fdata);
 double mstep_pen1_lagrange_cstr_func(double lambda, void *fdata);
+double mstep_pen1_lambda_support(void *fdata);
 
 
 #endif

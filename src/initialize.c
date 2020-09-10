@@ -220,7 +220,12 @@ int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf
 			debug_msg(DEBUG_I, fxn_debug, "%5d,",in->reads_umi_id[i]);
 		}
 		debug_msg(DEBUG_I, fxn_debug, "\n");
-		
+
+
+		/* H_abun */
+		in->H_abun = calloc(opt->K, sizeof (*in->H_abun));
+		if(!in->H_abun)
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "initializer.H_abun");	
 	}
 
 
@@ -378,7 +383,7 @@ int realloc_initializer(initializer *ini, data *dat, options *opt)
 	ini->reads_uniq_id = reads_uniq_id;
 
 	if(ini->abun_true) free(ini->abun_true);
-	if(ini->p) free(ini->p);
+	//if(ini->p) free(ini->p);
 	if(ini->H) free(ini->H);
 	if(ini->H_abun) free(ini->H_abun);
 	if(ini->e_trans) free(ini->e_trans);
@@ -387,7 +392,7 @@ int realloc_initializer(initializer *ini, data *dat, options *opt)
 	if (ini->nw_indels) free(ini->nw_indels);
 
 	ini->abun_true = NULL;
-	ini->p = NULL;
+	// ini->p = NULL;
 	ini->H = NULL;
 	ini->H_abun = NULL;
 	ini->e_trans = NULL;
@@ -538,7 +543,7 @@ void free_initializer(initializer *ini, options *opt)
 		if (ini->uniq_seq_idx) free(ini->uniq_seq_idx);
 		if (ini->reads_uniq_id) free(ini->reads_uniq_id);
 		if (ini->abun_true) free(ini->abun_true);
-		if (ini->p) free(ini->p);
+		// if (ini->p) free(ini->p);
 		if (ini->H) free(ini->H);
 		if (ini->H_abun) free(ini->H_abun);
 		if (ini->H_ee) free(ini->H_ee);

@@ -50,8 +50,10 @@ struct _options {
 	unsigned int K_UMI;  /*<! num of UMI clusters */
 	unsigned int topN;  /*<! top N possible combinations we considered in the model */
 	int trans_penalty;   /*<! penalty on transiton prob */
-	double pho;          /*<! for MPLE */
+	double rho;          /*<! for MPLE */
 	double omega;       /*< ! for MPLE */
+	double threshold_UMI;   /* ! minimal UMI abundance */
+	double threshold_hap;   /*  !minimal hap abundance */
 
 	/* model */
 	int convergence_amplici;  /*<! convergence or not when updating abundance */

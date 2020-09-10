@@ -214,6 +214,7 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 			return mmessage(ERROR_MSG, FILE_OPEN_ERROR,
 							opt->outfile_fasta);
 		
+		/* [TODO] rewrote the two function below to allow variable length */
 		if (use_size)
 			fprint_haplotypes_size(fp2, ini->seeds[0], opt->K,
 				dat->max_read_length, opt->p_threshold, "H",
@@ -1124,7 +1125,7 @@ int ExpTrans_nwalign(data *dat, options *opt, initializer *ini,
 				ini->nw_indels[dat->hash_length*select+id],
 				error_profile, err_encoding, dat->qmat[r],
 					dat->n_quality, adj, dat->lengths[r],
-							dat->error_prob);
+							dat->error_prob,0);
 		}
 	}
 
@@ -1277,14 +1278,16 @@ int ExpTrans_nogap(data *dat, options *opt, initializer *ini, unsigned int H_id,
  * @param adj			Pr(#{indels} <= read_length)
  * @param rlen			read length 
  * @param n_quality		the number of possible quality scores
- * @param error_prob		error prob indicated by quality score
+ * @param error_prob	error prob indicated by quality score
+ * @param ends_free     count the indel at the beginning of the alignment ?
+ * 						Yes[0], No[1]
  * 
  * @return e_trans		log transition prob
  **/
 double trans_nw(options *opt, unsigned char **aln, size_t alen,
 	unsigned int mismatch, unsigned int ngap, double *error_profile,
 	int err_encoding, unsigned char *rqmat, unsigned char n_quality, 
-	double adj, unsigned int rlen, double *error_prob)
+	double adj, unsigned int rlen, double *error_prob, int ends_free)
 {
 		
 	int fxn_debug = ABSOLUTE_SILENCE;
@@ -1360,7 +1363,7 @@ double trans_nw(options *opt, unsigned char **aln, size_t alen,
 				nins ++;
 
 				if (j == 0)
-					nindel++;
+					nindel += ends_free ? 0: 1;
 				else if (aln[0][j-1] != '-')
 					nindel++;
 
@@ -1375,7 +1378,7 @@ double trans_nw(options *opt, unsigned char **aln, size_t alen,
 			if (aln[1][j] == '-') {
 				ndel ++;
 				if (j == 0)
-					nindel++;
+					nindel += ends_free ? 0: 1;
 				else if (aln[1][j-1] != '-')
 					nindel++;
 				if (opt->indel_model == INDEL_PER_SITE1)
@@ -1795,7 +1798,7 @@ int check_fp_with_indels(options *opt, data *dat, model *mod, initializer *ini,
 				nw_alen[k], nw_mismatch[k], nw_indels[k],
 				error_profile, mod->err_encoding,
 				dat->qmat[idx_array[r]], dat->n_quality, 
-				mod->adj_trunpois, rlen, dat->error_prob);
+				mod->adj_trunpois, rlen, dat->error_prob,0);
 			tmp += e_trans[k*count + r];
 			#if DEBUG
 			if (nw_indels[k] == 1) {
@@ -2341,7 +2344,7 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 	}
 
 	if((err = trans_expectation(opt, dat, ini, error_profile, 
-					mod->adj_trunpois, mod->eik)))
+					mod->adj_trunpois, mod->eik,0)))
 		return err;
 	/* Keep codes below for debug purpose  */
 	/*
@@ -2494,7 +2497,7 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 
 /* calculate transition probability between reads and haplotypes */
 int trans_expectation(options *opt, data *dat,initializer*ini, double *error_profile, 
-					double adj_trunpois, double *trans_prob){
+					double adj_trunpois, double *trans_prob, int ends_free){
 
 	int err = NO_ERROR;
 	double l1third = 1./3;
@@ -2584,7 +2587,7 @@ int trans_expectation(options *opt, data *dat,initializer*ini, double *error_pro
 					trans_prob[h*dat->sample_size+ idx_array[r]] = trans_nw(opt, aln,
 						alen, nmismatch, nindels, error_profile, opt->err_encoding,
 						dat->qmat[idx_array[r]], dat->n_quality, adj_trunpois,
-										rlen, dat->error_prob);
+										rlen, dat->error_prob,ends_free);
 					/*
 					if(idx_array[r] ==0 && h == 2 ){
 						 for (size_t j = 0; j < alen; ++j){

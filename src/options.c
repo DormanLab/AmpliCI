@@ -113,8 +113,10 @@ int make_options(options **opt) {
 	op->K_UMI = 0;
 	op->topN = 10;
 	op->trans_penalty = MPLE;
-	op->pho = 1.01;
+	op->rho = 1.01;
 	op->omega = 1e-20;
+	op->threshold_UMI = 1;    // allowed minimal UMI abundance 
+	op->threshold_hap = 0;    // allowed minimal deduplicated abundance of haplotypes
 
 	return NO_ERROR;
 } /* make_options */
@@ -204,6 +206,15 @@ int parse_options(options *opt, int argc, const char **argv)
 			if (errno)
 				goto CMDLINE_ERROR;
 			break;
+		case 'r':
+			if (i == argc - 1) {
+				err = INVALID_CMD_OPTION;
+				goto CMDLINE_ERROR;
+			}else{
+				opt->rho = read_cmdline_double(argc,
+					argv, ++i, (void *)opt);
+			}
+			break;
 		case 'l':
 			if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
@@ -278,7 +289,7 @@ int parse_options(options *opt, int argc, const char **argv)
 		case 'u':
 			if (!strcmp(&argv[i][j], "umi")) {  /* Parameter set sepcific for clustering UMIs */
 				opt->gap_p = -20;
-				opt->band = 2;
+				opt->band = 2;    // need further investigation
 				opt->JC69_model = 0;
 				mmessage(INFO_MSG, NO_ERROR, "Cluster UMIs .... \n");
 			}else if (i == argc - 1) {

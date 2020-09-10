@@ -33,15 +33,18 @@ int reads_assign_sparse(model *mod, run_info *ri, size_t sample_size, unsigned i
                     unsigned int K, unsigned int K_UMI);
 int reads_assign_optimal(model *mod, run_info *ri, size_t sample_size, unsigned int topN, 
                     unsigned int K, unsigned int K_UMI);
-double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s,double pho, double omega);
-int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI, double *error_profile, double *trans_prob);
+double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s,double rho, double omega);
+int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI, double *error_profile, 
+                        double *trans_prob, int ends_free);
 
 
 /* main model for UMI */
 int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info *ri){
    int err = NO_ERROR;
+    int output_hap = 1;
    double rdelta;
    int EM_iter;
+   double epsilon = opt->epsilon;
 
    /* calculate the transition prob */
    if ((err = trans_hap_and_umi(opt, dat, ini, mod)))  
@@ -89,7 +92,7 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
     mod->pll_UMI = mod->ll_UMI;
     EM_iter ++;
 
-    if (rdelta < opt->epsilon && rdelta > 0)
+    if (rdelta < epsilon && rdelta > 0)
 		break;
 
 
@@ -104,61 +107,171 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
     mmessage(INFO_MSG, NO_ERROR, "Final reads assignment.....\n");
 
     /* reads assignment */
-    /*
-    if((err = reads_assign_sparse(mod, ri, dat->sample_size, opt->topN, 
-                    opt->K, opt->K_UMI)))
-        return err;
-    */
+    
+    //if((err = reads_assign_sparse(mod, ri, dat->sample_size, opt->topN, 
+    //                opt->K, opt->K_UMI)))
+    //    return err;
+    
 
     /* assignment with the combination with the joint maximum log likelihood */
     reads_assign_optimal(mod, ri, dat->sample_size, opt->topN, 
-                    opt->K, opt->K_UMI);
-    
+                   opt->K, opt->K_UMI);
 
-     /* print and check */
-    FILE *fp = NULL;
-    fp = fopen(opt->outfile_base, "w");
-    if (!fp){
-        return mmessage(ERROR_MSG, FILE_OPEN_ERROR,
-                        opt->outfile_base);        
+
+    /* filtering on gamma based on the threshold on eta */
+    double thres_eta = opt->threshold_UMI / dat->sample_size;
+    for (unsigned int b = 0; b < opt->K_UMI; ++b){
+        if(mod->eta[b] < thres_eta){  // filter UMIs with abundance < the threshold
+            for (unsigned int k = 0; k < opt->K; ++k)
+                mod->gamma[b*opt->K + k] = 0.;
+            fprintf(stderr, "remove the %d th UMI\n",b);
+        }
     }
 
-    fprintf(fp, "log likelihood: %f\n", mod->ll_UMI);
+    /* Deduplicate abundance for each haplotypes */
+    for(unsigned int k = 0; k < opt->K; ++k){
+        ini->H_abun[k] = 0.;
+        for (unsigned int b = 0; b < opt->K_UMI; ++b){
+            ini->H_abun[k] += mod->gamma[b*opt->K + k];
+        }
+    }
 
-    fprintf(fp, "K: %i\n", opt->K);
 
-    fprintf(fp, "assignments: ");
-    fprint_assignment(fp, ri->optimal_cluster_id, dat->sample_size,
-                      opt->K, 2, 1);
+    char *outfile_hap = NULL;
+	char *outfile = NULL;
 
-    fprintf(fp, "cluster sizes: ");
+    if (opt->outfile_base || opt->outfile_info)
+    {
+        /* print result and check */
+        FILE *fp = NULL;
 
-    fprint_uints(fp, ri->optimal_cluster_size, opt->K, 3, 1);
+        if (!opt->outfile_info)
+        {
+            outfile = malloc((strlen(opt->outfile_base) + 5) * sizeof(char));
+            if (!outfile)
+                return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+                                "output file");
+            strcpy(outfile, opt->outfile_base);
+            strcat(outfile, ".out");
+            opt->outfile_info = outfile;
+        }
 
-    fprintf(fp, "UMI K: %i\n", opt->K_UMI);
+        fp = fopen(opt->outfile_info, "w");
+        if (!fp)
+        {
+            return mmessage(ERROR_MSG, FILE_OPEN_ERROR,
+                            opt->outfile_info);
+        }
 
-     fprintf(fp, "UMI assignments: ");
-    fprint_assignment(fp, ri->UMI_cluster_id, dat->sample_size,
-                      opt->K_UMI, 2, 1);
+        fprintf(fp, "log likelihood: %f\n", mod->ll_UMI);
 
-    fprintf(fp, "UMI cluster sizes: ");
+        fprintf(fp, "K: %i\n", opt->K);
 
-    fprint_uints(fp, ri->UMI_cluster_size, opt->K_UMI, 3, 1);
+        fprintf(fp, "assignments: ");
+        fprint_assignment(fp, ri->optimal_cluster_id, dat->sample_size,
+                          opt->K, 2, 1);
 
-    fprintf(fp,"reads posterior likelihood: ");
-	fprint_doubles(fp, ri->optimal_cluster_ll, dat->sample_size, 3, 1);
+        fprintf(fp, "cluster sizes: ");
 
-    fprintf(fp,"Eta: ");
-	fprint_doubles(fp, mod->eta, opt->K_UMI, 6, 1);
+        fprint_uints(fp, ri->optimal_cluster_size, opt->K, 3, 1);
 
-    fprintf(fp,"Gamma: ");
-    fprint_vectorized_matrix(fp, mod->gamma,
-				opt->K_UMI, opt->K, 1);
-    
-    fclose(fp);
+        fprintf(fp, "UMI K: %i\n", opt->K_UMI);
 
-    mmessage(INFO_MSG, NO_ERROR, "Output the final result file: "
-						"%s \n", opt->outfile_base);
+        fprintf(fp, "UMI assignments: ");
+        fprint_assignment(fp, ri->UMI_cluster_id, dat->sample_size,
+                          opt->K_UMI, 2, 1);
+
+        fprintf(fp, "UMI cluster sizes: ");
+
+        fprint_uints(fp, ri->UMI_cluster_size, opt->K_UMI, 3, 1);
+
+        fprintf(fp, "reads posterior likelihood: ");
+        fprint_doubles(fp, ri->optimal_cluster_ll, dat->sample_size, 3, 1);
+
+        fprintf(fp, "Eta: ");
+        fprint_doubles(fp, mod->eta, opt->K_UMI, 6, 1);
+
+        fprintf(fp, "Gamma: ");
+        fprint_vectorized_matrix(fp, mod->gamma,
+                                 opt->K_UMI, opt->K, 1);
+
+        /* output haplotypes and related UMIs */
+        unsigned int cnt = 0;
+        unsigned int l = opt->UMI_length;
+        for (unsigned int k = 0; k < opt->K; ++k)
+        {
+            if (ini->H_abun[k] > opt->threshold_hap){
+                for (unsigned int j = 0; j < ini->seed_lengths[k]; ++j)
+                fprintf(fp, "%c", xy_to_char[(int)ini->seeds[k][j]]);
+                fprintf(fp, "\n");
+                for (unsigned int b = 0; b < opt->K_UMI; ++b){
+                    if(mod->gamma[b*opt->K + k] > 0.){
+                        for (unsigned int j = 0; j < opt->UMI_length; ++j)
+                         fprintf(fp, "%c", xy_to_char[(int)ini->seeds_UMI[b * l +j]]);
+                        fprintf(fp, "\t");
+                    }
+                 }
+                 fprintf(fp, "\n");
+                cnt++;
+            }            
+        }
+
+        fclose(fp);
+
+        mmessage(INFO_MSG, NO_ERROR, "Output the final result file: "
+                                     "%s \n",
+                 opt->outfile_info);
+    }
+    if(outfile) free(outfile);
+
+    if (output_hap) {
+
+        FILE *fp2 = NULL;
+
+		if (!opt->outfile_fasta) {
+			if (!opt->outfile_base)
+				return mmessage(ERROR_MSG, INTERNAL_ERROR,
+						"invalid output filenames");
+
+			outfile_hap = malloc((strlen(opt->outfile_base)
+							+ 5) * sizeof(char));
+			if (!outfile_hap)
+				return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+								"output file");
+ 
+			strcpy(outfile_hap, opt->outfile_base);
+			strcat(outfile_hap, ".fa");
+			opt->outfile_fasta = outfile_hap;
+		}
+
+		fp2 = fopen(opt->outfile_fasta, "w");
+		if (!fp2)
+			return mmessage(ERROR_MSG, FILE_OPEN_ERROR,
+							opt->outfile_fasta);
+
+        unsigned int cnt = 0;
+        //char const * const prefix = "H";
+        for (unsigned int k = 0; k < opt->K; ++k)
+        {
+            if (ini->H_abun[k] > opt->threshold_hap){
+                fprintf(fp2, ">%s%d;", "H", cnt);
+                fprintf(fp2,"Deduplicated Abundance=%.3f;",ini->H_abun[k]);
+                fprintf(fp2, "\n");
+                for (unsigned int j = 0; j < ini->seed_lengths[k]; ++j)
+                fprintf(fp2, "%c", xy_to_char[(int)ini->seeds[k][j]]);
+                fprintf(fp2, "\n");
+                cnt++;
+            }   
+           
+        }
+
+        fclose(fp2);
+
+		mmessage(INFO_MSG, NO_ERROR, "Output the final haplotype fasta "
+					"file: %s \n", opt->outfile_fasta);
+    }
+
+    if(outfile_hap) free(outfile_hap);
 
     return err;
 }/* EM_algorithm */
@@ -172,9 +285,8 @@ double ini_eta_gamma(options *opt, initializer *ini, double *gamma, double *eta,
     unsigned int K = opt->K;
     int fxn_debug = ABSOLUTE_SILENCE;
     double llp_sum;
-    double rho = 1.01;
-    double omega = 1e-15;
-    double epsilon = 1e-40;
+    double rho = opt->rho;
+    double omega = opt->omega;
 
 
     for (size_t i = 0; i < sample_size; i++)
@@ -207,7 +319,7 @@ double ini_eta_gamma(options *opt, initializer *ini, double *gamma, double *eta,
         for (unsigned int k = 0; k < K; ++k){
             idx = b * K + k;
             debug_msg(DEBUG_II, fxn_debug, "%15.3f / %15.3f\n,",gamma[idx],gamma_sumh);
-            gamma[idx] /=  (gamma_sumh+ epsilon); // avoid /0
+            gamma[idx] /=  (gamma_sumh+ 1e-40); // avoid /0
             debug_msg(DEBUG_III, fxn_debug, "%15.3f,",gamma[idx]);  
             double llp = rho * log1p(gamma[idx]/omega);
             llp_sum += llp;
@@ -245,11 +357,11 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
 
 
     /* For acceleration purpose. Do not allow large gap in amplification and sequencing */
-    opt->band = 5;
+    opt->band = 9;    // need further investigation 
    
     /* transition probability for reads */
     if ((err = trans_expectation(opt, dat, ini, error_profile,
-                                 mod->adj_trunpois, mod->eik)))
+                                 mod->adj_trunpois, mod->eik, 0)))
         return err;
 
 
@@ -260,14 +372,13 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
 
      /* [TODO] Need further investigation. It is good to set high gap 
             penalty to reduce gap when aligning UMIs */
-    opt->band = 2;   // for UMIs 
-    opt->gap_p = -20;
+   opt->band = 9;   // for UMIs // need further investigation 
+   opt->gap_p = -20;
     
     /* transition probability for UMIs */
-    if((err = trans_expect_UMIs(opt, dat, ini->seeds_UMI, error_profile, mod->eik_umi)))
+    if((err = trans_expect_UMIs(opt, dat, ini->seeds_UMI, error_profile, mod->eik_umi,0)))
         return err;
         
-   
    /*
     normalize(dat->sample_size, opt->K, mod->eik);
     normalize(dat->sample_size, opt->K_UMI, mod->eik_umi);
@@ -431,24 +542,31 @@ int M_step(options *opt, model *mod,size_t sample_size, unsigned int topN,
 
         if(algo == MPLE){
             /* for each row of gamma */
-            double lls = MPLE_gamma_s(gamma, K, &err, b,opt->pho, opt->omega);
+            double lls = MPLE_gamma_s(gamma, K, &err, b,opt->rho, opt->omega);
             if(err) return err;
 
-            
+            /* below have beed move to the MPLE_gamma_s itself*/
+            /* 
             if (isnan(lls)){
                 debug_msg(DEBUG_I, fxn_debug, "ll penalty: %15.3f\n",lls);
+
+                  for(unsigned int k = 0; k < K; ++k)
+                        fprintf(stderr, "Est gamma: %15.3f", gamma[b * K + k]);
+    
+                    fprintf(stderr, "\n");
                 
                 // compute MLE instead [XY: is it fine ? ]
                 for (unsigned int k = 0; k < K; k++){
                     idx = b * K + k;
-                    gamma[idx] /= (eta[b] + epsilon); // avoid /0
-                    double llp = opt->pho * log1p(gamma[idx]/opt->omega);
+                    gamma[idx] /= (eta[b] + epsilon);  // avoid /0
+                    double llp = opt->rho * log1p(gamma[idx]/opt->omega);
                     mod->penalty_ll += llp;
                 }
+            */
                 
-            }else{
+            //}else{
                 mod->penalty_ll += lls;
-            }
+            //}
             
         }else{
             for (unsigned int k = 0; k < K; k++){
@@ -474,38 +592,49 @@ int M_step(options *opt, model *mod,size_t sample_size, unsigned int topN,
 }/* M_step */
 
 /* Caculate the MPLE for gamma for each s and return the panalty turn */
-double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, double pho, double omega){
+double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, double rho, double omega){
 
-    int fxn_debug =DEBUG_I;
+    int fxn_debug = ABSOLUTE_SILENCE;
     double lls;
     int start = s*K;
+    double max_xi = 0.;
+    unsigned int arg_max_idx;
+    double sum_xi = 0.;
 
     /* set up */
     mstep_data md = {
 		.omega =omega,
-        .pho = pho,
+        .rho = rho,
 		.xi = NULL,
         .idx = NULL,
-		.signs = 0,
+		.signs = NULL,
 		.n_xi = 0,
 	};
 
 
     /* count the no-zeros number */
-    for(unsigned int k =0 ; k < K; ++k)
-        if(x_s[start+k] > 0)
+    for(unsigned int k =0 ; k < K; ++k){
+        if(x_s[start+k] > 0){
             md.n_xi+= 1;
+            sum_xi += x_s[start+k];
+        }
+    }
 
     if(md.n_xi == 0)
         return 0;
 
-    if(md.n_xi == 1)
-        return md.pho * log1p(1.0/md.omega);
+    if(md.n_xi == 1){
+        for(unsigned int k =0 ; k < K; ++k)
+            if(x_s[start+k] > 0)
+                x_s[start+k] = 1.0;
+        return md.rho * log1p(1.0/md.omega);
+    }
 
-    md.xi = calloc(md.n_xi, sizeof (*x_s));
+    md.xi = calloc(md.n_xi, sizeof (*md.xi));
     md.idx = calloc(md.n_xi, sizeof (*md.idx));
+    md.signs = calloc(md.n_xi, sizeof(*md.signs)); 
 
-    if(!md.xi || !md.idx){
+    if(!md.xi || !md.idx || !md.signs){
         *err = MEMORY_ALLOCATION;
         mmessage(ERROR_MSG, *err,"md\n");
         return 0;
@@ -516,6 +645,11 @@ double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, doubl
        if(x_s[start+k] > 0){
            md.xi[cnt] = x_s[start+k];
            md.idx[cnt] = k;
+           md.signs[cnt] = 1;
+           if(md.xi[cnt]  > max_xi){
+                max_xi = md.xi[cnt];
+                arg_max_idx = cnt;
+            }
             cnt ++;
        }
     }
@@ -523,23 +657,77 @@ double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, doubl
     msp_lcstr_func _plfunc = mstep_pen1_lagrange_cstr_func;
 	msp_lcstr_derv _plderv = mstep_pen1_lagrange_cstr_derv;
 
-    // \lambda_0 = md.pho/md.omega
-    double lambda = mstep_newton(_plfunc, _plderv, 1, 1e-6, 100, &md);
+
+    double l0 = 0.;
+    // check the signs of the solution
+    if(max_xi < md.rho){ // negative lambda
+
+        //double lamb_lb = mstep_pen1_lambda_support(&md);
+        //debug_msg(DEBUG_I, fxn_debug, "low bound for lambda: %15.3f\n",lamb_lb);
+        //l0 = lamb_lb + 1e-6;
+
+        l0 = max_xi - md.rho + 1e-6;
+
+        // try different signs 
+        double l1 = l0 - mstep_pen1_lagrange_cstr_func(l0, &md) / 
+		mstep_pen1_lagrange_cstr_derv(l0, &md);
+
+        md.signs[arg_max_idx] = -1;  // alternate signs 
+        double l1_alt = l0 - mstep_pen1_lagrange_cstr_func(l0, &md) / 
+		mstep_pen1_lagrange_cstr_derv(l0, &md);
+
+        debug_msg(DEBUG_I, fxn_debug, "l1: %15.3f; l1_alt: %15.3f;\n",l1,l1_alt);
+
+        if (l1 > 0){
+		    md.signs[arg_max_idx] = 1;
+        }
+        //else if(l1_alt < lamb_lb){
+        //   md.signs[arg_max_idx] = 1;
+        //}
+       
+    }else{
+        l0 = max_xi - md.rho + 1e-6;
+    }
     
-    if (isnan(lambda)){
+    // \lambda_0 = md.rho/md.omega
+    double lambda = mstep_newton(_plfunc, _plderv, l0, 1e-6, 100, &md);
+
+
+    //if(isnan(lambda)){
+    //    debug_msg(DEBUG_I, fxn_debug, "Try again with another initialize value !\n");
+    //    lambda = mstep_newton(_plfunc, _plderv, md.rho/md.omega, 1e-6, 100, &md);
+    //}
+    
+    if (isnan(lambda)){ /* Use MLE instead */
         debug_msg(DEBUG_I, fxn_debug, "lambda for the %d th UMI: %15.3f\n", s, lambda);
-        return NAN;
+        // return NAN;
+        
+        debug_msg(DEBUG_I, fxn_debug, "ll penalty: %15.3f\n",lls);
+
+            for(unsigned int base = 0; base < md.n_xi; ++base)
+                fprintf(stderr, "Est gamma: %15.3f", md.xi[base]);
+
+            fprintf(stderr, "\n");
+        
+        
+        unsigned int idx;
+        lls = 0.;
+        for (unsigned int base = 0; base < md.n_xi; ++base){
+            idx = start+md.idx[base];
+            x_s[idx]/= (sum_xi+ 1e-100);  // avoid /0
+            lls+= md.rho * log1p(x_s[idx]/md.omega);
+        }
+        return lls;
     }
 
     double sum_tp = 0.0;
     lls = 0.0;
     for (unsigned int base = 0; base < md.n_xi; ++base)
     {
-        double rho = md.pho;
         /* compute the MPLE for transition prob. */
         double _xi = md.xi[base];
         double b = md.omega * lambda - _xi + rho;
-        double sign = 1;
+        double sign = md.signs[base];
         double tp;
 
         tp = (-b + sign *
@@ -547,7 +735,7 @@ double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, doubl
              (2 * lambda);
 
         sum_tp += tp;
-        lls += rho * log1p(tp/md.omega);
+        lls += md.rho * log1p(tp/md.omega);
         x_s[start+md.idx[base]] = tp;
         if (isnan(tp)){
             debug_msg(DEBUG_I, fxn_debug, "%d tp:%15.3f\n",md.idx[base],tp);
@@ -559,8 +747,10 @@ double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, doubl
 
     if(md.xi) free(md.xi);
     if(md.idx) free(md.idx);
+    if(md.signs) free(md.signs);
     md.xi = NULL;
     md.idx = NULL;
+    md.signs = NULL;
 
     return lls;
 }/* MPLE_gamma */
@@ -723,7 +913,7 @@ int reads_assign_optimal(model *mod, run_info *ri, size_t sample_size, unsigned 
 }/* reads_assign_sparse */
 
 
-/* gam: gamma ; b : phi; xij = sum e_ij; thresh: pho */
+/* gam: gamma ; b : phi; xij = sum e_ij; thresh: rho */
 double mstep_pen1_lagrange_cstr_func(double lambda, void *fdata)
 {   
     mstep_data *md = fdata;
@@ -735,7 +925,7 @@ double mstep_pen1_lagrange_cstr_func(double lambda, void *fdata)
 
 	register double sum_root = 0.0;
 	for (int j = 0; j < n_xi; j++) {
-		double thresh = md->pho;
+		double thresh = md->rho;
 		double xij = md->xi[j];
 
 		double b = gam * lambda - xij + thresh;
@@ -751,7 +941,7 @@ double mstep_pen1_lagrange_cstr_func(double lambda, void *fdata)
 		delta = sqrt(delta);
 
         /* try mod->signs later */
-		double sign = 1; //(double) (((((sgns >> j) & 1) + sgn_off) << 1) - 1);
+		double sign = md->signs[j]; //(double) (((((sgns >> j) & 1) + sgn_off) << 1) - 1);
 		sum_root += (-b + sign * delta)/(2 * lambda);
 	}
 
@@ -770,7 +960,7 @@ double mstep_pen1_lagrange_cstr_derv(double lambda, void *fdata)
 
 	register double derv = 0.0;
 	for (int j = 0; j < md->n_xi; j++) {
-		register double thresh =  md->pho; //eta / log1p(1.0/gam);
+		register double thresh =  md->rho; //eta / log1p(1.0/gam);
 		register double xij = md->xi[j];
 
 		double b = gam * lambda - xij + thresh;
@@ -784,7 +974,7 @@ double mstep_pen1_lagrange_cstr_derv(double lambda, void *fdata)
         }
 
 		delta = sqrt(delta);
-		double sign = 1; //(double) (((((sgns >> j) & 1) + sgn_off) << 1) - 1);
+		double sign = md->signs[j]; //(double) (((((sgns >> j) & 1) + sgn_off) << 1) - 1);
 		derv += (lambda * (-gam + sign / delta * gam * (b + 2 * xij))) - 
 			(-b + sign * delta);
 	}
@@ -806,11 +996,12 @@ double mstep_newton(double (*fx)(double x, void *data),
 	if (isnan(x1)) return NAN;
 
 	while (fabs(x1 - x0) > eps && iter < maxiter) {
-        if (isnan(x1))
-            fprintf(stderr, "%5d iter: x0: %15.3f,x1:%15.3f\n", iter, x0, x1);
-
+       
 		x0 = x1;
 		x1 = x0 - fx(x0, fdata) / fderv(x0, fdata);
+
+        if (isnan(x1))
+            fprintf(stderr, "%5d iter: x0: %15.3f,x1:%15.3f\n", iter, x0, x1);
 
 		if (isnan(x1)) return NAN;
 
@@ -820,7 +1011,25 @@ double mstep_newton(double (*fx)(double x, void *data),
 	return x1;
 }
 
-int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI, double *error_profile, double *trans_prob){
+double mstep_pen1_lambda_support(void *fdata){
+	mstep_data *md = fdata;
+	register double _omega = md->omega;
+	register int n_xi = md->n_xi;
+    register double _rho = md->rho;
+
+	register double max_lamb_lb = -INFINITY;
+	for (int j = 0; j < n_xi; j++){
+		register double xi_j = md->xi[j];
+		register double _lb = (-(xi_j + _rho) + 2 * sqrt(xi_j * _rho)) / _omega;
+		if (_lb > max_lamb_lb) 
+			max_lamb_lb = _lb;
+	}
+
+	return max_lamb_lb;
+}
+
+int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI, 
+                double *error_profile, double *trans_prob, int ends_free){
 
     int err = NO_ERROR;
     hash *s;
@@ -852,7 +1061,7 @@ int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI, double *error_
 				(size_t) opt->UMI_length,
 				(size_t) rlen,
 				opt->score, opt->gap_p, opt->band, 1, NULL,
-									&err, &alen);
+									&err, &alen);				
 
 				/* count for number of indels */
 				ana_alignment(aln, alen, rlen, &nindels, 
@@ -860,10 +1069,23 @@ int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI, double *error_
 
 				for(unsigned int r = 0; r<count;++r){
 
+                    if(idx_array[r] < 10 && b == 0 ){
+					for (size_t j = 0; j < alen; ++j) {
+					fprintf(stderr, "%c", aln[0][j] == '-'
+					? '-' : xy_to_char[(int) aln[0][j]]);
+					}
+					fprintf(stderr, "\n");
+					for (size_t j = 0; j < alen; ++j) {
+					fprintf(stderr, "%c", aln[1][j] == '-'
+					? '-' : xy_to_char[(int) aln[1][j]]);
+					}
+					fprintf(stderr, "\n");
+					}
+
 					trans_prob[b * dat->sample_size + idx_array[r]] = trans_nw(opt, aln,
 						alen, nmismatch, nindels, error_profile, opt->err_encoding,
 						dat->qmatU[idx_array[r]], dat->n_quality, adj_trunpois,
-										rlen, dat->error_prob);
+										rlen, dat->error_prob, ends_free);
 				
 				}
 
