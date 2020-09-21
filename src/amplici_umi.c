@@ -66,6 +66,14 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
 
     mmessage(INFO_MSG, NO_ERROR, "The E step of the %5d iteration...\n", EM_iter);
 
+    // print gamma 
+    /*
+    fprintf(stderr, "\nEst gamma: ");
+    for(unsigned int k = 0; k < opt->K; ++k){
+        fprintf(stderr, "%15.3f\t", mod->gamma[326*opt->K+k]);
+    }
+    */
+
    log_vector(mod->gamma, opt->K*opt->K_UMI);
    log_vector(mod->eta, opt->K_UMI);
     
@@ -124,7 +132,7 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
         if(mod->eta[b] < thres_eta){  // filter UMIs with abundance < the threshold
             for (unsigned int k = 0; k < opt->K; ++k)
                 mod->gamma[b*opt->K + k] = 0.;
-            fprintf(stderr, "remove the %d th UMI\n",b);
+           // fprintf(stderr, "remove the %d th UMI\n",b);
         }
     }
 
@@ -357,11 +365,12 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
 
 
     /* For acceleration purpose. Do not allow large gap in amplification and sequencing */
-    opt->band = 9;    // need further investigation 
+    opt->band = 9;    // still need check
+    opt->ends_free = 1;
    
     /* transition probability for reads */
     if ((err = trans_expectation(opt, dat, ini, error_profile,
-                                 mod->adj_trunpois, mod->eik, 0)))
+                                 mod->adj_trunpois, mod->eik, opt->ends_free)))
         return err;
 
 
@@ -370,20 +379,21 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
 
     mmessage(INFO_MSG, NO_ERROR, "Calculating the trans prob of UMIs......\n");
 
-     /* [TODO] Need further investigation. It is good to set high gap 
-            penalty to reduce gap when aligning UMIs */
-   opt->band = 9;   // for UMIs // need further investigation 
-   opt->gap_p = -20;
+     /* [TODO] Set a new model of UMI alignment, not use nw alignment */
+    
+   opt->band = 0;   // for UMIs // need further investigation 
+   // opt->gap_p = -20;
+   // opt->ends_free = 1;
     
     /* transition probability for UMIs */
-    if((err = trans_expect_UMIs(opt, dat, ini->seeds_UMI, error_profile, mod->eik_umi,0)))
+    if((err = trans_expect_UMIs(opt, dat, ini->seeds_UMI, error_profile, mod->eik_umi,opt->ends_free)))
         return err;
+    /* calculate the transition probability without alignment */
         
-   /*
+    /*   
     normalize(dat->sample_size, opt->K, mod->eik);
     normalize(dat->sample_size, opt->K_UMI, mod->eik_umi);
     */
-    
 
     return err;
 }/* trans_hap_and_umi */
@@ -523,13 +533,22 @@ int M_step(options *opt, model *mod,size_t sample_size, unsigned int topN,
         for (unsigned int t = 0; t < topN;++t){
             idx = i *topN + t;
             gamma[mod->E2_sparse_umi_id[idx]* K + mod->E2_sparse_hap_id[idx]] += mod->E2_sparse_value[idx];
+            if(mod->E2_sparse_umi_id[idx] == 326 && mod->E2_sparse_hap_id[idx] == 189)
+                fprintf(stderr, "%d: %d: %15.7f\t",i, mod->E2_sparse_hap_id[idx], mod->E2_sparse_value[idx]);
         }
     }
 
     for (unsigned int b = 0; b < K_UMI; ++b){  
          for (unsigned int k = 0; k < K; ++k)
              eta[b] += gamma[b * K + k]; 
-    } 
+    }
+
+
+    //fprintf(stderr, "Est gamma: \n");
+    //for(unsigned int k = 0; k < opt->K; ++k){
+    //    if(mod->gamma[326*opt->K+k]>0)
+    //        fprintf(stderr, "%15.3f\t", mod->gamma[326*opt->K+k]);
+    //}
 
     //for(unsigned int k = 0; k < K; ++k)
      //   fprintf(stderr, "Est gamma: %15.3f", gamma[k]);
@@ -594,7 +613,7 @@ int M_step(options *opt, model *mod,size_t sample_size, unsigned int topN,
 /* Caculate the MPLE for gamma for each s and return the panalty turn */
 double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, double rho, double omega){
 
-    int fxn_debug = ABSOLUTE_SILENCE;
+    int fxn_debug = DEBUG_I;
     double lls;
     int start = s*K;
     double max_xi = 0.;
@@ -676,7 +695,7 @@ double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, doubl
         double l1_alt = l0 - mstep_pen1_lagrange_cstr_func(l0, &md) / 
 		mstep_pen1_lagrange_cstr_derv(l0, &md);
 
-        debug_msg(DEBUG_I, fxn_debug, "l1: %15.3f; l1_alt: %15.3f;\n",l1,l1_alt);
+        //debug_msg(DEBUG_I, fxn_debug, "l1: %15.3f; l1_alt: %15.3f;\n",l1,l1_alt);
 
         if (l1 > 0){
 		    md.signs[arg_max_idx] = 1;
@@ -702,13 +721,7 @@ double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, doubl
         debug_msg(DEBUG_I, fxn_debug, "lambda for the %d th UMI: %15.3f\n", s, lambda);
         // return NAN;
         
-        debug_msg(DEBUG_I, fxn_debug, "ll penalty: %15.3f\n",lls);
-
-            for(unsigned int base = 0; base < md.n_xi; ++base)
-                fprintf(stderr, "Est gamma: %15.3f", md.xi[base]);
-
-            fprintf(stderr, "\n");
-        
+        //debug_msg(DEBUG_I, fxn_debug, "ll penalty: %15.3f\n",lls);
         
         unsigned int idx;
         lls = 0.;
@@ -717,6 +730,11 @@ double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, doubl
             x_s[idx]/= (sum_xi+ 1e-100);  // avoid /0
             lls+= md.rho * log1p(x_s[idx]/md.omega);
         }
+
+        //for(unsigned int base = 0; base < md.n_xi; ++base)
+        //        fprintf(stderr, "Est gamma: %15.3f", md.xi[base]);
+
+       // fprintf(stderr, "\n");
         return lls;
     }
 
@@ -737,10 +755,12 @@ double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, doubl
         sum_tp += tp;
         lls += md.rho * log1p(tp/md.omega);
         x_s[start+md.idx[base]] = tp;
-        if (isnan(tp)){
+        if (isnan(tp) || tp < 0){
             debug_msg(DEBUG_I, fxn_debug, "%d tp:%15.3f\n",md.idx[base],tp);
             debug_msg(DEBUG_I, fxn_debug, "lls :%15.3f\n",lls);
         }
+        if(s == 326)
+            debug_msg(DEBUG_I, fxn_debug, "gamma :%15.3f; e: %15.3f\n", tp, _xi);
     }
     if (isnan(lls))
         debug_msg(DEBUG_I, fxn_debug, "sum_tp:%15.3f\n",sum_tp);  
@@ -1065,7 +1085,7 @@ int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI,
 
 				/* count for number of indels */
 				ana_alignment(aln, alen, rlen, &nindels, 
-						&nmismatch, opt->info); // need further check 
+						&nmismatch, opt->ends_free, opt->info); // need further check 
 
 				for(unsigned int r = 0; r<count;++r){
 

@@ -54,6 +54,7 @@ struct _options {
 	double omega;       /*< ! for MPLE */
 	double threshold_UMI;   /* ! minimal UMI abundance */
 	double threshold_hap;   /*  !minimal hap abundance */
+	unsigned int max_offset; /* ! maximal allowed offset */
 
 	/* model */
 	int convergence_amplici;  /*<! convergence or not when updating abundance */
@@ -102,6 +103,7 @@ struct _options {
 	int score[NUM_NUCLEOTIDES][NUM_NUCLEOTIDES];  /* score matrix for nw alignment */
 	int gap_p;  /* penalty for gaps */
 	int band;  /* bandwidth for banded nw alignment */
+	int ends_free; /* counting the indel at the begining ? Yes[0],No[1] */
 
 	int info;  /*<! level of information to output */
 	int use_curses;

@@ -105,6 +105,8 @@ int make_options(options **opt) {
 	op->score[3][0] = -2; op->score[3][1] = -3; op->score[3][2] = -3;op->score[3][3] = 2;
 	op->gap_p = -5;
 	op->band =  20;  // maybe need to be changed ? change from 10 to 20
+	op->ends_free = 0;  //default 0
+	op->max_offset = 2;
 
 
 	/* UMI information */
@@ -289,7 +291,9 @@ int parse_options(options *opt, int argc, const char **argv)
 		case 'u':
 			if (!strcmp(&argv[i][j], "umi")) {  /* Parameter set sepcific for clustering UMIs */
 				opt->gap_p = -20;
-				opt->band = 2;    // need further investigation
+				opt->band = opt->max_offset;   // need further investigation. currently set as 0.
+				//opt->ends_free = 0;   // not counting the offset the begining 
+				// opt->nw_align = NO_ALIGNMENT;
 				opt->JC69_model = 0;
 				mmessage(INFO_MSG, NO_ERROR, "Cluster UMIs .... \n");
 			}else if (i == argc - 1) {

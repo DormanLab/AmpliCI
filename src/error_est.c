@@ -625,7 +625,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 		for (s = hash_list[k]; s != NULL; s = s->hh.next) {
 			//fprintf(stderr, "s->count : %d for the %d th \n", s->count, k);
 			if(s->count > max_abun){
-				if(s->count > 20) fprintf(stderr, "s->count > 20\n");
+				//if(s->count > 20) fprintf(stderr, "s->count > 20\n");
 				max_abun = s->count;
 				memcpy(ini->seeds[k], s->sequence,
 					dat->max_read_length * sizeof **ini->seeds);		

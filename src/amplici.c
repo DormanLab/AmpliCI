@@ -643,7 +643,7 @@ int nwalign_matrix(options *opt, data *dat, initializer *ini,
 
 		/* calculate number of indels and mismatch based on alignment */
 		ana_alignment(aln, alen, rlen, &ini->nw_indels[select*size+i], 
-					&ini->nw_mismatch[select*size+i], opt->info);
+					&ini->nw_mismatch[select*size+i], opt->ends_free,opt->info);
 	}
 
 	return err;
@@ -1125,7 +1125,7 @@ int ExpTrans_nwalign(data *dat, options *opt, initializer *ini,
 				ini->nw_indels[dat->hash_length*select+id],
 				error_profile, err_encoding, dat->qmat[r],
 					dat->n_quality, adj, dat->lengths[r],
-							dat->error_prob,0);
+							dat->error_prob,opt->ends_free);
 		}
 	}
 
@@ -1765,7 +1765,7 @@ int check_fp_with_indels(options *opt, data *dat, model *mod, initializer *ini,
 
 		/* calculate number of indels and mismatch based on alignment */
 		ana_alignment(aln, alen, rlen, &nw_indels[k], 
-					&nw_mismatch[k], opt->info);
+					&nw_mismatch[k], opt->ends_free,opt->info);
 
 		/* diagnostic output: */
 		//debug_msg(DEBUG_I, DEBUG_I, "haplotype %u alignment length %zu; #indels %u; #mismatches %u\n", k, alen, nw_indels[k], nw_mismatch[k]);
@@ -1798,7 +1798,7 @@ int check_fp_with_indels(options *opt, data *dat, model *mod, initializer *ini,
 				nw_alen[k], nw_mismatch[k], nw_indels[k],
 				error_profile, mod->err_encoding,
 				dat->qmat[idx_array[r]], dat->n_quality, 
-				mod->adj_trunpois, rlen, dat->error_prob,0);
+				mod->adj_trunpois, rlen, dat->error_prob,opt->ends_free);
 			tmp += e_trans[k*count + r];
 			#if DEBUG
 			if (nw_indels[k] == 1) {
@@ -2566,7 +2566,7 @@ int trans_expectation(options *opt, data *dat,initializer*ini, double *error_pro
 
 				/* count for number of indels */
 				ana_alignment(aln, alen, rlen, &nindels, 
-						&nmismatch, opt->info); // need further check 
+						&nmismatch, opt->ends_free,opt->info); // need further check 
 
 				for(unsigned int r = 0; r<count;++r){
 
