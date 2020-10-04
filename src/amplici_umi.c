@@ -126,7 +126,7 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
                    opt->K, opt->K_UMI);
 
 
-    /* filtering on gamma based on the threshold on eta */
+    /* filtering on gamma based on the threshold on eta [Try remove false positive UMIs ] */
     double thres_eta = opt->threshold_UMI / dat->sample_size;
     for (unsigned int b = 0; b < opt->K_UMI; ++b){
         if(mod->eta[b] < thres_eta){  // filter UMIs with abundance < the threshold
@@ -136,6 +136,15 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
         }
     }
 
+    /*** Codes below used for testing ideas for collision ***/
+    for(unsigned int k = 0; k < opt->K; ++k){
+            for (unsigned int b = 0; b < opt->K_UMI; ++b){
+                // post hoc separate UMI+ haplotypes if there is an UMI collision
+                if( mod->gamma[b*opt->K + k] > 0)
+                    mod->gamma[b*opt->K + k] = 1.0;
+            }   
+    }
+
     /* Deduplicate abundance for each haplotypes */
     for(unsigned int k = 0; k < opt->K; ++k){
         ini->H_abun[k] = 0.;
@@ -143,7 +152,6 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
             ini->H_abun[k] += mod->gamma[b*opt->K + k];
         }
     }
-
 
     char *outfile_hap = NULL;
 	char *outfile = NULL;
@@ -533,8 +541,8 @@ int M_step(options *opt, model *mod,size_t sample_size, unsigned int topN,
         for (unsigned int t = 0; t < topN;++t){
             idx = i *topN + t;
             gamma[mod->E2_sparse_umi_id[idx]* K + mod->E2_sparse_hap_id[idx]] += mod->E2_sparse_value[idx];
-            if(mod->E2_sparse_umi_id[idx] == 326 && mod->E2_sparse_hap_id[idx] == 189)
-                fprintf(stderr, "%d: %d: %15.7f\t",i, mod->E2_sparse_hap_id[idx], mod->E2_sparse_value[idx]);
+            //if(mod->E2_sparse_umi_id[idx] == 326 && mod->E2_sparse_hap_id[idx] == 189)
+            //    fprintf(stderr, "%d: %d: %15.7f\t",i, mod->E2_sparse_hap_id[idx], mod->E2_sparse_value[idx]);
         }
     }
 
@@ -759,8 +767,8 @@ double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, doubl
             debug_msg(DEBUG_I, fxn_debug, "%d tp:%15.3f\n",md.idx[base],tp);
             debug_msg(DEBUG_I, fxn_debug, "lls :%15.3f\n",lls);
         }
-        if(s == 326)
-            debug_msg(DEBUG_I, fxn_debug, "gamma :%15.3f; e: %15.3f\n", tp, _xi);
+        //if(s == 326)
+        //    debug_msg(DEBUG_I, fxn_debug, "gamma :%15.3f; e: %15.3f\n", tp, _xi);
     }
     if (isnan(lls))
         debug_msg(DEBUG_I, fxn_debug, "sum_tp:%15.3f\n",sum_tp);  
@@ -1089,6 +1097,7 @@ int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI,
 
 				for(unsigned int r = 0; r<count;++r){
 
+                    /*
                     if(idx_array[r] < 10 && b == 0 ){
 					for (size_t j = 0; j < alen; ++j) {
 					fprintf(stderr, "%c", aln[0][j] == '-'
@@ -1101,6 +1110,7 @@ int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI,
 					}
 					fprintf(stderr, "\n");
 					}
+                    */
 
 					trans_prob[b * dat->sample_size + idx_array[r]] = trans_nw(opt, aln,
 						alen, nmismatch, nindels, error_profile, opt->err_encoding,

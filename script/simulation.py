@@ -14,6 +14,7 @@ parser.add_argument('-c', required=False, default= 7, type=int, help="number of 
 parser.add_argument('-e', required=False, default= 0.9, type= float, help="PCR efficiency")
 parser.add_argument('-n', required=False, default= 400, type= int, help="number of simulated moleculars")
 parser.add_argument('-a', required=False, default= 0.5, type= float, help="parameter for power-law distribution")
+parser.add_argument('-collision', required=False, default= 0, type= int, help="allow collision ?")
 
 params = parser.parse_args()
 
@@ -25,6 +26,7 @@ n_cycle = params.c  # PCR amplification
 p_amp = params.e
 num_uniq = params.n   ## number of sequences before amplification
 alpha = params.a ## controling the abundance distribution 
+collision = params.collision  ##  if 0, there is no collision happened. If 1, allow collision.
 
 class Error(Exception):
     pass
@@ -48,7 +50,7 @@ def change_to_sequence_format(sequence_of_number):
     sequence=''.join(sequence)
     return sequence
 
-### [TODO] add codes to simulate sequence. 
+### add codes to simulate sequence. 
 def simu_seq(hap):
     sequence= []
     nuc_list = change_sequence_format(hap)
@@ -123,6 +125,10 @@ def simulate_fasta():
 
     ### randomly select real_barcodes and haplotypes
     real_barcodes = np.random.choice(real_barcodes,num_uniq,replace = False)
+    if collision:
+        real_barcodes = np.random.choice(real_barcodes,num_uniq,replace = True)
+    #print(len(np.unique(real_barcodes)))
+     
     haplotypes = np.random.choice(haplotypes,K,replace = False)
 
 
@@ -145,7 +151,7 @@ def simulate_fasta():
             for a in range(0,abun):
                 list_true_hap.append(k)
                 list_true_UMI.append(barcode_id)
-                list_name.append(str(k)+"_"+str(barcode_id))
+                list_name.append(str(k)+"_"+str(barcode_id)+"_"+str(a))
             count = count + 1
     
     with open(output_file + ".fasta","w") as f:
@@ -153,6 +159,7 @@ def simulate_fasta():
            print_fasta(f,list_name[i],list_seq[i])
 
     with open(output_file+ ".para.txt","w") as f:
+        print("number of unique barcode:", len(np.unique(real_barcodes)), file = f)
         print("abundance:",file = f)
         print(abundance,file = f)
 
