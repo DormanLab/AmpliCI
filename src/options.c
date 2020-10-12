@@ -291,7 +291,7 @@ int parse_options(options *opt, int argc, const char **argv)
 		case 'u':
 			if (!strcmp(&argv[i][j], "umi")) {  /* Parameter set sepcific for clustering UMIs */
 				opt->gap_p = -20;
-				opt->band = opt->max_offset;   // need further investigation. currently set as 0.
+				opt->band = opt->max_offset;   // need further investigation. 
 				//opt->ends_free = 0;   // not counting the offset the begining 
 				// opt->nw_align = NO_ALIGNMENT;
 				opt->JC69_model = 0;

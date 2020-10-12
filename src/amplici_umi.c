@@ -1062,8 +1062,53 @@ int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI,
     int err = NO_ERROR;
     hash *s;
 	unsigned int u = 0;
+    double eik;
+    double l1third = 1.0/3;
 
-    double adj_trunpois = ppois(dat->max_read_length, dat->max_read_length * opt->indel_error, 1, 1);
+
+    if(!opt->band || opt->nw_align == NO_ALIGNMENT){
+
+        for (unsigned int r = 0; r < dat->sample_size; ++r){
+
+            for (unsigned int b = 0; b < opt->K_UMI; b++){
+
+            eik = 0.;
+            unsigned char * hap_seq = &seeds_UMI[b *opt->UMI_length];
+
+            for (unsigned int j = 0; j < opt->UMI_length; j++) {
+
+						if (error_profile) {
+							if (opt->err_encoding == STD_ENCODING)  // make sure opt->err_encoding is the same as mod->err_encoding
+								eik += translate_error_STD_to_XY(
+									error_profile,
+									dat->n_quality, hap_seq[j],
+									dat->dmatU[r][j],
+									dat->qmatU[r][j]);
+						else if (opt->err_encoding == XY_ENCODING)
+							eik += error_profile[(NUM_NUCLEOTIDES
+								* hap_seq[j] + dat->dmatU[r][j])
+								* dat->n_quality
+								+ dat->qmatU[r][j]];
+						} else {
+							//double ep = adj * error_prob(dat->fdata, dat->qmat[r][j]);
+							double ep = dat->error_prob[dat->qmatU[r][j]];	
+							if (dat->dmatU[r][j] == hap_seq[j] )			
+								eik += log(1 - ep);
+							else
+								eik += log(ep) + l1third;
+						}
+					}
+
+     
+            trans_prob[b * dat->sample_size + r] = eik;
+
+        }
+
+        }
+       return err;
+    }
+
+   double adj_trunpois = ppois(dat->max_read_length, dat->max_read_length * opt->indel_error, 1, 1);
 
 	for (s = dat->UMI_count; s != NULL; s = s->hh.next) {
 
