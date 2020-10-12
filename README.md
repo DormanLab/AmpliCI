@@ -86,7 +86,10 @@ Third line: +any content on a single line
 
 Fourth line: quality score sequence ([ASCII](https://en.wikipedia.org/wiki/FASTQ_format#Encoding) [!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJ])
 
-If your read or quality scores are split over multiple lines, AmpliCI will not work.  One possible script for fixing your FASTQ-formatted files is given by [Damian Kao on BioStars](https://www.biostars.org/p/14828/).
+If your read or quality scores are split over multiple lines, AmpliCI will not work.  One possible script for fixing your FASTQ-formatted files is given by [Damian Kao on BioStars](https://www.biostars.org/p/14828/). You can also use [seqkit](https://github.com/shenwei356/seqkit) with following command,
+```
+seqkit seq reads_1.fq -w 0
+```
 
 # Usage
 
