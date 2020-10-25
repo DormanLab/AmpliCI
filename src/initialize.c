@@ -108,8 +108,8 @@ int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf
 	if(fqdf){
 		if (fqdf->n_lengths || fqdf->n_max_length != dat->max_read_length) 
 			return mmessage(ERROR_MSG, INVALID_USER_INPUT,
-						"invalid input haplotype set. haplotypes in '%s' must be same "
-							"length.\n",opt->initialization_file);
+						"invalid input haplotype set. The length of input haplotypes in '%s' must be "
+							"%i.\n",opt->initialization_file, dat->max_read_length);
 		
 		for (unsigned int k = 0; k < opt->K; ++k){
 			memcpy(in->seeds[k],
@@ -165,9 +165,8 @@ int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf
 		{
 			if (fqdfu->n_lengths || fqdfu->n_max_length != opt->UMI_length)
 				return mmessage(ERROR_MSG, INVALID_USER_INPUT,
-								"invalid input UMI set. UMIs in '%s' must be with same "
-								"length.\n",
-								opt->initialization_UMI);
+								"invalid input UMI set. UMIs in '%s' must be "
+								"%i.\n",opt->initialization_UMI, opt->UMI_length);
 
 			memcpy(in->seeds_UMI, fqdfu->reads,
 				   opt->K_UMI * fqdfu->n_max_length * sizeof *fqdfu->reads);

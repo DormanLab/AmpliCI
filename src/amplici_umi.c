@@ -183,7 +183,7 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
 
         fprintf(fp, "K: %i\n", opt->K);
 
-        fprintf(fp, "assignments: ");
+        fprintf(fp, "read assignments: ");
         fprint_assignment(fp, ri->optimal_cluster_id, dat->sample_size,
                           opt->K, 2, 1);
 
