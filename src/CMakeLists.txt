@@ -7,6 +7,8 @@ SET(CMAKE_CC_COMPILER  gcc)
 set(CMAKE_BUILD_TYPE release)
 set(CMAKE_CXX_STANDARD 11)
 
+set(RMATH_PATH ".")
+
 include(FindPackageHandleStandardArgs)
 
 aux_source_directory(. DIR_SRCS)
@@ -99,7 +101,7 @@ message(STATUS "Found R include directory: ${LIBR_INCLUDE_DIRS}")
 message(STATUS "Found R lib directory: ${LIBR_LIB_DIR}")
 
 include_directories(${LIBR_INCLUDE_DIRS})
-link_directories(${LIBR_LIB_DIR})
+link_directories(${LIBR_LIB_DIR} ${RMATH_PATH})
 
 # compile option 
 add_compile_options(-D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500)
@@ -122,7 +124,7 @@ add_dependencies(run_AmpliCI loess_raw)
 target_link_libraries(run_AmpliCI loess_raw)
 
 # Rmath
-find_library(RMATH_LIBRARY NAMES Rmath  HINTS ${LIBR_LIB_DIR} ${_LIBR_EXECUTABLE_DIR}/lib ${_LIBR_EXECUTABLE_DIR}/lib64)
+find_library(RMATH_LIBRARY NAMES Rmath HINTS ${RMATH_PATH} ${LIBR_LIB_DIR} ${_LIBR_EXECUTABLE_DIR}/lib ${_LIBR_EXECUTABLE_DIR}/lib64)
 find_package_handle_standard_args(LibRmath DEFAULT_MSG RMATH_LIBRARY)
 if(RMATH_LIBRARY)
    target_link_libraries(run_AmpliCI ${RMATH_LIBRARY})
