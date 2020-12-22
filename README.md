@@ -27,13 +27,13 @@ AmpliCI, Amplicon Clustering Inference, denoises Illumina amplicon data by appro
 	- r-mathlib on [Ubuntu](https://ubuntu.com/) and [Debian](https://www.debian.org/)
 	- libRmath on [Fedora](https://ubuntu.com/), [CentOS](https://centos.org/), [Mageia](https://www.mageia.org/en/), and [Mandriva](https://www.openmandriva.org/)
 	- Or if all else fails, you can install the Rmath standalone library from the repository [https://github.com/statslabs/rmath](https://github.com/statslabs/rmath)
-  - If you do not get admin to install Rmath, you can compile the Rmath standalone library and move libRmath.a to the `src` folder. Or you can modify the line in CMakeLists.txt
+  - If you do not get admin to install Rmath, you can compile the Rmath standalone library and move libRmath.a to the `src` folder. Or you can modify the line in CMakeLists.txt to add the path to your own Rmath library.
   
   ```
   set(RMATH_PATH "path/to/libRmath.a")
   ```
     
-  to add the path to your own Rmath library.
+ 
 
 
 # Installation <a name = "installation" />
