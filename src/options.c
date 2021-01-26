@@ -475,7 +475,7 @@ void fprint_usage(FILE *fp, const char *cmdname, void *obj)
 	for (size_t i = start; i < strlen(cmdname); ++i)
 		fputc(toupper(cmdname[i]), fp);
 	//fprintf(fp, "(%d)\n", 1);
-	fprintf(fp, "(v1.0.1)\n");
+	fprintf(fp, "(v1.0.2)\n");
 	fprintf(fp, "\nNAME\n\t%s - Amplicon Clustering Inference\n",
 		&cmdname[start]);
 	fprintf(fp, "\nSYNOPSIS\n\t%s [--error | --profile <pstr>]"
