@@ -28,6 +28,14 @@ AmpliCI, Amplicon Clustering Inference, denoises Illumina amplicon data by appro
 	- r-mathlib on [Ubuntu](https://ubuntu.com/) and [Debian](https://www.debian.org/)
 	- libRmath on [Fedora](https://ubuntu.com/), [CentOS](https://centos.org/), [Mageia](https://www.mageia.org/en/), and [Mandriva](https://www.openmandriva.org/)
 	- Or if all else fails, you can install the Rmath standalone library from the repository [https://github.com/statslabs/rmath](https://github.com/statslabs/rmath)
+  - If you do not get admin to install Rmath, you can compile the Rmath standalone library and move libRmath.a to the `src` folder. Or you can modify the line in CMakeLists.txt to add the path to your own Rmath library.
+  
+  ```
+  set(RMATH_PATH "path/to/libRmath.a")
+  ```
+    
+ 
+
 
 # Installation <a name = "installation" />
 
@@ -89,7 +97,10 @@ Third line: +any content on a single line
 
 Fourth line: quality score sequence ([ASCII](https://en.wikipedia.org/wiki/FASTQ_format#Encoding) [!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJ])
 
-If your read or quality scores are split over multiple lines, AmpliCI will not work.  One possible script for fixing your FASTQ-formatted files is given by [Damian Kao on BioStars](https://www.biostars.org/p/14828/).
+If your read or quality scores are split over multiple lines, AmpliCI will not work.  One possible script for fixing your FASTQ-formatted files is given by [Damian Kao on BioStars](https://www.biostars.org/p/14828/). You can also use [seqkit](https://github.com/shenwei356/seqkit) with following command,
+```
+seqkit seq reads_1.fq -w 0
+```
 
 # Usage
 
