@@ -72,8 +72,6 @@ Like all other denoising methods, the starting point of the analysis is FASTQ se
 
 AmpliCI requires all input reads have the **same** length, with no **ambiguous** nucleotides (only A, C, G, T base calls allowed).  (One way to truncate or filter reads with ambiguous nucleotides is via the R package [ShortRead](https://rdrr.io/bioc/ShortRead/).)
 
-- Now AmpliCI can support multiple-length reads. You can run AmpliCI directly on such dataset and simply ignore the warning message. But it is still under the *test* and use it with care !
-
 ## **Input files** <a name="inputfiles" />
 
 AmpliCI takes a single demultiplexed FASTQ file (one per sample) generated from the Illumina sequencing platform, with reads trimmed to the same length and containing no ambiguous nucleotides (see above steps). If you have paired end data, AmpliCI can analyze the forward reads, the reverse reads, or the merged reads, but not both forward and reverse reads simultaneously.
