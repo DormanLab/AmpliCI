@@ -311,6 +311,7 @@ Other important options:
 
 - `--log_likelihood`  Lower bound for screening reads during cluster assignment.  This is the minimum log assignment likelihood, $\ln \pi_k + \ln \Pr(r_i|h_k)$. [DEFAULT: -100.000000]
 
+- `--nJC69` Disable JC69 model. By default, AmpliCI assume all sequences are generated from an ancestral sequence, which slightly increases the sensitivity for detecting closed haplotypes. [Use it when biological sequences are unrelated] 
 
 # C library <a name = "library" />
 
@@ -343,8 +344,6 @@ AmpliCI provides both a shared and a static C library for users to call function
 - `abun`: See the description of `scaled true abun` above for outfile `output_base_filename.out`.
 
 - `ll`: See the description of `reads ll` above for outfile `output_base_filename.out`.
-
-- `--nJC69` Disable JC69 model. By default, AmpliCI assume all sequences are generated from an ancestral sequence, which slightly increases the sensitivity for detecting closed haplotypes. [Use it when biological sequences are unrelated] 
 
 An example to call function ```amplici_wfile()``` is provided in [example_wfile.c](https://github.com/DormanLab/AmpliCI/tree/master/example_wfile.c). You can compile the source file with the C library libamplici.a (in the ```src``` directory):
 
