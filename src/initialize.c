@@ -441,7 +441,9 @@ int realloc_seeds(initializer *ini, unsigned int max_read_length, unsigned int p
 	ini->seed_lengths = seed_lengths;   // Uninitialized 
 	ini->seeds = seeds;
 
-	data_t *dptr = realloc(ini->seeds[0], max_read_length * K * sizeof **ini->seeds);
+	//if(ini->seeds[0]) free(ini->seeds[0]);
+	 data_t *dptr = realloc(ini->seeds[0], max_read_length * K * sizeof **ini->seeds);
+	//data_t *dptr = malloc(max_read_length * K * sizeof **ini->seeds);
 	if (!dptr)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 			"reallloc.initializer.seeds");

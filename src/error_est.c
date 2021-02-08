@@ -589,8 +589,10 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 		return err;
 	
 	unsigned int max = 0;
-	for(unsigned int i = 0; i < dat->sample_size; i++) 
+	for(unsigned int i = 0; i < dat->sample_size; i++){
 		if (ini->cluster_id[i] > max) max = ini->cluster_id[i];
+	//	fprintf(stderr, "%d",ini->cluster_id[i]);
+	}
 
 	unsigned int K_partitions = max + 1;  // new K, number of UMI clusters
 	fprintf(stderr, "new K = %d\n", K_partitions);
@@ -600,6 +602,10 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 	hash_list = malloc(K_partitions* sizeof *hash_list);
 	if(!hash_list)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "Err_cnt.hash_list");
+
+	unsigned int *cluster_size = NULL;
+	cluster_size = malloc(K_partitions * sizeof *ini->cluster_size);
+	ini->cluster_size = cluster_size;
 
 	for (unsigned int k =0 ; k < K_partitions; k++){
 		hash_list[k] = NULL;
@@ -616,40 +622,57 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 		if(err) return err;
 	}
 
+	// sort
+	for (unsigned int k = 0; k < K_partitions; k++){
+		sort_by_count(&hash_list[k]); 
+	}
+
 	// simple idea to detect collision in each UMI clusters
 	// remember need to update both  ini->cluster_id, ini->seeds
 
 	// determine a new K 
+	
 	unsigned int K_seeds = 0;
 
 	
-	for (unsigned int k = 0; k < K_partitions; k++){
+	for (unsigned int k = 0; k < K_partitions; ++k){
+			
 		
-		hash *s = hash_list[k];
-		sort_by_count(&s);  // sort hash list 
-		hash_list[k] = s;
+		if(hash_list[k]){
+			unsigned int max_abun = hash_list[k]->count;  // the most abundant sequence
+			unsigned int thres = (max_abun+1) / 2;
 		
-		// fprintf(stderr, "count : %d\n", hash_list[k]->count);
-	     unsigned int max_abun = s->count;  // the most abundant sequence
-	
-		 unsigned int thres = (max_abun+1) / 2;
-
-		//hash *s;
-		for (s = hash_list[k]; s != NULL; s = s->hh.next) {
-			if (s->count >= thres && s->count >= 2){
-				K_seeds ++;
-				ini->cluster_size[k] ++;
-			}else{ break;}
-			//
-			//if(s->count > max_abun){
-				//if(s->count > 20) fprintf(stderr, "s->count > 20\n");
-			//	max_abun = s->count;
-			//	idx = s->idx;
-				//memcpy(ini->seeds[k], s->sequence,
-				//	dat->max_read_length * sizeof **ini->seeds);		
-			//}
+			hash *s;
+			for (s = hash_list[k]; s != NULL; s = s->hh.next) {
+				if (s->count >= thres && s->count >= 2){
+					K_seeds ++;
+					ini->cluster_size[k] ++;
+				} else{ break;}
+				//
+				//if(s->count > max_abun){
+					//if(s->count > 20) fprintf(stderr, "s->count > 20\n");
+				//	max_abun = s->count;
+				//	idx = s->idx;
+					//memcpy(ini->seeds[k], s->sequence,
+					//	dat->max_read_length * sizeof **ini->seeds);		
+				//}
+			}
 		}
-	}
+
+	} 
+
+	//unsigned int sum_subK;
+	//for (unsigned int k =0 ; k < K_partitions; k++){
+	//	sum_subK +=  ini->cluster_size[k];
+	//}
+	//fprintf(stderr, "sum_subK : %d\n", sum_subK);
+
+	// There are some zero clusters in the K partitions 
+	unsigned int num_null = 0;
+	for (unsigned int k = 0; k < K_partitions; ++k)
+		if(ini->cluster_size[k]==0)
+			num_null++;
+	K_seeds = K_seeds + num_null;
 
 	fprintf(stderr, "K_seeds : %d\n", K_seeds);
 	
@@ -658,16 +681,20 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 		if((err = realloc_seeds(ini, dat->max_read_length, opt->K, K_seeds)))
 			return err;
 
-	
 	/* identify true assignment and seeds when recognizing possible collision */
-
+	
 	unsigned int add_num = 0;
 	// hash *s = NULL;
 	for (unsigned int k = 0; k < K_partitions; k++){
+
+		if(hash_list[k]){
+
 		hash *s = hash_list[k];
 		unsigned int subK = ini->cluster_size[k];
 
-		if(subK < 2 ){ // no collision
+		//fprintf(stderr, "subK : %d\n", subK);
+
+		if(subK < 2 ){ // no collision or zero cluster
 			memcpy(ini->seeds[k], s->sequence,
 				dat->max_read_length * sizeof **ini->seeds);
 			ini->seed_lengths[k] = dat->lengths[s->idx];
@@ -676,14 +703,16 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 			// copy seeds information
 			unsigned int lidx[subK];
 
-			for(unsigned int sk = 0; sk < subK; sk++){
+			for(unsigned int sk = 0; sk < subK; ++sk){
+				//fprintf(stderr, "count: %d\n",s->count);
 				unsigned int pos = k;
-				if(!sk){
+				if(sk==0){
 					memcpy(ini->seeds[k], s->sequence,
 						dat->max_read_length * sizeof **ini->seeds);
 					ini->seed_lengths[k] = dat->lengths[s->idx];
 				}else{
 					pos = K_partitions + add_num;
+					//fprintf(stderr, "%d, %d\n",pos,K_seeds);
 					memcpy(ini->seeds[pos], s->sequence,
 						dat->max_read_length * sizeof **ini->seeds);
 					ini->seed_lengths[pos] = dat->lengths[s->idx];
@@ -691,30 +720,46 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 				}
 				lidx[sk] = pos;
 				s = s->hh.next;
+			//	fprintf(stderr, "%d, %d\n",pos,subK);
 			}
+			//fprintf(stderr, "%d, %d\n",add_num,subK-1);
 
 			// reassignment based on hamming distance
+			unsigned int min_dist;
 			for (unsigned int i = 0; i < dat->sample_size; i++){   
 				if (ini->cluster_id[i] == k){
-					unsigned int min_dist = INFINITY;
+					min_dist = INFINITY;
 					for(unsigned int sk = 0; sk < subK; sk++){
 						unsigned char * hapk = ini->seeds[lidx[sk]];
 						unsigned int hdist = hamming_uchar_dis(dat->dmat[i], hapk, dat->max_read_length);
-					if (hdist < min_dist)  ini->cluster_id[i] = lidx[sk];
+						// fprintf(stderr, "%d, %d\n",lidx[sk], hdist);
+						if (hdist < min_dist){  
+							ini->cluster_id[i] = lidx[sk];
+							min_dist = hdist;
+						}
 					}
+					//fprintf(stderr, "previous %d, current %d\n",k, ini->cluster_id[i]);
 				}
 			}
 		
 	    }
 	}
+	}
+
+	//for(unsigned int i = 0; i < dat->sample_size; i++){
+	//	fprintf(stderr, "%d",ini->cluster_id[i]);
+	//}
+	
 
 	/*
-	for (unsigned int k = 0; k < new_K; k++){
+	for (unsigned int k = 0; k < K_partitions; k++){
 		unsigned int max_abun = 0;
 		hash *s = NULL;
 		unsigned int idx = 0;
+		// fprintf(stderr, "count : %d\n", hash_list[k]->count);
 		for (s = hash_list[k]; s != NULL; s = s->hh.next) {
-			//fprintf(stderr, "s->count : %d for the %d th \n", s->count, k);
+			//if(k==3)
+			//	fprintf(stderr, "s->count : %d for the %d th \n", s->count, k);
 			if(s->count > max_abun){
 				//if(s->count > 20) fprintf(stderr, "s->count > 20\n");
 				max_abun = s->count;
@@ -723,13 +768,13 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 				//	dat->max_read_length * sizeof **ini->seeds);		
 			}
 		}
-		memcpy(ini->seeds[k], dat->dmat[dat->max_read_length*idx],
+		memcpy(ini->seeds[k], dat->dmat[idx],
 				dat->max_read_length * sizeof **ini->seeds);
 		ini->seed_lengths[k] = dat->lengths[idx];
 		if(hash_list[k])
 			delete_all(&hash_list[k]);
-	}
-	*/
+	} */
+	
 
 	/* count error types with given assignment */
 	err_count_with_assignment(dat, ini->cluster_id, ini->seeds, ini->seed_lengths,ini->err_cnt, K_seeds);
