@@ -22,6 +22,7 @@ enum {
 double sq_euc_dis(double *x, double *y, size_t n);
 double euc_dis(double *x, double *y, size_t n);
 size_t hamming_char_dis(char *x, char *y, size_t n);
+unsigned int hamming_uchar_dis(unsigned char *x, unsigned char *y, unsigned int p);
 int find_uint(unsigned int *array, unsigned int num, size_t l);
 
 #endif

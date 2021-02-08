@@ -49,6 +49,22 @@ size_t hamming_char_dis(char *x, char *y, size_t p)
 } /* hamming_char_dis */
 
 /**
+ * Compute Hamming distance between two p-vectors.
+ *
+ * @param x	character vector of length p
+ * @param y	character vector of length p
+ * @param p	length of vector
+ * @return	Hamming distance between two vectors
+ */
+unsigned int hamming_uchar_dis(unsigned char *x, unsigned char *y, unsigned int p)
+{
+	unsigned int hd = 0;
+	for (unsigned int i = 0; i < p; ++i)
+		hd += x[i] != y[i];
+	return hd;
+} /* hamming_char_dis */
+
+/**
  * Determine if given element is in a vector.
  * 
  * @param array	pointer to vector of numbers

@@ -232,7 +232,7 @@ int error_count_generator(options *opt, data *dat, model *mod,
 		 *	count all (n,m,q) combinations for true base n, read base m
 		 * and quality score q, assuming assigned haplotype is true
 		 */
-		err_count_with_assignment(dat, ri->optimal_cluster_id, ini->seeds, err_cnt_cur,opt->K);
+		err_count_with_assignment(dat, ri->optimal_cluster_id, ini->seeds,ini->seed_lengths, err_cnt_cur,opt->K);
 		/*
 		for (size_t i = 0; i < dat->sample_size; ++i) {
 			// ignore any filtered 
@@ -592,54 +592,153 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 	for(unsigned int i = 0; i < dat->sample_size; i++) 
 		if (ini->cluster_id[i] > max) max = ini->cluster_id[i];
 
-	unsigned int new_K = max + 1;  // new K 
-	fprintf(stderr, "new K = %d\n", new_K);
-	
-	/* find the most abundant sequence in K partitions */
-
-	/* realloc space for seeds */
-	if (new_K > opt->K)
-		if((err = realloc_seeds(ini, dat->max_read_length, opt->K, new_K)))
-			return err;
+	unsigned int K_partitions = max + 1;  // new K, number of UMI clusters
+	fprintf(stderr, "new K = %d\n", K_partitions);
 
 	/* find the most abundant sequence for each partition */
 	hash ** hash_list = NULL;
-	hash_list = malloc(new_K* sizeof *hash_list);
+	hash_list = malloc(K_partitions* sizeof *hash_list);
 	if(!hash_list)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "Err_cnt.hash_list");
 
-	for (unsigned int k =0 ; k < new_K; k++)
+	for (unsigned int k =0 ; k < K_partitions; k++){
 		hash_list[k] = NULL;
-	
+		ini->cluster_size[k] = 0;   // used to store number of haplotypes in each UMI clusters
+	}
+
 	// check bugs in hash (currently not find any bugs )
+	// unsigned int slen;
 	for (size_t i = 0; i < dat->sample_size; ++i) {
+		//if(dat->lengths) slen = ; else slen = dat->max_read_length;
 		int first = add_sequence(&hash_list[ini->cluster_id[i]], dat->dmat[i],
 					dat->lengths[i], i, &err);
 		//if(first == 1)  fprintf(stderr, "first == 1");
 		if(err) return err;
 	}
 
+	// simple idea to detect collision in each UMI clusters
+	// remember need to update both  ini->cluster_id, ini->seeds
+
+	// determine a new K 
+	unsigned int K_seeds = 0;
+
+	
+	for (unsigned int k = 0; k < K_partitions; k++){
+		
+		hash *s = hash_list[k];
+		sort_by_count(&s);  // sort hash list 
+		hash_list[k] = s;
+		
+		// fprintf(stderr, "count : %d\n", hash_list[k]->count);
+	     unsigned int max_abun = s->count;  // the most abundant sequence
+	
+		 unsigned int thres = (max_abun+1) / 2;
+
+		//hash *s;
+		for (s = hash_list[k]; s != NULL; s = s->hh.next) {
+			if (s->count >= thres && s->count >= 2){
+				K_seeds ++;
+				ini->cluster_size[k] ++;
+			}else{ break;}
+			//
+			//if(s->count > max_abun){
+				//if(s->count > 20) fprintf(stderr, "s->count > 20\n");
+			//	max_abun = s->count;
+			//	idx = s->idx;
+				//memcpy(ini->seeds[k], s->sequence,
+				//	dat->max_read_length * sizeof **ini->seeds);		
+			//}
+		}
+	}
+
+	fprintf(stderr, "K_seeds : %d\n", K_seeds);
+	
+	/* realloc space for seeds */
+	if (K_seeds > opt->K)
+		if((err = realloc_seeds(ini, dat->max_read_length, opt->K, K_seeds)))
+			return err;
+
+	
+	/* identify true assignment and seeds when recognizing possible collision */
+
+	unsigned int add_num = 0;
+	// hash *s = NULL;
+	for (unsigned int k = 0; k < K_partitions; k++){
+		hash *s = hash_list[k];
+		unsigned int subK = ini->cluster_size[k];
+
+		if(subK < 2 ){ // no collision
+			memcpy(ini->seeds[k], s->sequence,
+				dat->max_read_length * sizeof **ini->seeds);
+			ini->seed_lengths[k] = dat->lengths[s->idx];
+
+		}else{  // collision
+			// copy seeds information
+			unsigned int lidx[subK];
+
+			for(unsigned int sk = 0; sk < subK; sk++){
+				unsigned int pos = k;
+				if(!sk){
+					memcpy(ini->seeds[k], s->sequence,
+						dat->max_read_length * sizeof **ini->seeds);
+					ini->seed_lengths[k] = dat->lengths[s->idx];
+				}else{
+					pos = K_partitions + add_num;
+					memcpy(ini->seeds[pos], s->sequence,
+						dat->max_read_length * sizeof **ini->seeds);
+					ini->seed_lengths[pos] = dat->lengths[s->idx];
+					add_num++;
+				}
+				lidx[sk] = pos;
+				s = s->hh.next;
+			}
+
+			// reassignment based on hamming distance
+			for (unsigned int i = 0; i < dat->sample_size; i++){   
+				if (ini->cluster_id[i] == k){
+					unsigned int min_dist = INFINITY;
+					for(unsigned int sk = 0; sk < subK; sk++){
+						unsigned char * hapk = ini->seeds[lidx[sk]];
+						unsigned int hdist = hamming_uchar_dis(dat->dmat[i], hapk, dat->max_read_length);
+					if (hdist < min_dist)  ini->cluster_id[i] = lidx[sk];
+					}
+				}
+			}
+		
+	    }
+	}
+
+	/*
 	for (unsigned int k = 0; k < new_K; k++){
 		unsigned int max_abun = 0;
 		hash *s = NULL;
+		unsigned int idx = 0;
 		for (s = hash_list[k]; s != NULL; s = s->hh.next) {
 			//fprintf(stderr, "s->count : %d for the %d th \n", s->count, k);
 			if(s->count > max_abun){
 				//if(s->count > 20) fprintf(stderr, "s->count > 20\n");
 				max_abun = s->count;
-				memcpy(ini->seeds[k], s->sequence,
-					dat->max_read_length * sizeof **ini->seeds);		
+				idx = s->idx;
+				//memcpy(ini->seeds[k], s->sequence,
+				//	dat->max_read_length * sizeof **ini->seeds);		
 			}
 		}
-		ini->seed_lengths[k] = dat->max_read_length;
+		memcpy(ini->seeds[k], dat->dmat[dat->max_read_length*idx],
+				dat->max_read_length * sizeof **ini->seeds);
+		ini->seed_lengths[k] = dat->lengths[idx];
 		if(hash_list[k])
 			delete_all(&hash_list[k]);
 	}
+	*/
 
 	/* count error types with given assignment */
-	err_count_with_assignment(dat, ini->cluster_id, ini->seeds, ini->err_cnt, new_K);
+	err_count_with_assignment(dat, ini->cluster_id, ini->seeds, ini->seed_lengths,ini->err_cnt, K_seeds);
 
 	/* free space */
+	for (unsigned int k = 0; k < K_partitions; k++){
+		if(hash_list[k])
+			delete_all(&hash_list[k]);
+	}
 	if(hash_list) free(hash_list);
 
 	return NO_ERROR;
@@ -656,20 +755,20 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
  * @param K              maximum number of clusters
  * @return               error status
  */
-int err_count_with_assignment(data *dat, unsigned int *cluster_id, data_t** seeds, unsigned int *count_mat, unsigned int K)
-{
+int err_count_with_assignment(data *dat, unsigned int *cluster_id, data_t** seeds, unsigned int*seed_lengths, unsigned int *count_mat, unsigned int K){
 	for (size_t i = 0; i < dat->sample_size; ++i) {
 		/* ignore any filtered reads */
 		if (cluster_id[i] >= K)
 			continue;
 		
 		for (size_t j = 0; j < dat->lengths[i]; ++j)
-			count_mat[dat->n_quality * (
-				seeds[cluster_id[i]][j]
-				* NUM_NUCLEOTIDES + dat->dmat[i][j])
-				+ dat->qmat[i][j]]++;// order of A,C,T,G
-		
+			if(j < seed_lengths[cluster_id[i]])
+				count_mat[dat->n_quality * (
+					seeds[cluster_id[i]][j]
+					* NUM_NUCLEOTIDES + dat->dmat[i][j])
+					+ dat->qmat[i][j]]++;// order of A,C,T,G
+			
 		}
 	return NO_ERROR;
-}/* err_count_with_assignment */
+}/* e */
 

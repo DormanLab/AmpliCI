@@ -24,7 +24,7 @@ typedef struct {
 int error_profile_generator(options *opt, data *dat, model *mod, initializer *ini, run_info *ri);
 int error_predict(unsigned int *err_cnt, double *error_profile, unsigned int n_quality,unsigned int self_lines[4]);
 void fprint_error_profile(FILE *fp, double *mat, unsigned int n, unsigned int l);
-int err_count_with_assignment(data *dat, unsigned int *cluster_id, data_t** seeds, unsigned int *count_mat,unsigned int K);
+int err_count_with_assignment(data *dat, unsigned int *cluster_id, data_t** seeds, unsigned int*seed_lengths, unsigned int *count_mat,unsigned int K);
 
 /* functions of regression or to call regression */
 int loess_est(loess *lo,double *y,double *x, unsigned int* weights, unsigned int n);
