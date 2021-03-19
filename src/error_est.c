@@ -5,6 +5,7 @@
  * Naive error estimation algorithm for AmpliCI
  */
 
+#include <limits.h>
 #include "amplici.h"
 #include "ampliclust.h"
 #include "statistics.h"
@@ -728,7 +729,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat,initializer *ini)
 			unsigned int min_dist;
 			for (unsigned int i = 0; i < dat->sample_size; i++){   
 				if (ini->cluster_id[i] == k){
-					min_dist = INFINITY;
+					min_dist = UINT_MAX;
 					for(unsigned int sk = 0; sk < subK; sk++){
 						unsigned char * hapk = ini->seeds[lidx[sk]];
 						unsigned int hdist = hamming_uchar_dis(dat->dmat[i], hapk, dat->max_read_length);
