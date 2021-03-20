@@ -663,7 +663,8 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 		unsigned int thres = (max_abun + 1) / 2;
 		
 		for (hash *s = hash_list[k]; s != NULL; s = s->hh.next) {
-			if (s->count >= thres && s->count >= 2) {
+			if (s->count >= thres && s->count
+					>= opt->seed_min_observed_abundance) {
 				K_seeds ++;
 				ini->cluster_size[k] ++;
 			} else {
