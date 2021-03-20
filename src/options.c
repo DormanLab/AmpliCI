@@ -75,6 +75,8 @@ int make_options(options **opt) {
 
 	/* error profile estimation */
 	op->error_estimation = 0;  // estimate error profile in current run, default is 0
+	op->seed_min_observed_abundance = 2;
+	op->exclude_low_abundance_seeds = 0;
 	op->min_cosdist = log(0.999);
 	op->use_error_profile = 0;	
 	op->err_encoding = XY_ENCODING;   // Indicate that how error encoded in error profiles STD_ENCODING or XY_ENCODING
@@ -140,9 +142,27 @@ int parse_options(options *opt, int argc, const char **argv)
 	int i, j;
 	size_t n;
 	int err = NO_ERROR;
+	char const *cmd = "cluster";	/* default command */
 	char a;
 
 	for (i = 1; i < argc; i++) {
+		/* new command format */
+		if (i == 1 && argv[i][0] != '-') {
+			cmd = argv[i];
+			if (!strcmp(cmd, "cluster")) {
+				mmessage(INFO_MSG, NO_ERROR,
+							"Command: cluster\n");
+			} else if (!strcmp(cmd, "error")) {
+				opt->error_estimation = 1;
+				mmessage(INFO_MSG, NO_ERROR,
+							"Command: error\n");
+			} else {
+				mmessage(ERROR_MSG, INVALID_CMDLINE,
+					"Command '%s' not recognized\n", cmd);
+				goto CMDLINE_ERROR;
+			}
+			continue;
+		}
 		n = strlen(argv[i]);
 		if (n < 2)
 			usage_error(argv, i, (void *)opt);
@@ -158,8 +178,22 @@ int parse_options(options *opt, int argc, const char **argv)
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
 			} else if (!strncmp(&argv[i][j], "abu", 3)) {
-				opt->low_bound = read_cmdline_double(argc,
-					argv, ++i, (void *)opt);
+				if (!strcmp(cmd, "cluster")) {
+					opt->low_bound = read_cmdline_double(
+						argc, argv, ++i, (void *)opt);
+					mmessage(INFO_MSG, NO_ERROR,
+						"Lower bound: %f.\n",
+						opt->low_bound);
+				} else if (!strcmp(cmd, "error")) {
+					opt->seed_min_observed_abundance = 
+						strtoul(argv[++i], NULL, 0);
+					mmessage(INFO_MSG, NO_ERROR,
+						"Minimum abundance: %u.\n",
+						opt->seed_min_observed_abundance);
+				} else {
+					err = INVALID_CMD_OPTION;
+					goto CMDLINE_ERROR;
+				}
 			} else {
 				opt->alpha = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
@@ -235,6 +269,10 @@ int parse_options(options *opt, int argc, const char **argv)
 			if (i + 1 < argc && !strcmp(argv[i + 1], "error")) {
 				i++;
 				opt->error_estimation = 1;
+			} else if(!strncmp(&argv[i][j], "ex", 2)) {
+				opt->exclude_low_abundance_seeds = 1;
+				mmessage(INFO_MSG, NO_ERROR, "Excluding low "
+					"abundance seeds (set --abundance).\n");
 			} else {
 				opt->error_estimation = 1;
 			}
@@ -425,8 +463,9 @@ int parse_options(options *opt, int argc, const char **argv)
 				goto CMDLINE_ERROR;
 			} else {
 				opt->trans_matrix = argv[++i];
-				mmessage(INFO_MSG, NO_ERROR, "Output transition matrix: "
-					"%s\n", opt->trans_matrix);
+				mmessage(INFO_MSG, NO_ERROR, "Output "
+						"transition matrix: %s\n",
+							opt->trans_matrix);
 			}
 			break;
 		case 'h':
@@ -440,7 +479,7 @@ int parse_options(options *opt, int argc, const char **argv)
 					"%s\n", opt->initialization_file);
 				opt->run_amplici = 0; 
 			} else {
-				fprint_usage(stderr, argv[0], opt);
+				fprint_usage(stderr, argv[0], cmd, opt);
 				free_options(opt);
 				exit(EXIT_SUCCESS);
 			}
@@ -515,50 +554,68 @@ CMDLINE_ERROR:
 /**
  * Usage statement.
  */
-void fprint_usage(FILE *fp, const char *cmdname, void *obj)
+void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj)
 {
 	options *opt = (options *) obj;
-	size_t start = strlen(cmdname) - 1;
+	size_t start = strlen(exe_name) - 1;
 
-	while (cmdname[start] != '/' && start) start--;
-	if (cmdname[start] == '/') start++;
 
-	for (size_t i = start; i < strlen(cmdname); ++i)
-		fputc(toupper(cmdname[i]), fp);
+	while (exe_name[start] != '/' && start) start--;
+	if (exe_name[start] == '/') start++;
+
+	for (size_t i = start; i < strlen(exe_name); ++i)
+		fputc(toupper(exe_name[i]), fp);
 	//fprintf(fp, "(%d)\n", 1);
 	fprintf(fp, "(v1.0.1)\n");
-	fprintf(fp, "\nNAME\n\t%s - Amplicon Clustering Inference\n",
-		&cmdname[start]);
-	fprintf(fp, "\nSYNOPSIS\n\t%s [--error | --profile <pstr>]"
-		" [--abundance <adbl> --log_likelihood <lldbl> --diagnostic <ddbl> --per_candidate --align --scores <smint> <smmint> <sgint>]"
-		" [--haplotypes <hstr>]"
-		" --fastq <fstr> --outfile <ostr>\n",
-		&cmdname[start]);
-	fprintf(fp, "\nDESCRIPTION\n\tProgram %s clusters amplicon sequences presented "
-		"as reads in fastq file <fstr> in two steps.\n"
-		"\n\tStep 1:\n\t\tEstimate error profile and write to file <ostr> given input fastq file <fstr> with option -e error."
-		"\n\t\tExample: \n\t\t\trun_ampliCI --error --fastq <fstr> --outfile <ostr>"
-		"\n\tStep 2:\n\t\tCluster amplicon sequences in fastq file <fstr> with estimated error profile from file <pstr>, using lower bound 2, and output results in file <ostr>."
-		"\n\t\tExample: \n\t\t\trun_ampliCI --profile <pstr> --abundance <adbl> --fastqs <fstr> --outfile <ostr>"
+	/* default command is to cluster */
+	if (!strlen(command)) {
+		command = "cluster";
+		fprintf(fp, "\nNAME\n\t%s - Amplicon Clustering Inference\n",
+			&exe_name[start]);
+		fprintf(fp, "\nSYNOPSIS\n\t%s [--error | --profile <pstr>]"
+			" [--abundance <adbl> --log_likelihood <lldbl> --diagnostic <ddbl> --per_candidate --align --scores <smint> <smmint> <sgint>]"
+			" [--haplotypes <hstr>]"
+			" --fastq <fstr> --outfile <ostr>\n",
+			&exe_name[start]);
+		fprintf(fp, "\nDESCRIPTION\n\tProgram %s clusters amplicon sequences presented "
+			"as reads in fastq file <fstr> in two steps.\n"
+			"\n\tStep 1:\n\t\tEstimate error profile and write to file <ostr> given input fastq file <fstr> with option -e error."
+			"\n\t\tExample: \n\t\t\trun_ampliCI --error --fastq <fstr> --outfile <ostr>"
+			"\n\tStep 2:\n\t\tCluster amplicon sequences in fastq file <fstr> with estimated error profile from file <pstr>, using lower bound 2, and output results in file <ostr>."
+			"\n\t\tExample: \n\t\t\trun_ampliCI --profile <pstr> --abundance <adbl> --fastqs <fstr> --outfile <ostr>"
 
-		"\n\n\tBy default, %s will automatically select K true haplotypes with estimated scaled "
-		"true abundance greater than or equal to <adbl> using an alignment-free strategy. "
-		"A Diagnostic test is used to screen false positives with provided threshold.  The "
-		"default diagnostic test threshold is quite liberal.  "
-		"Reads with log likelihood higher than <lldbl> under the current model are assigned "
-		"to clusters.\n", &cmdname[start], &cmdname[start]);
-	fprintf(fp, "\n\n\t%s can also be used to assign reads to user-provided haplotypes by using the "
-		"--haplotypes option.  This can be helpful if there are known haplotypes in the sample, "
-		" but it is also useful for careful abundance estimation.", &cmdname[start]);
+			"\n\n\tBy default, %s will automatically select K true haplotypes with estimated scaled "
+			"true abundance greater than or equal to <adbl> using an alignment-free strategy. "
+			"A Diagnostic test is used to screen false positives with provided threshold.  The "
+			"default diagnostic test threshold is quite liberal.  "
+			"Reads with log likelihood higher than <lldbl> under the current model are assigned "
+			"to clusters.\n", &exe_name[start], &exe_name[start]);
+		fprintf(fp, "\n\n\t%s can also be used to assign reads to user-provided haplotypes by using the "
+			"--haplotypes option.  This can be helpful if there are known haplotypes in the sample, "
+			" but it is also useful for careful abundance estimation.", &exe_name[start]);
+	} else if (!strcmp(command, "cluster")) {
+	} else if (!strcmp(command, "error")) {
+		fprintf(fp, "\nNAME\n\t%s-%s - Estimate Error Profile\n", &exe_name[start], command);
+		fprintf(fp, "\nSYNOPSIS\n\t%s error [--partition FILE] [--collision --abundance INT --exclude] --fastq FILE --outfile FILE\n", &exe_name[start]);
+		fprintf(fp, "\nDESCRIPTION\n\tEstimates the error profile from a FASTQ file, either by alternating AmpliCI clustering with estimation, or given an existing partition of the reads.\n");
+		fprintf(fp, "\n\tGiven a partition of the reads, either obtained by AmpliCI clustering or the partition, we fit an error model to the counts of errors across all clusters in the partition. For an externally provided partition, perhaps given by an independent clustering of UMIs, possible collisions within clusters may be detected (--collision) by checking for other high abundance members in a cluster and splitting by Hamming distance to the candidate members. A high abundance member reaches a minimum observed abundance and has at least (max. abundance + 1)/2 the abundance of the most abundant member. The user can set the minimum observed abundance threshold using the --abundance option. The user may also choose to exclude clusters that have no member meeting the minimum observed abundance threshold (--exclude). Without replication, it is hard to be sure the cluster represents a real variant or what is the true center of the cluster, so the counts of errors from such clusters may be less reliable. If there is high replication in the dataset, there may be plenty of information to estimate errors from only the clusters around high abundance centers.\n");
+		fprintf(fp, "\n\tLike DADA2, we use LOESS regression to estimate the relationship between quality score and each of the error probabilities.\n");
+	}
+
 		
 	/* KSD: Maybe we should make AmpliCI-cons the default. */
 	fprintf(fp, "\nOPTIONS\n");
-	fprintf(fp, "\t--abundance | -lb <adbl>\n\t\tLower bound for scaled true abundance during haplotype reconstruction.  [DEFAULT: %f]\n", opt->low_bound);
+	if (!strcmp(command, "cluster"))
+		fprintf(fp, "\t--abundance | -lb FLOAT\n\t\tLower bound for scaled true abundance during haplotype reconstruction.  [DEFAULT: %f]\n", opt->low_bound);
+	else if (!strcmp(command, "error"))
+		fprintf(fp, "\t--abundance FLOAT\n\t\tLower bound on observed abundance for inclusion of seeded cluster during error estimation.  [DEFAULT: %f]\n", opt->seed_min_observed_abundance);
 	fprintf(fp, "\t--align | -z \n\t\tAlign all reads to haplotypes (slow).  [DEFAULT: no]\n");	 /* KSD:  --align | -a */
 	fprintf(fp, "\t--contaminants | -c <ctuint>\n\t\tBaseline count abundance of contaminating or noise sequences.  [DEFAULT: %i]\n", opt->contamination_threshold);
 	fprintf(fp, "\t--deletion <deldbl>\n\t\tSequencing deletion error rate.  [DEFAULT: %f]\n", opt->deletion_error);
 	fprintf(fp, "\t--diagnostic | -a <ddbl>\n\t\tThreshold for diagnostic probability in the diagnostic/contamination test.  [DEFAULT: %f].\n", opt->alpha);
 	fprintf(fp, "\t--error | -e\n\t\tEstimate the error profile.\n");
+	if (!strcmp(command, "error"))
+		fprintf(fp, "\t--exclude\n\t\tExclude small clusters during error estimation (set threshold with option --abundance). [DEFAULT: %s]\n", opt->exclude_low_abundance_seeds ? "yes" : "no");
 	fprintf(fp, "\t--fastq | -f <fstr>\n\t\tThe fastq input file.  [REQUIRED]\n");
 	fprintf(fp, "\t--haplotypes | -i <hstr>\n\t\tFASTA file with haplotypes.  [DEFAULT: none]\n");
 	fprintf(fp, "\t--help | -h\n\t\tThis help.\n");
@@ -576,7 +633,7 @@ void fprint_usage(FILE *fp, const char *cmdname, void *obj)
 //	fprintf(fp, "\t-k <kuint>\n\t\tNumber of haplotypes in the haplotype set (used with -i <hstr>).  [DEFAULT: %i]\n", opt->K);	/* KSD: get rid of this option */
 	/* fprintf(fp, "\t--most <mint>\n\t\tReport top m-most abundant sequences and quit. [DEFAULT: %i]\n", opt->most_abundant); */
 	fprintf(fp, "\n");
-	for (size_t i = start; i < strlen(cmdname); ++i)
-		fputc(toupper(cmdname[i]), fp);
+	for (size_t i = start; i < strlen(exe_name); ++i)
+		fputc(toupper(exe_name[i]), fp);
 	fprintf(fp, "(%d)\n", 1);
 } /* fprint_usage */

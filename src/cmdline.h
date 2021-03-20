@@ -33,6 +33,6 @@ unsigned int read_cmdline_uints(unsigned int argc, const char **argv, unsigned i
 unsigned int read_cmdline_strings(unsigned int argc, const char ** argv, unsigned int i, char const ***sret, void *obj);
 
 void print_usage(const char *);
-void fprint_usage(FILE *fp, const char *program_name, void *obj);
+void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj);
 
 #endif

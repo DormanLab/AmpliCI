@@ -37,7 +37,7 @@ int usage_error(const char **argv, int i, void *obj)
 #ifdef OLD_USAGE	/* define to compile with older source code */
 	print_usage(argv[0]);
 #else
-	fprint_usage(stderr, argv[0], obj);
+	fprint_usage(stderr, argv[0], i ? argv[1] : NULL, obj);
 #endif
 	fprintf(stderr, "\nERROR -- incorrect command line usage\n");
 	if (i >= 1)

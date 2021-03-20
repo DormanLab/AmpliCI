@@ -1,5 +1,6 @@
 /**
  * @file run_amplici.c
+ * @author Xiyu Peng
  * @author Karin S. Dorman
  *
  * Cluster amplicon sequences.
@@ -83,15 +84,17 @@ int main(int argc, const char **argv)
 		goto CLEAR_AND_EXIT;
 
 	/* read initialization file  into fqdf */
-	if (opt->initialization_file){ 
-		if((err = read_initialization_file(opt->initialization_file, &fqdf,opt->info)))
+	if (opt->initialization_file) {
+		if ((err = read_initialization_file(opt->initialization_file,
+							&fqdf, opt->info)))
 			goto CLEAR_AND_EXIT;
 		opt->K = fqdf->n_reads;
 	}
 
 	/* read initialization UMI file into fqdfu */
-	if(opt->initialization_UMI){
-		if((err = read_initialization_file(opt->initialization_UMI, &fqdfu,opt->info)))
+	if (opt->initialization_UMI) {
+		if((err = read_initialization_file(opt->initialization_UMI,
+							 &fqdfu, opt->info)))
 			goto CLEAR_AND_EXIT;
 		opt->K_UMI = fqdfu->n_reads;
 	}
@@ -128,22 +131,22 @@ int main(int argc, const char **argv)
 	}
 
 	/* main algorithm */
-	if(opt->UMI_length){
-		if((err = EM_algorithm(opt, dat, mod, ini, ri)))
+	if (opt->UMI_length) {
+		if ((err = EM_algorithm(opt, dat, mod, ini, ri)))
 			return err;
 
-	}else if ((!opt->initialization_file) && opt->run_amplici) {
-		
-		if(opt->partition_file){
+	} else if ((!opt->initialization_file) && opt->run_amplici) {
+
+		if (opt->partition_file) {
 			if ((err = ampliCI_wpartition(opt, dat, mod, ini, ri)))   // currently too slow ....
 				return err;
-		}else{	
+		} else {
 			if ((err = ampliCI(opt, dat, mod, ini, ri)))
 				goto CLEAR_AND_EXIT;
 		}
 
 	/* reads assignment with user-provided haplotypes */
-	} else if(opt->initialization_file) {
+	} else if (opt->initialization_file) {
 		if ((err = reads_assignment(opt, dat, mod, ini, ri)))
 			goto CLEAR_AND_EXIT;
 
