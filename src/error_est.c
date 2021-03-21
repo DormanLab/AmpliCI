@@ -723,6 +723,9 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 				&& !opt->exclude_low_abundance_seeds)) {
 //if (!subK) fprintf(stderr, "Adding null cluster %u (%u)\n", k, current_k);
 //else fprintf(stderr, "Adding non-collision cluster %u (%u)\n", k, current_k);
+unsigned char *str = display_sequence(s->sequence, dat->lengths[s->idx], XY_ENCODING);
+fprintf(stderr, "%s\n", str);
+free(str);
 			memcpy(ini->seeds[current_k], s->sequence,
 				dat->max_read_length * sizeof **ini->seeds);	/* [KSD, BUG] I think this is rare read past end of array bug when strlen(s->sequence) < dat->max_read_length */
 			ini->seed_lengths[current_k] = dat->lengths[s->idx];
@@ -750,6 +753,9 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 				//fprintf(stderr, "count: %d\n",s->count);
 //fprintf(stderr, "Adding collision cluster %u:%u (%u)\n", k, sk, current_k);
 
+unsigned char *str = display_sequence(s->sequence, dat->lengths[s->idx], XY_ENCODING);
+fprintf(stderr, "%s\n", str);
+free(str);
 				if (sk == 0) {
 					memcpy(ini->seeds[current_k],
 								s->sequence,
