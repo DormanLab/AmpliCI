@@ -41,16 +41,16 @@ int error_profile_generator(options *opt, data *dat, model *mod,
 	/* number of distinct quality scores */
 	unsigned int err_length = MAX_ASCII_QUALITY_SCORE
 				- MIN_ASCII_QUALITY_SCORE + 1;
-	unsigned int self_lines[4] = {0, 5, 10, 15}; // idx of lines for A->A, T->T, G->G, C->C 
+	unsigned int self_lines[4] = {0, 5, 10, 15}; // idx of lines for A->A, T->T, G->G, C->C
 
-	double *error_profile  = NULL;  // For final output 
-	double *error_profile_p = NULL;  // estimated error rates 
+	double *error_profile  = NULL;  // For final output
+	double *error_profile_p = NULL;  // estimated error rates
 
 /* [KSD] What is the difference between model::n_quality and err_length?
  * [KSD] The former is the realized range in the given fastq file, the latter
  * [KSD] is the theoretical range given our hard-coded assumptions about FASTQ.
  * [KSD] Why use both?
- * [XY] Allow users to better interpret the output error profile ? 
+ * [XY] Allow users to better interpret the output error profile ?
  */
 
 	/* memory allocation for error profile */
@@ -59,7 +59,7 @@ int error_profile_generator(options *opt, data *dat, model *mod,
 
 	error_profile = malloc(NUM_NUCLEOTIDES * NUM_NUCLEOTIDES
 			* err_length * sizeof *error_profile);  // Used in the final output
-	
+
 	error_profile_p = malloc(NUM_NUCLEOTIDES * NUM_NUCLEOTIDES  // only contains error rates estimated from loess fit
 			* mod->n_quality * sizeof *error_profile_p);  // Used in the estimation step
 
@@ -81,7 +81,7 @@ int error_profile_generator(options *opt, data *dat, model *mod,
 
 	/* copy error_profile_p to error_profile and output */
 	double one_third = 1.0/3.0;
-	
+
 	for (unsigned int nu1 = 0; nu1 < NUM_NUCLEOTIDES; nu1++) {
 		for (unsigned int nu2 = 0; nu2 < NUM_NUCLEOTIDES; nu2++) {
 			unsigned int r = nu1 * NUM_NUCLEOTIDES + nu2;
@@ -204,7 +204,7 @@ int error_count_generator(options *opt, data *dat, model *mod,
 		if ((err = realloc_run_info(ri, dat->sample_size, opt->K + 1,
 									0, 1)))
 			return err;
-	
+
 		/* assign reads to haplotypes using posterior assignment
 		 * probability
 		 */
@@ -238,14 +238,14 @@ int error_count_generator(options *opt, data *dat, model *mod,
 							dat->sample_size, ri);
 		#endif
 
-		/*  Generate current error count profile. 
+		/*  Generate current error count profile.
 		 *	count all (n,m,q) combinations for true base n, read base m
 		 * and quality score q, assuming assigned haplotype is true
 		 */
 		err_count_with_assignment(dat, ri->optimal_cluster_id, ini->seeds,ini->seed_lengths, err_cnt_cur,opt->K);
 		/*
 		for (size_t i = 0; i < dat->sample_size; ++i) {
-			// ignore any filtered 
+			// ignore any filtered
 			if (ri->optimal_cluster_id[i] == opt->K)
 				continue;
 
@@ -261,7 +261,7 @@ int error_count_generator(options *opt, data *dat, model *mod,
 
 		/* compare the distance between err_cnt_cur and err_cnt_pre */
 		double min_cos_dist = cos_dist(err_cnt_prev, err_cnt_cur, nrow,
-								mod->n_quality);  
+								mod->n_quality);
 
 		/* cosine distance close enough to 1 terminates the loop */
 		if (min_cos_dist > opt->min_cosdist) {
@@ -330,7 +330,7 @@ double cos_dist(unsigned int *mat1, unsigned int *mat2, unsigned int nrow,
 	double *cos_dist = calloc(ncol, sizeof *cos_dist);
 	unsigned int *colsum1 = calloc(ncol, sizeof *colsum1);
 	unsigned int *colsum2 = calloc(ncol, sizeof *colsum2);
-	
+
 	if (!cos_dist || !colsum1 || !colsum2) {
 		mmessage(ERROR_MSG, MEMORY_ALLOCATION, "cosine distance");
 		min_cos_dist = log(epsilon);	/* [KSD] Communicate lethal problem! */
@@ -408,7 +408,7 @@ void fprint_error_profile(FILE *fp, double *mat, unsigned int n, unsigned int l)
  * @param err_cnt	     error counts
  * @param error_profile	 error profile to be computed
  * @param n_quality	     number of distinct quality scores
- * @param self_lines	 idx of lines of self-transitions, like A->A, T->T, C->C, G->G 
+ * @param self_lines	 idx of lines of self-transitions, like A->A, T->T, C->C, G->G
  * @return		         error status
  */
 int error_predict(unsigned int *err_cnt, double *error_profile,
@@ -422,7 +422,7 @@ int error_predict(unsigned int *err_cnt, double *error_profile,
 	double *qual = NULL;
 
 	int if_loess = 1;
-	
+
 	/* malloc work space */
 	error_prob_temp = malloc(n_quality * sizeof *error_prob_temp);
 	count_sum = calloc(n_quality, sizeof *count_sum);    // initial value: 0
@@ -450,7 +450,7 @@ EXIT_ERROR_PREDICT:
 		free(count_sum);
 	if (qual)
 		free(qual);
-	
+
 	return NO_ERROR;
 }/* error_predict */
 
@@ -485,7 +485,7 @@ int loess_est(loess *lo,double *y,double *x, unsigned int* weights, unsigned int
  * @param n_quality		number of distinct quality scores
  * @param count_sum		room for one column of err_cnt
  * @param err_cnt		counts of all (n,m,q) combinations
- * @param self_lines		idx of lines of self-transitions, like A->A, T->T, C->C, G->G 
+ * @param self_lines		idx of lines of self-transitions, like A->A, T->T, C->C, G->G
  * @param error_prob_temp	vector of length n_quality
  * @param if_loess		use loess regression
  * @param qual			all possible quality values
@@ -529,7 +529,7 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
 				/ (count_sum[q] + 4));   //avoid numerical bugs
 
 		/* malloc space for lo and pre */
-		lo = malloc(sizeof *lo);	
+		lo = malloc(sizeof *lo);
 		if (!lo)
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 							"loess object");
@@ -540,7 +540,7 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 						"prediction object");
 		}
-		
+
 		/* weighted loess regression */
 		loess_est(lo, error_prob_temp, qual, count_sum,
 							n_quality);
@@ -555,7 +555,7 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
 			if (error_profile[idx] < lepsilon)
 				error_profile[idx] = lepsilon;
 		}
-	
+
 
 		if (lo)
 			loess_free_mem(lo);
@@ -580,7 +580,7 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
 	return NO_ERROR;
 }/* err_per_nuc */
 
-/** 
+/**
  * Generate error count profile (ini->err_cnt) with given partition.
  *
  * @param opt 	options object
@@ -591,21 +591,19 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
  * @return	error status
  */
 int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
-{	
+{
 	int err = NO_ERROR;
 
 	/*  read the partition file, start from 0 */
 	if ((err = read_partition_file(opt->partition_file, ini->cluster_id,
 							dat->sample_size)))
 		return err;
-	
+
 	unsigned int max = 0;
 
-	for (unsigned int i = 0; i < dat->sample_size; i++) {
+	for (unsigned int i = 0; i < dat->sample_size; i++)
 		if (ini->cluster_id[i] > max)
 			max = ini->cluster_id[i];
-	//	fprintf(stderr, "%d",ini->cluster_id[i]);
-	}
 
 	unsigned int K_partitions = max + 1;  // new K, number of UMI clusters
 
@@ -641,7 +639,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 
 	// sort by abundance within each partition
 	for (unsigned int k = 0; k < K_partitions; k++) {
-		sort_by_count(&hash_list[k]); 
+		sort_by_count(&hash_list[k]);
 	}
 
 	// simple idea to detect collision in each UMI clusters
@@ -650,18 +648,18 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 	// [TODO] Put these choices under user control!
 	// remember need to update both ini->cluster_id, ini->seeds
 
-	// determine a new K 
-	
+	// determine a new K
+
 	unsigned int K_seeds = 0;
 
 	for (unsigned int k = 0; k < K_partitions; ++k) {
 
 		if (!hash_list[k])
 			continue;
-		
+
 		unsigned int max_abun = hash_list[k]->count;  // the most abundant sequence
 		unsigned int thres = (max_abun + 1) / 2;
-		
+
 		for (hash *s = hash_list[k]; s != NULL; s = s->hh.next) {
 			if (s->count >= thres && s->count
 					>= opt->seed_min_observed_abundance) {
@@ -676,10 +674,10 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 			//	max_abun = s->count;
 			//	idx = s->idx;
 				//memcpy(ini->seeds[k], s->sequence,
-				//	dat->max_read_length * sizeof **ini->seeds);		
+				//	dat->max_read_length * sizeof **ini->seeds);
 			//}
 		}
-	} 
+	}
 
 	//unsigned int sum_subK;
 	//for (unsigned int k =0 ; k < K_partitions; k++){
@@ -687,15 +685,17 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 	//}
 	//fprintf(stderr, "sum_subK : %d\n", sum_subK);
 
-	// There are some zero clusters in the K partitions 
+	// There are some zero clusters in the K partitions
 	unsigned int num_null = 0;
 	for (unsigned int k = 0; k < K_partitions; ++k)
 		if (ini->cluster_size[k] == 0)
 			num_null++;
-	K_seeds = K_seeds + (opt->exclude_low_abundance_seeds ? 0 : num_null);
 
-	fprintf(stderr, "K_seeds : %d\n", K_seeds);
-	
+	fprintf(stderr, "K_seeds: %u (%u)\n", K_seeds, opt->exclude_low_abundance_seeds);
+	K_seeds += (opt->exclude_low_abundance_seeds ? 0 : num_null);
+
+	fprintf(stderr, "K_seeds: %u (%u)\n", K_seeds, opt->exclude_low_abundance_seeds);
+
 	/* realloc space for seeds */
 	if (K_seeds != opt->K)
 		if ((err = realloc_seeds(ini, dat->max_read_length,
@@ -703,9 +703,10 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 			return err;
 
 	/* identify true assignment and seeds when recognizing possible collision */
-	
+
 	unsigned int current_k = 0;
 	unsigned int kept_reads = 0;
+	unsigned int extra_k = 0;
 
 	for (unsigned int k = 0; k < K_partitions; k++) {
 
@@ -718,8 +719,10 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 		//fprintf(stderr, "subK : %d\n", subK);
 
 		// no collision or zero cluster
-		if (subK == 1
-			|| (subK == 0 && !opt->exclude_low_abundance_seeds)) {
+		if (subK == 1 || (subK == 0
+				&& !opt->exclude_low_abundance_seeds)) {
+//if (!subK) fprintf(stderr, "Adding null cluster %u (%u)\n", k, current_k);
+//else fprintf(stderr, "Adding non-collision cluster %u (%u)\n", k, current_k);
 			memcpy(ini->seeds[current_k], s->sequence,
 				dat->max_read_length * sizeof **ini->seeds);	/* [KSD, BUG] I think this is rare read past end of array bug when strlen(s->sequence) < dat->max_read_length */
 			ini->seed_lengths[current_k] = dat->lengths[s->idx];
@@ -745,6 +748,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 			// copy seeds information
 			for (unsigned int sk = 0; sk < subK; ++sk) {
 				//fprintf(stderr, "count: %d\n",s->count);
+//fprintf(stderr, "Adding collision cluster %u:%u (%u)\n", k, sk, current_k);
 
 				if (sk == 0) {
 					memcpy(ini->seeds[current_k],
@@ -796,13 +800,15 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 		}
 	}
 
+	if (current_k != K_seeds)
+		return mmessage(ERROR_MSG, INTERNAL_ERROR, "current_k = %u != K_seeds = %u\n", current_k, K_seeds);
 	mmessage(INFO_MSG, NO_ERROR, "Kept %u clusters out of %u\n", K_seeds,
 							K_partitions);
 
 	//for(unsigned int i = 0; i < dat->sample_size; i++){
 	//	fprintf(stderr, "%d",ini->cluster_id[i]);
 	//}
-	
+
 
 	/*
 	for (unsigned int k = 0; k < K_partitions; k++){
@@ -818,7 +824,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 				max_abun = s->count;
 				idx = s->idx;
 				//memcpy(ini->seeds[k], s->sequence,
-				//	dat->max_read_length * sizeof **ini->seeds);		
+				//	dat->max_read_length * sizeof **ini->seeds);
 			}
 		}
 		memcpy(ini->seeds[k], dat->dmat[idx],
@@ -827,7 +833,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 		if(hash_list[k])
 			delete_all(&hash_list[k]);
 	} */
-	
+
 
 	/* count error types with given assignment */
 	err_count_with_assignment(dat, ini->cluster_id, ini->seeds,
@@ -845,12 +851,12 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 
 
 /**
- * count error types with given assignment 
- * 
+ * count error types with given assignment
+ *
  * @param dat            data object
  * @param cluster_id     reads assignment id
  * @param seeds          haplotypes
- * @param count_mat      array for count 
+ * @param count_mat      array for count
  * @param K              maximum number of clusters
  * @return               error status
  */
@@ -864,7 +870,7 @@ int err_count_with_assignment(data *dat, unsigned int *cluster_id,
 		/* ignore any filtered reads */
 		if (cluster_id[i] >= K)
 			continue;
-		
+
 		for (size_t j = 0; j < dat->lengths[i]; ++j)
 			if(j < seed_lengths[cluster_id[i]]) {
 				count_mat[dat->n_quality * (
@@ -874,10 +880,10 @@ int err_count_with_assignment(data *dat, unsigned int *cluster_id,
 				if (seeds[cluster_id[i]][j] != dat->dmat[i][j])
 					++kept_errors;
 				++kept_bases;
-			
+
 		}
 	}
-	
+
 	mmessage(INFO_MSG, NO_ERROR, "Estimating with %u observed errors out "
 			"of %u kept base calls.\n", kept_errors, kept_bases);
 	return NO_ERROR;
