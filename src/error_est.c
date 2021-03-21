@@ -394,12 +394,9 @@ EXIT_COS_DIST:
 void fprint_error_profile(FILE *fp, double *mat, unsigned int n, unsigned int l){
 	unsigned int i, j;
 
-	for (i = 0; i < n; ++i) {
-		for (j = 0; j < l; ++j) {
-				fprintf(fp, " %8.8f,",
-					mat[i*l + j]);
-		}
-	}
+	for (i = 0; i < n; ++i)
+		for (j = 0; j < l; ++j)
+			fprintf(fp, " %8.8f,", mat[i*l + j]);
 } /* fprint_error_profile */
 
 /**
@@ -630,7 +627,6 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 	// check bugs in hash (currently not find any bugs )
 	// unsigned int slen;
 	for (size_t i = 0; i < dat->sample_size; ++i) {
-		//if(dat->lengths) slen = ; else slen = dat->max_read_length;
 		add_sequence(&hash_list[ini->cluster_id[i]],
 				dat->dmat[i], dat->lengths[i], i, &err);
 		if (err)
@@ -638,9 +634,8 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 	}
 
 	// sort by abundance within each partition
-	for (unsigned int k = 0; k < K_partitions; k++) {
+	for (unsigned int k = 0; k < K_partitions; k++)
 		sort_by_count(&hash_list[k]);
-	}
 
 	// simple idea to detect collision in each UMI clusters
 	// consider every member with abundance at least half of most
@@ -691,10 +686,10 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 		if (ini->cluster_size[k] == 0)
 			num_null++;
 
-	fprintf(stderr, "K_seeds: %u (%u)\n", K_seeds, opt->exclude_low_abundance_seeds);
+	fprintf(stderr, "K_seeds: %u\n", K_seeds);
 	K_seeds += (opt->exclude_low_abundance_seeds ? 0 : num_null);
 
-	fprintf(stderr, "K_seeds: %u (%u)\n", K_seeds, opt->exclude_low_abundance_seeds);
+	fprintf(stderr, "K_seeds: %u\n", K_seeds);
 
 	/* realloc space for seeds */
 	if (K_seeds != opt->K)
@@ -707,55 +702,51 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 	unsigned int current_k = 0;
 	unsigned int kept_reads = 0;
 	unsigned int extra_k = 0;
+	unsigned int *new_cluster_id = NULL;
+
+	if (opt->exclude_low_abundance_seeds) {
+		new_cluster_id = malloc(dat->sample_size
+						* sizeof(*new_cluster_id));
+		if (!new_cluster_id)
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+							"new_cluster_id");
+	}
 
 	for (unsigned int k = 0; k < K_partitions; k++) {
 
 		if (!hash_list[k])
 			continue;
 
-		hash *s = hash_list[k];
+		hash *s = hash_list[k], *cs;
 		unsigned int subK = ini->cluster_size[k];
-
-		//fprintf(stderr, "subK : %d\n", subK);
 
 		// no collision or zero cluster
 		if (subK == 1 || (subK == 0
 				&& !opt->exclude_low_abundance_seeds)) {
-//if (!subK) fprintf(stderr, "Adding null cluster %u (%u)\n", k, current_k);
-//else fprintf(stderr, "Adding non-collision cluster %u (%u)\n", k, current_k);
-unsigned char *str = display_sequence(s->sequence, dat->lengths[s->idx], XY_ENCODING);
-fprintf(stderr, "%s\n", str);
-free(str);
+
 			memcpy(ini->seeds[current_k], s->sequence,
 				dat->max_read_length * sizeof **ini->seeds);	/* [KSD, BUG] I think this is rare read past end of array bug when strlen(s->sequence) < dat->max_read_length */
 			ini->seed_lengths[current_k] = dat->lengths[s->idx];
-
 			/* some clusters are dropped */
 			if (opt->exclude_low_abundance_seeds)
 				for (unsigned int i = 0; i < dat->sample_size;
 									++i)
-					if (ini->cluster_id[i] == k) {
-						++kept_reads;
-						ini->cluster_id[i] = current_k;
-					}
+					if (ini->cluster_id[i] == k)
+						new_cluster_id[i] = current_k;
 			++current_k;
 
 		/* exclude clusters without obvious centers */
 		} else if (subK == 0 && opt->exclude_low_abundance_seeds) {
 			for (unsigned int i = 0; i < dat->sample_size; ++i)
 				if (ini->cluster_id[i] == k)
-					ini->cluster_id[i] = K_seeds;
+					new_cluster_id[i] = K_seeds;
 		} else {  // collision
 			unsigned int lidx[subK];
 
 			// copy seeds information
 			for (unsigned int sk = 0; sk < subK; ++sk) {
 				//fprintf(stderr, "count: %d\n",s->count);
-//fprintf(stderr, "Adding collision cluster %u:%u (%u)\n", k, sk, current_k);
 
-unsigned char *str = display_sequence(s->sequence, dat->lengths[s->idx], XY_ENCODING);
-fprintf(stderr, "%s\n", str);
-free(str);
 				if (sk == 0) {
 					memcpy(ini->seeds[current_k],
 								s->sequence,
@@ -763,17 +754,23 @@ free(str);
 							* sizeof(**ini->seeds));
 					ini->seed_lengths[current_k]
 							= dat->lengths[s->idx];
+					lidx[sk] = current_k;
+					++current_k;
 				} else {
+					unsigned int lk =
+						opt->exclude_low_abundance_seeds
+						? current_k++
+						: K_partitions + extra_k++;
 					//fprintf(stderr, "%d, %d\n",pos,K_seeds);
-					memcpy(ini->seeds[current_k],
-								s->sequence,
+					memcpy(ini->seeds[lk], s->sequence,
 							dat->max_read_length 	/* [KSD, BUG] see above */
 							* sizeof(**ini->seeds));
-					ini->seed_lengths[current_k]
+					ini->seed_lengths[lk]
 						= dat->lengths[s->idx];
+					lidx[sk] = lk;
 				}
-				lidx[sk] = current_k;
-				++current_k;
+				kept_reads += s->count;
+
 				s = s->hh.next;
 			//	fprintf(stderr, "%d, %d\n",pos,subK);
 			}
@@ -781,11 +778,11 @@ free(str);
 
 			// assign members of split clusters by Hamming distance
 			unsigned int min_dist;
-			for (unsigned int i = 0; i < dat->sample_size; i++) {
+
+			for (unsigned int i = 0; i < dat->sample_size; ++i) {
+
 				if (ini->cluster_id[i] != k)
 					continue;
-
-				++kept_reads;
 
 				min_dist = UINT_MAX;
 				for (unsigned int sk = 0; sk < subK; sk++) {
@@ -797,7 +794,10 @@ free(str);
 
 					// fprintf(stderr, "%d, %d\n",lidx[sk], hdist);
 					if (hdist < min_dist) {
-						ini->cluster_id[i] = lidx[sk];
+						if (opt->exclude_low_abundance_seeds)
+							new_cluster_id[i] = lidx[sk];
+						else
+							ini->cluster_id[i] = lidx[sk];
 						min_dist = hdist;
 					}
 				}
@@ -806,10 +806,15 @@ free(str);
 		}
 	}
 
-	if (current_k != K_seeds)
+	if (opt->exclude_low_abundance_seeds && current_k != K_seeds)
 		return mmessage(ERROR_MSG, INTERNAL_ERROR, "current_k = %u != K_seeds = %u\n", current_k, K_seeds);
-	mmessage(INFO_MSG, NO_ERROR, "Kept %u clusters out of %u\n", K_seeds,
-							K_partitions);
+	if (opt->exclude_low_abundance_seeds) {
+		free(ini->cluster_id);
+		ini->cluster_id = new_cluster_id;
+	}
+
+	mmessage(INFO_MSG, NO_ERROR, "Kept %u reads in %u out of %u "
+			"clusters.\n", kept_reads, K_seeds, K_partitions);
 
 	//for(unsigned int i = 0; i < dat->sample_size; i++){
 	//	fprintf(stderr, "%d",ini->cluster_id[i]);
