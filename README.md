@@ -1,5 +1,5 @@
-AmpliCI
-=======
+AmpliCI-UMI
+===========
 
 AmpliCI, Amplicon Clustering Inference, denoises Illumina amplicon data by approximate model-based clustering.
 
