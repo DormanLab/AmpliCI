@@ -66,8 +66,13 @@ int assign_clusters(double *eik, unsigned int K, size_t n,
 void fprint_fasta(FILE *fp, data_t *data, size_t n, size_t p, unsigned int*len, char const * const prefix) {
 	for (size_t i = 0; i < n; ++i) {
 		fprintf(fp, ">%s%lu\n", prefix, i);
-		for (size_t j = 0; j < len[i]; ++j)
-			fprintf(fp, "%c", xy_to_char[(int)data[i*p + j]]);
+		for (size_t j = 0; j < len[i]; ++j){
+			if ((int)data[i*p + j] < 4)
+				fprintf(fp, "%c", xy_to_char[(int)data[i*p + j]]);
+			else{
+				fprintf(fp, "N");
+			}
+		}
 		fprintf(fp, "\n");
 	}
 } /* fprint_fasta */

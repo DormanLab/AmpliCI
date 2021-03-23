@@ -64,12 +64,12 @@ double exp_errors(unsigned char *qual, unsigned int length, double *error_prob);
 
 /* BIC */
 int m_JC69(unsigned char * hap, unsigned char * anc, double *dist,
-	unsigned int K, unsigned int len);  
+	unsigned int K, unsigned int len,int start);  
 double e_JC69(unsigned char * hap, unsigned char * anc, double *dist,
-	unsigned int K, unsigned int len);   
+	unsigned int K, unsigned int len, int start);   
 int modified_ic(unsigned char* hap, unsigned char *est_anc, double *distance, double best_ll, unsigned int K, 
 	double *JC_ll, double *n_aic, double *n_bic, unsigned int n_param, unsigned int max_read_length,
-	size_t sample_size); 
+	size_t sample_size, int start); 
 
 
 

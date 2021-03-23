@@ -37,6 +37,7 @@ int make_options(options **opt) {
 	op->use_curses = 0;
 	op->wp = NULL;
 	op->active_fp = NULL;
+	op->ignor_nc = 0;
 
 
 	/* ampliCI */
@@ -423,6 +424,13 @@ int parse_options(options *opt, int argc, const char **argv)
 			if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
+			} else if (!strcmp(&argv[i][j], "trim")) {
+				if (argv[i + 1][0] >= 48
+						&& argv[i + 1][0] <= 57)
+					opt->ignor_nc = read_uint(argc,
+						argv, ++i, (void *)opt);
+				mmessage(INFO_MSG, NO_ERROR, "ignore first "
+					"%i nucleotides in JC69 model\n", opt->ignor_nc);
 			} else {
 				opt->trans_matrix = argv[++i];
 				mmessage(INFO_MSG, NO_ERROR, "Output transition matrix: "

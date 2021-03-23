@@ -63,6 +63,7 @@ struct _options {
 	int JC69_model;  /*<! use approx. JC69 hierarchical model */
 	int nw_align;  /*<! when and how we perform nw alignment */
 	int indel_model;  /*<! build indel model to calculate trans prob*/
+	int ignor_nc; /*<! Number of nucleotides that will be ignored in JC69 hierarchical model*/
 
 	/* error profile estimation */
 	int error_estimation;  /*<! run error estimate function */

@@ -132,8 +132,7 @@ int make_model(model **mod, data *dat, options *opt)
 
 	if (opt->JC69_model) {
 		rm->distance = malloc(rm->K * sizeof *rm->distance);
-		rm->est_ancestor = malloc(dat->max_read_length
-					* sizeof * rm->est_ancestor);
+		rm->est_ancestor = calloc(dat->max_read_length, sizeof * rm->est_ancestor);
 		rm->JC_ll_K = malloc(rm->K * sizeof *rm->JC_ll_K);
 
 		if (!rm->distance || !rm->est_ancestor || !rm->JC_ll_K)
