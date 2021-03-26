@@ -37,7 +37,6 @@ int make_options(options **opt) {
 	op->use_curses = 0;
 	op->wp = NULL;
 	op->active_fp = NULL;
-	op->ignor_nc = 0;
 
 
 	/* ampliCI */
@@ -63,6 +62,7 @@ int make_options(options **opt) {
 	op->use_aic = 0;
 	op->nw_align = ALIGNMENT_HAPLOTYPES ; //ALIGNMENT_UNIQ_SEQ; //ALIGNMENT_HAPLOTYPES; // NO_ALIGNMENT
 	op->indel_model = INDEL_PER_READ;  // consider a indel model
+	op->ignor_nc = 0;
 	
 	
 	/* K  number of clusters */
@@ -424,7 +424,8 @@ int parse_options(options *opt, int argc, const char **argv)
 			if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
-			} else if (!strcmp(&argv[i][j], "trim")) {
+			}
+			if (!strcmp(&argv[i][j], "trim")) {
 				if (argv[i + 1][0] >= 48
 						&& argv[i + 1][0] <= 57)
 					opt->ignor_nc = read_uint(argc,
