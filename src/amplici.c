@@ -25,7 +25,7 @@
 #include <math.h>
 
 #define MATHLIB_STANDALONE 1
-//#define DEBUG 0
+// #define DEBUG 0
 //#define ADJUST_PVALUE
 //#define STORE_FP
 #include <Rmath.h>
@@ -1564,7 +1564,7 @@ int evaluate_haplotype(options *opt, data *dat, model *mod, initializer *ini,
 	if (opt->JC69_model) {
 		modified_ic(ini->seeds[0], mod->est_ancestor, mod->distance,
 				mod->ll, K, &JC_ll, &new_aic, &new_bic, n_param,
-					dat->max_read_length, dat->sample_size);
+					dat->max_read_length, dat->sample_size,opt->ignor_nc);
 	} else {
 		new_aic = aic(mod->ll, n_param);
 		new_bic = bic(mod->ll, n_param, dat->sample_size);
@@ -2220,15 +2220,16 @@ int likelihood_filter(unsigned int K, double ll_cutoff, double *eik, double *pi,
  * @return err
  **/
 int m_JC69(unsigned char * hap, unsigned char * anc, double *dist,
-	unsigned int K, unsigned int len)
+	unsigned int K, unsigned int len, int start)
 {
 	
 	int err = NO_ERROR;
 	unsigned int count[NUM_NUCLEOTIDES];
 	unsigned int max_count;
+	// int start = 9;  // ignore the first 9 nucleotides
 
 	/* most common nucleotide across haplotypes is the estimated ancestor */
-	for (unsigned int j = 0; j < len; j ++){
+	for (unsigned int j = start; j < len; j ++){
 		for (unsigned char n = 0; n < NUM_NUCLEOTIDES; n++)
 			count[n] = 0;
 		for (unsigned int k = 0; k < K; k++)
@@ -2241,11 +2242,14 @@ int m_JC69(unsigned char * hap, unsigned char * anc, double *dist,
 			}
 		}
 	}
+	for (unsigned int j = 0; j < start; j ++)
+		anc[j] = (unsigned char) 4;
+
 
 	/* estimate the expected number of changes per site of all haplotypes */
 	for (unsigned int k = 0; k < K; k++) {		
-		double tmp = (double) hamming_char_dis( (char *) &hap[k*len],
-					(char *) anc, (size_t) len) / len;
+		double tmp = (double) hamming_char_dis( (char *) &hap[k*len+start],
+					(char *) anc, (size_t) len-start) / (len-start);
 		/* Previous there is a bug for the estimated distance out of range */
 		if(tmp >= 0.75)
 			dist[k] = INFINITY;
@@ -2268,12 +2272,13 @@ int m_JC69(unsigned char * hap, unsigned char * anc, double *dist,
  * @return	err status
  **/
 double e_JC69(unsigned char * hap, unsigned char * anc, double *dist,
-	unsigned int K, unsigned int len)
+	unsigned int K, unsigned int len,int start)
 {
 	double ll = 0;
+	// int start = 9;  // ignore the first 9 nucleotides
 
 	for (unsigned int k = 0; k < K; k++)
-		for (unsigned int j = 0; j < len; j++)
+		for (unsigned int j = start; j < len; j++)
 			if (anc[j] == hap[k * len + j])
 				ll += log(0.25 + 0.75 * exp(-dist[k] / 0.75));
 			else
@@ -2303,15 +2308,17 @@ double e_JC69(unsigned char * hap, unsigned char * anc, double *dist,
 int modified_ic(unsigned char *hap, unsigned char *est_anc, double *distance,
 	double best_ll, unsigned int K, double *JC_ll, double *n_aic,
 	double *n_bic, unsigned int n_param, unsigned int max_read_length,
-	size_t sample_size)
+	size_t sample_size, int start)
 {
 	int param_change = 0;
+	// int start = 9;  // ignore the first 9 nucleotides
+
 	
-	m_JC69(hap, est_anc, distance, K, max_read_length);
-	*JC_ll = e_JC69(hap, est_anc, distance, K, max_read_length);
+	m_JC69(hap, est_anc, distance, K, max_read_length,start);
+	*JC_ll = e_JC69(hap, est_anc, distance, K, max_read_length,start);
 
 	/* K branch lengths, ancestral haplotype, but no haplotypes estimated */
-	param_change = K - max_read_length * (K - 1);
+	param_change = K - max_read_length * (K - 1)-start;
 
 	*n_aic = aic(best_ll + *JC_ll, n_param + param_change);
 	*n_bic = bic(best_ll + *JC_ll, n_param + param_change, sample_size);

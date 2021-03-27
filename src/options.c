@@ -62,6 +62,7 @@ int make_options(options **opt) {
 	op->use_aic = 0;
 	op->nw_align = ALIGNMENT_HAPLOTYPES ; //ALIGNMENT_UNIQ_SEQ; //ALIGNMENT_HAPLOTYPES; // NO_ALIGNMENT
 	op->indel_model = INDEL_PER_READ;  // consider a indel model
+	op->ignor_nc = 0;
 	
 	
 	/* K  number of clusters */
@@ -478,6 +479,14 @@ int parse_options(options *opt, int argc, const char **argv)
 			if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
+			}
+			if (!strcmp(&argv[i][j], "trim")) {
+				if (argv[i + 1][0] >= 48
+						&& argv[i + 1][0] <= 57)
+					opt->ignor_nc = read_uint(argc,
+						argv, ++i, (void *)opt);
+				mmessage(INFO_MSG, NO_ERROR, "ignore first "
+					"%i nucleotides in JC69 model\n", opt->ignor_nc);
 			} else {
 				opt->trans_matrix = argv[++i];
 				mmessage(INFO_MSG, NO_ERROR, "Output "
