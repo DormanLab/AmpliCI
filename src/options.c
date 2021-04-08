@@ -76,7 +76,7 @@ int make_options(options **opt) {
 
 	/* error profile estimation */
 	op->error_estimation = 0;  // estimate error profile in current run, default is 0
-	op->seed_min_observed_abundance = 2;
+	op->seed_min_observed_abundance = 1;  // better for low deduplicated sample
 	op->exclude_low_abundance_seeds = 0;
 	op->min_cosdist = log(0.999);
 	op->use_error_profile = 0;	
@@ -642,7 +642,7 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--abundance | -lb FLOAT\n\t\tLower bound for scaled true abundance during haplotype reconstruction.  [DEFAULT: %f]\n", opt->low_bound);
 	else if (!strcmp(command, "error"))
-		fprintf(fp, "\t--abundance FLOAT\n\t\tLower bound on observed abundance for inclusion of seeded cluster during error estimation.  [DEFAULT: %f]\n", opt->seed_min_observed_abundance);
+		fprintf(fp, "\t--abundance FLOAT\n\t\tLower bound on observed abundance for inclusion of seeded cluster during error estimation.  [DEFAULT: %u]\n", opt->seed_min_observed_abundance);
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--align | -z \n\t\tAlign all reads to haplotypes (slow).  [DEFAULT: no]\n");	 /* KSD:  --align | -a */
 	if (!strcmp(command, "cluster"))
