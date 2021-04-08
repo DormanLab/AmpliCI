@@ -68,6 +68,8 @@ struct _options {
 	/* error profile estimation */
 	int error_estimation;  /*<! run error estimate function */
 	char const *partition_file; /*<! given partition file */
+	unsigned int seed_min_observed_abundance; /*<! min. abund. for seed */
+	unsigned char exclude_low_abundance_seeds; /*<! exclude low abundance seeds */
 	int use_error_profile;  /*<! if we choose to use an input error profile */
 	int err_encoding;  /*<! how nucleotides encoded in error profile */
 	char const *error_profile_name;  /*<! name of file name of error profile */
