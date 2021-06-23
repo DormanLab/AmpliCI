@@ -2318,7 +2318,7 @@ int modified_ic(unsigned char *hap, unsigned char *est_anc, double *distance,
 	*JC_ll = e_JC69(hap, est_anc, distance, K, max_read_length,start);
 
 	/* K branch lengths, ancestral haplotype, but no haplotypes estimated */
-	param_change = K - max_read_length * (K - 1)-start;
+	 param_change = K - (max_read_length -start) * (K - 1);
 
 	*n_aic = aic(best_ll + *JC_ll, n_param + param_change);
 	*n_bic = bic(best_ll + *JC_ll, n_param + param_change, sample_size);

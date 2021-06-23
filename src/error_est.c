@@ -891,7 +891,6 @@ int err_count_with_assignment(data *dat, unsigned int *cluster_id,
 				if (seeds[cluster_id[i]][j] != dat->dmat[i][j])
 					++kept_errors;
 				++kept_bases;
-
 		}
 	}
 
