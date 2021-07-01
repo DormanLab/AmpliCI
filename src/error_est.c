@@ -725,7 +725,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 				&& !opt->exclude_low_abundance_seeds)) {
 
 			memcpy(ini->seeds[current_k], s->sequence,
-				dat->max_read_length * sizeof **ini->seeds);	/* [KSD, BUG] I think this is rare read past end of array bug when strlen(s->sequence) < dat->max_read_length */
+				dat->lengths[s->idx] * sizeof **ini->seeds);	
 			ini->seed_lengths[current_k] = dat->lengths[s->idx];
 			/* some clusters are dropped */
 			if (opt->exclude_low_abundance_seeds)
@@ -750,7 +750,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 				if (sk == 0) {
 					memcpy(ini->seeds[current_k],
 								s->sequence,
-							dat->max_read_length	/* [KSD, bUG] see above */
+							dat->lengths[s->idx] 	
 							* sizeof(**ini->seeds));
 					ini->seed_lengths[current_k]
 							= dat->lengths[s->idx];
@@ -763,7 +763,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 						: K_partitions + extra_k++;
 					//fprintf(stderr, "%d, %d\n",pos,K_seeds);
 					memcpy(ini->seeds[lk], s->sequence,
-							dat->max_read_length 	/* [KSD, BUG] see above */
+							dat->lengths[s->idx]  	
 							* sizeof(**ini->seeds));
 					ini->seed_lengths[lk]
 						= dat->lengths[s->idx];
@@ -784,6 +784,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 				if (ini->cluster_id[i] != k)
 					continue;
 
+				// [TODO] find the minmimal length of seeds and use it when calculate the hamming distance.
 				min_dist = UINT_MAX;
 				for (unsigned int sk = 0; sk < subK; sk++) {
 					unsigned char *hapk

@@ -76,7 +76,7 @@ int make_options(options **opt) {
 
 	/* error profile estimation */
 	op->error_estimation = 0;  // estimate error profile in current run, default is 0
-	op->seed_min_observed_abundance = 1;  // set lower for low deduplicated sample
+	op->seed_min_observed_abundance = 2;  // set lower for low deduplicated sample
 	op->exclude_low_abundance_seeds = 0;
 	op->min_cosdist = log(0.999);
 	op->use_error_profile = 0;	
