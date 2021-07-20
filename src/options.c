@@ -592,7 +592,7 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 	for (size_t i = start; i < strlen(exe_name); ++i)
 		fputc(toupper(exe_name[i]), fp);
 	//fprintf(fp, "(%d)\n", 1);
-	fprintf(fp, "(v1.0.1)\n");
+	fprintf(fp, "(v1.1)\n");
 	/* default command is to cluster */
 	if (!command) {
 		command = "cluster";
@@ -665,6 +665,8 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 		fprintf(fp, "\t--insertion <insdbl>\n\t\tSequencing insertion error rate (see also --deletion or --indel).  [DEFAULT: %f]\n", opt->insertion_error);
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--kmax <kuint>\n\t\tSet maximum number of clusters K.  [DEFAULT: %i]\n", opt->K_max);
+	if (!strcmp(command, "cluster"))
+		fprintf(fp, "\t--nJC69 \n\t\tDisable JC69 model. [Use it when biological sequences are unrelated]\n");
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--log_likelihood | -ll <lldbl>\n\t\tLower bound for screening reads during cluster assignment.  This is the minimum log assignment likelihood, ln pi_k + ln Pr(r_i|h_k). [DEFAULT: %f]\n", opt->ll_cutoff);
 	if (!strcmp(command, "cluster")) {

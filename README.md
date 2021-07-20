@@ -28,6 +28,14 @@ AmpliCI, Amplicon Clustering Inference, denoises Illumina amplicon data by appro
 	- r-mathlib on [Ubuntu](https://ubuntu.com/) and [Debian](https://www.debian.org/)
 	- libRmath on [Fedora](https://ubuntu.com/), [CentOS](https://centos.org/), [Mageia](https://www.mageia.org/en/), and [Mandriva](https://www.openmandriva.org/)
 	- Or if all else fails, you can install the Rmath standalone library from the repository [https://github.com/statslabs/rmath](https://github.com/statslabs/rmath)
+  - If you do not get admin to install Rmath, you can compile the Rmath standalone library and move libRmath.a to the `src` folder. Or you can modify the line in CMakeLists.txt to add the path to your own Rmath library.
+  
+  ```
+  set(RMATH_PATH "path/to/libRmath.a")
+  ```
+    
+ 
+
 
 # Installation <a name = "installation" />
 
@@ -66,7 +74,7 @@ AmpliCI requires all input reads have the **same** length, with no **ambiguous**
 
 ## **Input files** <a name="inputfiles" />
 
-AmpliCI takes a single demultiplexed FASTQ file (one per sample) generated from the Illumina sequencing platform, with reads trimmed to the same length and containing no ambiguous nucleotides (see above steps).  If you have paired end data, AmpliCI can analyze the forward reads, the reverse reads, or the merged reads, but not both forward and reverse reads simultaneously.
+AmpliCI takes a single demultiplexed FASTQ file (one per sample) generated from the Illumina sequencing platform, with reads trimmed to the same length and containing no ambiguous nucleotides (see above steps). If you have paired end data, AmpliCI can analyze the forward reads, the reverse reads, or the merged reads, but not both forward and reverse reads simultaneously.
 
 You can find example input FASTQ files in the [test](https://github.com/DormanLab/AmpliCI/tree/master/test) directory.
 
@@ -87,7 +95,10 @@ Third line: +any content on a single line
 
 Fourth line: quality score sequence ([ASCII](https://en.wikipedia.org/wiki/FASTQ_format#Encoding) [!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJ])
 
-If your read or quality scores are split over multiple lines, AmpliCI will not work.  One possible script for fixing your FASTQ-formatted files is given by [Damian Kao on BioStars](https://www.biostars.org/p/14828/).
+If your read or quality scores are split over multiple lines, AmpliCI will not work.  One possible script for fixing your FASTQ-formatted files is given by [Damian Kao on BioStars](https://www.biostars.org/p/14828/). You can also use [seqkit](https://github.com/shenwei356/seqkit) with following command,
+```
+seqkit seq reads_1.fq -w 0
+```
 
 # Usage
 
@@ -298,6 +309,7 @@ Other important options:
 
 - `--log_likelihood`  Lower bound for screening reads during cluster assignment.  This is the minimum log assignment likelihood, $\ln \pi_k + \ln \Pr(r_i|h_k)$. [DEFAULT: -100.000000]
 
+- `--nJC69` Disable JC69 model. By default, AmpliCI assume all sequences are generated from an ancestral sequence, which slightly increases the sensitivity for detecting closed haplotypes. [Use the option when biological sequences are unrelated] 
 
 # C library <a name = "library" />
 
@@ -330,7 +342,6 @@ AmpliCI provides both a shared and a static C library for users to call function
 - `abun`: See the description of `scaled true abun` above for outfile `output_base_filename.out`.
 
 - `ll`: See the description of `reads ll` above for outfile `output_base_filename.out`.
-
 
 An example to call function ```amplici_wfile()``` is provided in [example_wfile.c](https://github.com/DormanLab/AmpliCI/tree/master/example_wfile.c). You can compile the source file with the C library libamplici.a (in the ```src``` directory):
 

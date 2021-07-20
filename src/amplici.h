@@ -47,9 +47,9 @@ double trans_nw(options *opt,unsigned char **align, size_t alen, unsigned int mi
 
 /* print */
 void fprint_assignment(FILE *fp, unsigned int *v, size_t n, unsigned int max, int width, int newline);
-void fprint_haplotypes_abun(FILE *fp, data_t *data, size_t n, size_t p, double pthres, 
+void fprint_haplotypes_abun(FILE *fp, data_t **data, size_t n, unsigned int *len, double pthres, 
 	char const * const prefix, double *pvalue, double *abun,double *ee);
-void fprint_haplotypes_size(FILE *fp, data_t *data, size_t n, size_t p, double pthres, 
+void fprint_haplotypes_size(FILE *fp, data_t **data, size_t n, unsigned int *len, double pthres, 
 	char const * const prefix, double *pvalue, unsigned int *size,double *ee);
 
 /* nwalign */
