@@ -201,7 +201,7 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
 
         fprint_uints(fp, ri->UMI_cluster_size, opt->K_UMI, 3, 1);
 
-        fprintf(fp, "reads posterior likelihood: ");
+        fprintf(fp, "reads ll: ");
         fprint_doubles(fp, ri->optimal_cluster_ll, dat->sample_size, 3, 1);
 
         fprintf(fp, "Eta: ");

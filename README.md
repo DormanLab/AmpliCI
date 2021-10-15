@@ -159,7 +159,7 @@ We recommend to run the alternative step on massive datasets with sequences with
 
 # Output Files <a name = "output" />
 
-The final step of the pipeline generates two output files with argument `--outfile <output_base_filename>`:
+The final step of the pipeline with argument `--outfile <output_base_filename>` generates two output files:
 
 ***1.`output_base_filename.fa`***
 
@@ -176,27 +176,27 @@ For each haplotype, deduplicated abundance is the estimated number of unamplifie
 
 A text file with the following information provided as key: value pairs, one per line.  The keys are:
 
-- `log likelihood`:
+- `log likelihood`: Penalized log likelihood of the model. See the paper for more details.
 
-- `K`: Number of haplotypes selected by AmpliCI.
+- `K`: Number of haplotypes
 
-- `assignments`: AmpliCI-assigned haplotype by posterior probability for each read in FASTQ-determined input order.  Haplotypes are numbered 0, 1, ..., and match the sequences H0, H1, ... in the output FASTA file of haplotypes.
+- `assignments`: model-assigned haplotype for each read in FASTQ-determined input order.  Haplotypes are numbered 0, 1, ..., and match the sequences H0, H1, ... in the output FASTA file of haplotypes.
 
 - `cluster sizes`: Number of reads assigned to each haplotype.
 
-- `UMI K`:
+- `UMI K`: Number of unique UMIs
 
-- `UMI assignment`:
+- `UMI assignment`: model-assigned UMI for each read in FASTQ-determined input order.
 
-- `UMI cluster sizes`:
+- `UMI cluster sizes`: Number of reads assigned to each UMI.
 
-- `reads posterior likelihood`:
+- `reads ll`: The posterior log likelihood for each read.
 
 - `Eta`:
 
 - `Gamma`: 
 
-- There is also a list of the haplotypes with related UMIs reported in this file.
+- There is also a list of haplotypes with related UMIs reported in this file.
 
 The example below showed one haplotype with related 3 UMIs. Thus the deduplicated abundance of the haplotype is 3.  
 
