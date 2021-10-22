@@ -355,11 +355,18 @@ int parse_options(options *opt, int argc, const char **argv)
 			}else if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
+			}else if(!strncmp(&argv[i][j], "umilen",6)){
+				if (argv[i + 1][0] >= 48
+						&& argv[i + 1][0] <= 57)
+					opt->UMI_length =  read_uint(argc, argv, ++i,
+						(void *)opt);
 			}else{
 				opt->initialization_UMI = argv[++i];
 				mmessage(INFO_MSG, NO_ERROR, "UMI set: "
 					"%s\n", opt->initialization_UMI);
 			}
+			if(errno)
+				goto CMDLINE_ERROR;
 			break;
 		case 'x':
 			if (i == argc - 1) {
@@ -653,6 +660,9 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 		fprintf(fp, "\t--diagnostic | -a <ddbl>\n\t\tThreshold for diagnostic probability in the diagnostic/contamination test.  [DEFAULT: %f].\n", opt->alpha);
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--error | -e\n\t\tEstimate the error profile.\n");
+	if(!strcmp(command,"error"))
+		fprintf(fp, "\t--partition <pstr> \n\t\tPartition file used for a better error profile. [DEFAULT: none] \n");
+	fprintf(fp, "\t-n  \n\t\t Disnable sequence alignment. Use it when there is no indel error.  [DEFAULT: no]\n");
 	if (!strcmp(command, "error"))
 		fprintf(fp, "\t--exclude\n\t\tExclude small clusters during error estimation (set threshold with option --abundance). [DEFAULT: %s]\n", opt->exclude_low_abundance_seeds ? "yes" : "no");
 	fprintf(fp, "\t--fastq | -f <fstr>\n\t\tThe fastq input file.  [REQUIRED]\n");
