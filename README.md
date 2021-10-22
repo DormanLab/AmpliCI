@@ -124,13 +124,13 @@ cat ../test/sim2.merge.fa |  seqkit subseq -r 10:250 | seqkit rmdup -s | seqkit 
 4. Estimate deduplicated abundance of each haplotype. rho is a tunning parameter. We describe how to tun this parameter in the following section.
 
 ```sh
-./run_AmpliCI --fastq <input_merge_fastq_file> -u <input_umi_fasta_file> -i <input_hap_fasta_file> -x <umi_length> --outfile <output_base_filename> --profile error.out -rho <rho>
+./run_AmpliCI --fastq <input_merge_fastq_file> --umifile <input_umi_fasta_file> --haplotype <input_hap_fasta_file> -umilen <umi_length> --outfile <output_base_filename> --profile error.out -rho <rho>
 ```
 
 An example:
 
 ```sh
-./run_AmpliCI --fastq ../test/sim2.fq -u ../test/sim2.bc.fa -i ../test/sim2.merge.trim_dedup.fa -x 9 --outfile ../test/test --profile ../test/error.out -rho 46
+./run_AmpliCI --fastq ../test/sim2.fq --umifile ../test/sim2.bc.fa -haplotype ../test/sim2.merge.trim_dedup.fa -umilen 9 --outfile ../test/test --profile ../test/error.out -rho 46
 ```
 
 - You can run the whole pipeline on this example (from the ```src``` directory):
@@ -178,13 +178,13 @@ A text file with the following information provided as key: value pairs, one per
 
 - `log likelihood`: Penalized log likelihood of the model. See the paper for more details.
 
-- `K`: Number of haplotypes
+- `K`: Number of haplotypes (total number of sequences in the input haplotype set <input_hap_fasta_file> )
 
 - `assignments`: model-assigned haplotype for each read in FASTQ-determined input order.  Haplotypes are numbered 0, 1, ..., and match the sequences H0, H1, ... in the output FASTA file of haplotypes.
 
 - `cluster sizes`: Number of reads assigned to each haplotype.
 
-- `UMI K`: Number of unique UMIs
+- `UMI K`: Number of unique UMIs (total number of sequences in the input UMI set <input_umi_fasta_file> )
 
 - `UMI assignment`: model-assigned UMI for each read in FASTQ-determined input order.
 
@@ -192,9 +192,9 @@ A text file with the following information provided as key: value pairs, one per
 
 - `reads ll`: The posterior log likelihood for each read.
 
-- `Eta`:
+- `Eta`: Relative abundance of each unique UMI
 
-- `Gamma`: 
+- `Gamma`: A UMI_K X K matrix used to indicate dependence between UMI and haplotypes. The deduplicated abundance of the kth haplotype is the kth column sum of the Gamma.
 
 - There is also a list of haplotypes with related UMIs reported in this file.
 
@@ -209,23 +209,21 @@ TTTTAAAAC GTAAATAGT CGCTAATGA
 
 Options of AmpliCI can be found in [here](https://github.com/DormanLab/AmpliCI#options). Below we list options specific for AmpliCI-UMI.
 
-- `partition`
+- `--partition`: Use a partition file when estimating errors. The partition file contains cluster assignment of each read. Reads assigned with the same number are in the same group. We can use either true partition or UMI-induced partition file to generate a better error profile. 
 
-- `exclude`: Exclude small clusters during error estimation (set threshold with option --abundance).
+- `--exclude`: Exclude small clusters during error estimation (set threshold with option --abundance).
 
-- `abundance` under `error` estimation mode: Lower bound on observed abundance for inclusion of seeded cluster during error estimation.
+- `--abundance` under `error` estimation mode: Lower bound on observed abundance for inclusion of seeded cluster during error estimation.
 
-- `umi`
+- `--umi`: Used for clustering UMIs. Compared to the default, we set the gap score -20, and band width 2, used in Needleman Welch alignment. We also disable JC69 model since UMIs are random sequences.
 
-- `trim`
+- `--trim`:Ignore first # nucleotides in JC69 model. Since UMIs are random sequences, they should not be ignored when fit the JC69 model.
 
-- `u`
+- `--umifile`: FASTA file with UMIs.
 
-- `i`
+- `--rho`:  The tunning parameter that control the sparsity of the `Gamma` matrix. We have described how to select `rho` above.
 
-- `rho`
-
-- `x`
+- `--umilen`: Length of each UMI.
  
 
 
