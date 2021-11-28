@@ -180,6 +180,7 @@ The first step is to fit our proposed model (details in the paper) to data (the 
 You can use option `-t` to select a truncate position to truncate the long right tail of the distribution, which may be contributed by unmodeled UMI collision.
 
 3. **Refit Model**
+
 You can also use the estimated values of parameters as the input to the program, in order to obtain the desired distribution without reestimating parameters.
 Below we use the input file from a HIV dataset as an example. 
 ```
@@ -188,7 +189,8 @@ Below we use the input file from a HIV dataset as an example.
 Options `--efficiency`, `--ncycles`, `--epsilon` and `--delta` are four parameters in the model, that represent PCR efficiency, number of PCR cycles, PCR error rate and sequence error rate. You can find more details about the model intepretation in the paper. 
 
 4. **Select Rho**
-In practice, we currently choose rho as the argmax{Pr(X <= rho | Z = 1) < 0.05},
+
+In practice, we currently choose rho as the argmax {Pr(X <= rho | Z = 1) < 0.05},
 which means at most five percent of true variants will have observed abundance below or equal to rho.
 And you can find such information at the 8th column in the output csv file.
 
