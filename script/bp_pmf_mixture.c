@@ -20,11 +20,22 @@ gcc -Wall -pedantic -o bp_pmf bp_pmf.c fft.c -DFFTW_FLOAT -lfftw3f -lm
 #include <stdlib.h>
 #include <math.h>
 #include <float.h>
-#include "fft.h"
+#include <string.h>
+#include <ctype.h>
 
 #define MATHLIB_STANDALONE 1
 #include <Rmath.h>
 #include <R.h>
+
+#include "fft.h"
+
+typedef struct {
+	double epsilon;  // PCR error rate 
+	double delta;   // sequence error rate
+	unsigned int ncycles;
+	double E;     //Efficency
+	int input;   // user input these parameters 
+} itr_para ;
 
 /**
  * Probability generating function.
@@ -321,14 +332,22 @@ double bp_err(unsigned int *obser_abun, unsigned int n, double E,
 		prec[y] = pmf_Y[y]+ prec[y-1]; // P(Y < = y)
 	}
 	
+	
 	for (unsigned int y = 0; y < hthres; ++y){
 		pmf_mix[y] /= trun_cdf_mix;   // truncated pmf in [1,n]
 		emp_pmf[y] /= trun_cdf_emp;
 		sens[y] = sens[y] / sens[hthres-1];
 		prec[y] = prec[y]/prec[hthres-1];
-		if(output) 
-			fprintf(stderr, "%i: %f %f %f %f %i %f %f %f %f %f %f\n", y, pmfs[ncycles][y], pmf_Y[y], pmf_mix[y], 
-				emp_pmf[y], obser_abun[y], 1-sens[y],sens[y], prec[y], 1-prec[y], 1-sens[y]+prec[y], sens[y]* (1-lambdae) + (1-prec[y])*lambdae);
+		if(output){ 
+			if(!y){
+				fprintf(stdout, "x, P(X = x | Z = 1), P(X = x | Z = 0), P_trun(X = x), P_emp(X = x), count, P(X > x | Z = 1), " 
+								"P(X <= x | Z = 1), P(X <= x | Z = 0), P(X > x | Z = 0), "
+								"P(X > x | Z = 1)+ P(X <= x | Z = 0) \n");
+			}else{
+				fprintf(stdout, "%i, %f, %f, %f, %f, %i, %f, %f, %f, %f, %f\n", y, pmfs[ncycles][y], pmf_Y[y], pmf_mix[y], 
+					emp_pmf[y], obser_abun[y], 1-sens[y],sens[y], prec[y], 1-prec[y], 1-sens[y]+prec[y]);
+			}
+		}
 	}
 
 	double D = KS_test_stat(&emp_pmf[lthres], &pmf_mix[lthres], hthres-lthres);
@@ -375,7 +394,7 @@ int PCR_para(unsigned int *obser_abun, unsigned int n, double *E_est, unsigned i
 			double ncycles = ncycles_vec[j];   // error proportion 
 			double dist = bp_err(obser_abun, (unsigned int) n, E, ncycles,epsilon0,delta0,0);
 			dist_vec[cnt] = dist;
-			printf("[%f, %i], div: %f\n",  E_vec[i], ncycles_vec[j], dist_vec[cnt]);
+			fprintf(stderr, "[%f, %i], div: %f\n",  E_vec[i], ncycles_vec[j], dist_vec[cnt]);
 			if(dist_vec[cnt] < min_dist){
 				min_dist = dist_vec[cnt];
 				E_opt =  E_vec[i];
@@ -416,7 +435,7 @@ int err_para(unsigned int *obser_abun, unsigned int n, double E0, unsigned int n
 
 			double div = bp_err(obser_abun, (unsigned int) n, E0, ncycles0,epsilon_vec[i],delta_vec[j],0);
 			div_vec[cnt] = div;
-			printf("[%f, %f], div: %f\n", epsilon_vec[i], delta_vec[j], div_vec[cnt]);
+			fprintf(stderr, "[%f, %f], div: %f\n", epsilon_vec[i], delta_vec[j], div_vec[cnt]);
 			if(div_vec[cnt] < min_div){
 				min_div = div_vec[cnt];
 				epsilon_opt =  epsilon_vec[i];
@@ -445,7 +464,7 @@ int para_est(unsigned int *obser_abun, unsigned int n,
 
 
 	PCR_para(obser_abun, n, &E, &ncycles, epsilon, delta, &dist);
-	printf("FINAL: [%f, %i], div: %f\n", E, ncycles, dist);
+	fprintf(stderr, "FINAL: [%f, %i], div: %f\n", E, ncycles, dist);
 
 	double dist_pre = dist + 100000;
 	while( (dist_pre - dist)/dist > 1e-4 ){
@@ -453,14 +472,14 @@ int para_est(unsigned int *obser_abun, unsigned int n,
 		dist_pre = dist;
 		err_para(obser_abun, n, E, ncycles, 
 					&epsilon, &delta, &dist);
-		printf("FINAL: [%f, %f], div: %f\n", epsilon, delta, dist);
+		fprintf(stderr, "FINAL: [%f, %f], div: %f\n", epsilon, delta, dist);
 
 		if((dist_pre - dist)/dist < 1e-4)
 			break;
 
 		dist_pre = dist;
 		PCR_para(obser_abun, n, &E, &ncycles, epsilon, delta, &dist);
-		printf("FINAL: [%f, %i], div: %f\n", E, ncycles, dist);
+		fprintf(stderr, "FINAL: [%f, %i], div: %f\n", E, ncycles, dist);
 		
 	}
 
@@ -473,42 +492,148 @@ int para_est(unsigned int *obser_abun, unsigned int n,
 }
 
 
-int main(void) 
-{
+int parse_options_simple(int argc, const char **argv, itr_para* para, const char** file_name, int *hthres){	
+	int i, j;
+	size_t n;
+	int err = 0;
+	char a;
+	unsigned int hthre;
 
-	int hthres = 100; // it may be good to only work on truncated datasets.
+	for (i = 1; i < argc; i++) {
+
+		n = strlen(argv[i]);
+		if (n < 1)
+			goto CMDLINE_ERROR;
+		j = 0;
+		while ((a = argv[i][++j]) == '-' && j < (int) n);
+		switch(a) {
+			case 't':
+				if (i == argc - 1) {
+					err = 1;
+					goto CMDLINE_ERROR;
+				} else {
+					if (argv[i + 1][0] >= 48
+						&& argv[i + 1][0] <= 57){
+							hthre = strtoul(argv[++i], NULL, 0);
+							// fprintf(stderr, "%i\n",hthre);
+							*hthres = (int) hthre;
+						}
+					break;	
+				}
+				break;
+			case 'n':
+				if (i == argc - 1) {
+					err = 1;
+					goto CMDLINE_ERROR;
+				} else {
+					if (argv[i + 1][0] >= 48
+						&& argv[i + 1][0] <= 57){
+							para->ncycles = strtoul(argv[++i], NULL, 0);
+							para->input = 1;
+						}
+					break;	
+				}
+				break;
+			case 'd':
+				if (i == argc - 1) {
+					err = 1;
+					goto CMDLINE_ERROR;
+				} 
+				para->delta = strtod(argv[++i], NULL);
+				para->input = 1;
+				break;
+			case 'f':
+				if (i == argc - 1){
+					err = 1;
+					goto CMDLINE_ERROR;
+				}else{
+				*file_name = argv[++i];
+				}
+				break;
+			case 'e': 
+				if (i == argc - 1) {
+					err = 1;
+					goto CMDLINE_ERROR;
+				}
+				if (!strncmp(&argv[i][j], "eff", 3)) {
+					para->E = strtod(argv[++i], NULL);
+					para->input = 1;
+					break;
+				}else{
+					para->epsilon = strtod(argv[++i], NULL);
+					para->input = 1;
+					break;
+				}
+				break;	
+			default:
+				goto CMDLINE_ERROR;
+		}
+	}
+	return err;
+
+CMDLINE_ERROR:
+	if(err > 0)
+		fprintf(stderr, "INVALID_CMD_ARGUMENT !\n");
+	return err;
+
+} 
+
+
+int main(int argc, const char **argv) {
+
+	/* The file records the UMI observed abundance distribution. 
+		Check sim8.2_raw_abun.txt as an example in the test folder */
+
+	const char *file_name = NULL; //"sim8.2_raw_abun.txt";   //  
+
+	/* truncation choose on the right tail */
+	int hthres = 100; 
+
+	/* set up */
+    itr_para para = {
+		.epsilon = 0.0045,
+        .delta = 0.013,
+		.ncycles = 10,
+        .E = 0.5,
+		.input = 0,
+	};
+
+	/* read from the command line */
+	if(parse_options_simple(argc, argv, &para, &file_name, &hthres))
+		return 0;
+
+	/*  major parameter */
+	double epsilon = para.epsilon;  // PCR error rate 
+	double delta = para.delta;   // sequence error rate
+	unsigned int ncycles = para.ncycles;
+	double E = para.E;
+	
+	// hthres = 100; 
+	fprintf(stderr, "INIT: [E: %f, ncycles: %i, epsilon: %f, delta: %f, H thres: %i]\n", E, ncycles, epsilon, delta, hthres);
+
 	int n = hthres + 1;  // include 0
-
-
 	unsigned int * obser_abun = NULL;
 	obser_abun = calloc(n, sizeof (unsigned int));
 	if(!obser_abun)
 		return 0;
 
-	
 	/* read observed abundance <= hthres */
-	FILE *fp = fopen("hiv2_raw_abun.txt", "r");
+	FILE *fp = fopen(file_name, "r");
 	if (!fp)
 		return 0;
 	fread_uints(fp, obser_abun,n);		
 	fclose(fp);
-	fprintf(stderr,"Finish reading\n");
-
-
-	/* major parameters */
-	double epsilon = 0.0045;  // PCR error rate 
-	double delta = 0.013;   // sequence error rate
-	unsigned int ncycles = 10;
-	double E = 0.5;
+	fprintf(stderr,"Finish reading %s \n", file_name);
 
 	/* estimate the parameters */
-	para_est(obser_abun, (unsigned int) n, &E, &ncycles, &epsilon, &delta);
+	if(!para.input)
+		para_est(obser_abun, (unsigned int) n, &E, &ncycles, &epsilon, &delta);
 
-	/* run again */
+	/* run again to get the final distribution */
 	double dist = bp_err(obser_abun, (unsigned int) n, E, ncycles, epsilon, delta, 1);
 
-	printf("FINAL: [%f, %i, %f, %f], div: %f\n", E, ncycles, epsilon, delta, dist);
-	
+	fprintf(stdout, "FINAL: [E: %f, ncycles: %i, epsilon: %f, delta: %f], div: %f\n", E, ncycles, epsilon, delta, dist);
+	fprintf(stderr, "FINAL: [E: %f, ncycles: %i, epsilon: %f, delta: %f], div: %f\n", E, ncycles, epsilon, delta, dist);
 
 	free(obser_abun);
 	return 0;

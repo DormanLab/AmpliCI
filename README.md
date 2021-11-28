@@ -156,6 +156,41 @@ We recommend to run the alternative step on massive datasets with sequences with
 
 # Tunning Parameter <a name = "parameter" />
 
+A separate program will be used to find the value of the tuning parameter rho. 
+You can find the program from the ```script``` directory.
+
+1. **Preparation**
+
+First, codes can be compiled with
+```
+cd ../script
+gcc -Wall -pedantic -Wextra -g -o bp_pmf_mix bp_pmf_mixture.c fft.c -lfftw3 -lm -lRmath
+```
+You may need to add additional path to the Rmath library (use -L) and header files (use -I) if Rmarh is not on your default path.
+The input file is the count distribution of UMI raw abundance in the sample, 
+that the number in the ith row is the number of unique UMIs with abundance i.
+You can find examples of the input file `.txt` under the ```script``` directory.
+
+2. **Model Fitting**
+
+The first step is to fit our proposed model (details in the paper) to data (the executable is called bp_pmf_mix).
+```
+./bp_pmf_mix -f  <input_data_file>  -t <truncate_position> > <output_csv_file>
+```
+You can use option `-t` to select a truncate position to truncate the long right tail of the distribution, which may be contributed by unmodeled UMI collision.
+
+3. **Refit Model**
+You can also use the estimated values of parameters as the input to the program, in order to obtain the desired distribution without reestimating parameters.
+Below we use the input file from a HIV dataset as an example. 
+```
+./bp_pmf_mix -f hiv1_raw_abun.txt -t 100 --efficiency 0.6 --ncycles 11 --epsilon 0.004 --delta 0.01 > text.csv
+```
+Options `--efficiency`, `--ncycles`, `--epsilon` and `--delta` are four parameters in the model, that represent PCR efficiency, number of PCR cycles, PCR error rate and sequence error rate. You can find more details about the model intepretation in the paper. 
+
+4. **Select Rho**
+In practice, we currently choose rho as the argmax{Pr(X <= rho | Z = 1) < 0.05},
+which means at most five percent of true variants will have observed abundance below or equal to rho.
+And you can find such information at the 8th column in the output csv file.
 
 # Output Files <a name = "output" />
 
@@ -221,7 +256,7 @@ Options of AmpliCI can be found in [here](https://github.com/DormanLab/AmpliCI#o
 
 - `--umifile`: FASTA file with UMIs.
 
-- `--rho`:  The tunning parameter that control the sparsity of the `Gamma` matrix. We have described how to select `rho` above.
+- `--rho`:  Tunning parameter that control the sparsity of the transition matrix `Gamma`. We have described how to select `rho` above.
 
 - `--umilen`: Length of each UMI.
  
