@@ -703,7 +703,7 @@ double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, doubl
         double l1_alt = l0 - mstep_pen1_lagrange_cstr_func(l0, &md) / 
 		mstep_pen1_lagrange_cstr_derv(l0, &md);
 
-        //debug_msg(DEBUG_I, fxn_debug, "l1: %15.3f; l1_alt: %15.3f;\n",l1,l1_alt);
+        debug_msg(DEBUG_III, fxn_debug, "l0: %15.3f, l1: %15.3f; l1_alt: %15.3f;\n",l0, l1, l1_alt);
 
         if (l1 > 0){
 		    md.signs[arg_max_idx] = 1;
@@ -718,6 +718,9 @@ double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, doubl
     
     // \lambda_0 = md.rho/md.omega
     double lambda = mstep_newton(_plfunc, _plderv, l0, 1e-6, 100, &md);
+
+    if(max_xi < md.rho)
+        debug_msg(DEBUG_I, fxn_debug, "lambda: %15.3f\n",lambda);
 
 
     //if(isnan(lambda)){
@@ -769,6 +772,8 @@ double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, doubl
         }
         //if(s == 326)
         //    debug_msg(DEBUG_I, fxn_debug, "gamma :%15.3f; e: %15.3f\n", tp, _xi);
+        if(max_xi < md.rho)
+            debug_msg(DEBUG_III, fxn_debug, "_xi, %15.3f, est_x: %15.3f", _xi, tp);
     }
     if (isnan(lls))
         debug_msg(DEBUG_I, fxn_debug, "sum_tp:%15.3f\n",sum_tp);  
@@ -938,7 +943,7 @@ int reads_assign_optimal(model *mod, run_info *ri, size_t sample_size, unsigned 
     }
 
     return err;
-}/* reads_assign_sparse */
+}/* reads_assign_optimal */
 
 
 /* gam: gamma ; b : phi; xij = sum e_ij; thresh: rho */
