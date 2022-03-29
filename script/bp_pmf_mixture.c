@@ -196,6 +196,8 @@ double bp_err(unsigned int *obser_abun, unsigned int n, double E,
 
 	/* abundance distribution of error free reads */
 	double Et = E * (1.0-epsilon);
+	/* assume %1 reads would be read as an error. thus 0.99 sample rates */
+	// sample rate could be 1-\epsilon
 
 	/* cycle 0 */
 	ns[0] = 2;
@@ -204,14 +206,12 @@ double bp_err(unsigned int *obser_abun, unsigned int n, double E,
 	pmfs[0][0] = 0.;
 	pmfs[0][1] = 1.;
 
-	/* cycle 1 to N-1, cycle N is the error free pmf*/
+	/* cycle 1 to cycle N, error free pmf */
 
 	for(unsigned int i = 1; i < ncycles; i++)
 		bp_pmf(Et, i, 1., &ns[i], &pmfs[i]);
-
-	/* assume %1 reads would be read as an error. thus 0.99 sample rates */
 	bp_pmf(Et, ncycles, 1., &ns[ncycles], &pmfs[ncycles]);
-	// sample rate could be 1-\epsilon 
+	 
 
 	pmf_Y = calloc(ns[ncycles], sizeof (double));
 	if(!pmf_Y)
@@ -225,11 +225,6 @@ double bp_err(unsigned int *obser_abun, unsigned int n, double E,
 	if(!prec)
 		return 0;
 
-
-	//pmf_Z = calloc(ns[ncycles], sizeof (double));
-	//if(!pmf_Z)
-	//	return 0;
-
 	pmf_mix = calloc(ns[ncycles], sizeof (double));
 	if(!pmf_mix)
 		return 0;
@@ -238,16 +233,17 @@ double bp_err(unsigned int *obser_abun, unsigned int n, double E,
 	/* P(R = i) */
 	double sumR = 0.;
 	for(unsigned int i = 1; i < Nplus1; i++){
-		R[i] = pow(Eplus1, i-1) * epsilon;
+		R[i] = pow(Eplus1, i-1) * epsilon;  //PCR error 
 		sumR += R[i];
 	}
-	R[Nplus1] = pow(Eplus1, ncycles) * delta;
+	R[Nplus1] = pow(Eplus1, ncycles) * delta;  //sequencing error
 	sumR += R[Nplus1];
 	
 	//for(unsigned int i = ncycles; i > 0; i--)
 	//	R[i] = R[i] - R[i-1];
 	R[0] = 0;
 
+	// check the proportions of errors in each cycle
 	double sumR2 = 0.;
 	for(unsigned int i = 0; i < Nplus2; i++){
 		R[i] = R[i]/sumR;
