@@ -164,7 +164,7 @@ You can find the program from the ```script``` directory.
 First, codes can be compiled with
 ```
 cd ../script
-gcc -Wall -pedantic -Wextra -g -o bp_pmf_mix bp_pmf_mixture.c fft.c -lfftw3 -lm -lRmath
+gcc -Wall -pedantic -Wextra -g -o bp_pmf_mix bp_pmf_mixture.c fft.c -lfftw3 -lm
 ```
 You may need to add additional path to the Rmath library (use -L) and header files (use -I) if Rmarh is not on your default path.
 The input file is the count distribution of UMI raw abundance in the sample, 
