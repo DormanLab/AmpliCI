@@ -244,17 +244,18 @@ double bp_err(unsigned int *obser_abun, unsigned int n, double E,
 	R[0] = 0;
 
 	// check the proportions of errors in each cycle
-	//double sumR2 = 0.;
-	//for(unsigned int i = 0; i < Nplus2; i++){
-	//	R[i] = R[i]/sumR;
-	//	sumR2 += R[i];
-	//	// printf("R: %f \n", R[i]);
-	//}
+	 // double sumR2 = 0.;
+	for(unsigned int i = 0; i < Nplus2; i++){
+		//printf("R: %f \n", R[i]);
+		R[i] = R[i]/sumR;   // normalization to sum to 1
+		// sumR2 += R[i];
+		// printf("R: %f \n", R[i]);
+	}
 
 	// printf("sum_R: %f \n", sumR2);
 
 
-	/* P(Y = y) */
+	/* P(Y = y | Z = 0) */
 	unsigned int lenN = ns[ncycles];
 	for (unsigned int y = 0; y < lenN; ++y)
 		for(unsigned int i = 1; i < Nplus1; i++)
