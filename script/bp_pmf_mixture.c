@@ -156,7 +156,7 @@ double bp_pmf(double eff, unsigned int ngen, double sam, int*len, double**pmf){
 	//pm[0] = 0.;
 	//mean+= n * pm[n];
 	
-	double mean1 = 1 + eff;
+	// double mean1 = 1 + eff;
 	//printf("Mean: %f (expected mean: %f)\n", mean, pow(mean1, ngen) * sam);
   
 	*pmf = pm;
@@ -244,12 +244,12 @@ double bp_err(unsigned int *obser_abun, unsigned int n, double E,
 	R[0] = 0;
 
 	// check the proportions of errors in each cycle
-	double sumR2 = 0.;
-	for(unsigned int i = 0; i < Nplus2; i++){
-		R[i] = R[i]/sumR;
-		sumR2 += R[i];
-		// printf("R: %f \n", R[i]);
-	}
+	//double sumR2 = 0.;
+	//for(unsigned int i = 0; i < Nplus2; i++){
+	//	R[i] = R[i]/sumR;
+	//	sumR2 += R[i];
+	//	// printf("R: %f \n", R[i]);
+	//}
 
 	// printf("sum_R: %f \n", sumR2);
 
