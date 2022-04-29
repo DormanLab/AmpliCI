@@ -209,8 +209,8 @@ double bp_err(unsigned int *obser_abun, unsigned int n, double E,
 	/* cycle 1 to cycle N, error free pmf */
 
 	for(unsigned int i = 1; i < ncycles; i++)
-		bp_pmf(Et, i, 1., &ns[i], &pmfs[i]);
-	bp_pmf(Et, ncycles, 1., &ns[ncycles], &pmfs[ncycles]);
+		bp_pmf(Et, i, 1-delta, &ns[i], &pmfs[i]);
+	bp_pmf(Et, ncycles, 1-delta, &ns[ncycles], &pmfs[ncycles]);
 	 
 
 	pmf_Y = calloc(ns[ncycles], sizeof (double));
