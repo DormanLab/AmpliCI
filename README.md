@@ -254,7 +254,9 @@ Options of AmpliCI can be found in [here](https://github.com/DormanLab/AmpliCI#o
 
 - `--umi`: Used for clustering UMIs. Compared to the default, we set the gap score -20, and band width 2, used in Needleman Welch alignment. We also disable JC69 model since UMIs are random sequences.
 
-- `--trim`:Ignore first # nucleotides in JC69 model. Since UMIs are random sequences, they should not be ignored when fit the JC69 model.
+- `--trim`:Ignore first # nucleotides in JC69 model. Since UMIs are random sequences, they should be ignored when fit the JC69 model.
+
+- `--ncollision`: Assume NO UMI collision, that same UMI CANNOT be attached to two different original haplotypes. This option can also be used when estimate errors based on UMI-induced partition file when there is no UMI collision.
 
 - `--umifile`: FASTA file with UMIs.
 
@@ -272,6 +274,8 @@ Options of AmpliCI can be found in [here](https://github.com/DormanLab/AmpliCI#o
 # Citation <a name = "citation" />
 
 - Peng, X. and Dorman, K. (2020) ‘AmpliCI: A High-resolution Model-Based Approach for Denoising Illumina Amplicon Data’, Bioinformatics. doi: [10.1093/bioinformatics/btaa648](https://academic.oup.com/bioinformatics/article/doi/10.1093/bioinformatics/btaa648/5875058).
+
+- Peng, X. and Dorman, K. (2022) 'Accurate estimation of molecular counts from amplicon sequence data with unique molecular identifiers'. 
 
 # Contact <a name = "contact" />
 

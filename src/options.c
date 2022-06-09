@@ -242,7 +242,7 @@ int parse_options(options *opt, int argc, const char **argv)
 		case 'n':
 			if (!strcmp(&argv[i][j], "nJC69")) {
 				opt->JC69_model = 0;
-			}else if (!strcmp(&argv[i][j], "ncol")){
+			}else if (!strncmp(&argv[i][j], "ncol", 4)){
 				opt->umicollision = 0;
 			}else{
 				opt->nw_align = NO_ALIGNMENT;
@@ -607,7 +607,7 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 	for (size_t i = start; i < strlen(exe_name); ++i)
 		fputc(toupper(exe_name[i]), fp);
 	//fprintf(fp, "(%d)\n", 1);
-	fprintf(fp, "(v1.1)\n");
+	fprintf(fp, "(v1.99)\n");
 	/* default command is to cluster */
 	if (!command) {
 		command = "cluster";
@@ -717,9 +717,9 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 		fprintf(fp, "\t--outfile, -o FILE \n\t\tOutput file(s) for haplotypes with estimated deduplicated abundance. [REQUIRED]\n");
 	}
 	if (!strcmp(command, "error"))
-		fprintf(fp, "\t--ncollision \n\t\t Assume NO UMI collision during error estimation based on UMI partition file. [DEFAULT: %s]\n", opt->umicollision ? "collision" : "no collision");
+		fprintf(fp, "\t--ncollision \n\t\t Assume NO UMI collision when estimating errors based on UMI-induced partition file. [DEFAULT: %s]\n", opt->umicollision ? "collision" : "no collision");
 	if (!strcmp(command, "daumi"))
-		fprintf(fp, "\t--ncollisin \n\t\t Assume NO UMI collision, that same UMI can be not attacehd to two (different or identical) haplotypes. [DEFAULT: %s]\n", opt->umicollision ? "collision" : "no collision");
+		fprintf(fp, "\t--ncollision \n\t\t Assume NO UMI collision, that same UMI CANNOT be attached to two different original haplotypes. [DEFAULT: %s]\n", opt->umicollision ? "collision" : "no collision");
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--per_candidate | --pdiag <pdbl>\n\t\tAdjust diagnostic threshold (--diagnostic) to %f / number_candidates.  [DEFAULT: %s]\n", opt->alpha, opt->per_candidate ? "yes" : "no");
 	if (!strcmp(command, "cluster"))
