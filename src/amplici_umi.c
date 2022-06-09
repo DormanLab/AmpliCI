@@ -136,13 +136,32 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
         }
     }
 
-    /*** Codes below used for testing ideas for collision ***/
-    for(unsigned int k = 0; k < opt->K; ++k){
-            for (unsigned int b = 0; b < opt->K_UMI; ++b){
-                // post hoc separate UMI+ haplotypes if there is an UMI collision
-                if( mod->gamma[b*opt->K + k] > 0)
+    
+    if(opt->umicollision){ // allow collision
+        for(unsigned int k = 0; k < opt->K; ++k){
+                for (unsigned int b = 0; b < opt->K_UMI; ++b){
+                    // post hoc separate UMI+ haplotypes if there is an UMI collision
+                    if( mod->gamma[b*opt->K + k] > 0)
+                        mod->gamma[b*opt->K + k] = 1.0;
+                }   
+        }
+    }else{ // Or just assign UMIs to the haplotype with the highest probability 
+        for (unsigned int b = 0; b < opt->K_UMI; ++b){
+            double max = 0.;
+            unsigned int max_idx = 0;
+            for(unsigned int k = 0; k < opt->K; ++k){
+                if( mod->gamma[b*opt->K + k] > max){ 
+                    max = mod->gamma[b*opt->K + k];
+                    max_idx = k;
+                } 
+             }
+            for(unsigned int k = 0; k < opt->K; ++k){
+                if(k == max_idx)  
                     mod->gamma[b*opt->K + k] = 1.0;
-            }   
+                else
+                    mod->gamma[b*opt->K + k] = 0.;
+             }     
+        }   
     }
 
     /* Deduplicate abundance for each haplotypes */

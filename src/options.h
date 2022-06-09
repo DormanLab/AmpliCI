@@ -55,6 +55,7 @@ struct _options {
 	double threshold_UMI;   /* ! minimal UMI abundance */
 	double threshold_hap;   /*  !minimal hap abundance */
 	unsigned int max_offset; /* ! maximal allowed offset */
+	unsigned int umicollision; /* ! consider UMI collision or not*/
 
 	/* model */
 	int convergence_amplici;  /*<! convergence or not when updating abundance */

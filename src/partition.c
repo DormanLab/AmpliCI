@@ -237,8 +237,8 @@ int ampliCI_wpartition(options * opt, data * dat, model *mod, initializer *ini, 
 			return mmessage(ERROR_MSG, FILE_OPEN_ERROR,
 							opt->outfile_fasta);
 		
-		fprint_haplotypes_abun(fp2,ini->seeds[0], opt->K,
-			dat->max_read_length, opt->p_threshold, "H", 
+		fprint_haplotypes_abun(fp2,&ini->seeds[0], opt->K,
+			&dat->max_read_length, opt->p_threshold, "H", 
 				NULL, NULL, NULL);
 
 		fclose(fp2);

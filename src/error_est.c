@@ -660,6 +660,12 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 					>= opt->seed_min_observed_abundance) {
 				K_seeds ++;
 				ini->cluster_size[k] ++;
+
+				// if we just need the most abundant sequence for each UMI cluster
+				if(!opt->umicollision){
+					break;
+				}
+
 			} else {
 				break;
 			}

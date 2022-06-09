@@ -122,6 +122,7 @@ int make_options(options **opt) {
 	op->omega = 1e-20;
 	op->threshold_UMI = 1;    // allowed minimal UMI abundance 
 	op->threshold_hap = 0;    // allowed minimal deduplicated abundance of haplotypes
+	op->umicollision = 1;   // consider UMI collision by default
 
 	return NO_ERROR;
 } /* make_options */
@@ -241,6 +242,8 @@ int parse_options(options *opt, int argc, const char **argv)
 		case 'n':
 			if (!strcmp(&argv[i][j], "nJC69")) {
 				opt->JC69_model = 0;
+			}else if (!strcmp(&argv[i][j], "ncol")){
+				opt->umicollision = 0;
 			}else{
 				opt->nw_align = NO_ALIGNMENT;
 			}
@@ -628,7 +631,7 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 			"default diagnostic test threshold is quite liberal.  "
 			"Reads with log likelihood higher than <lldbl> under the current model are assigned "
 			"to clusters.\n", &exe_name[start], &exe_name[start]);
-		fprintf(fp, "\n\t%s can also be used to assign reads to user-provided haplotypes by using the "
+		fprintf(fp, "\t%s can also be used to assign reads to user-provided haplotypes by using the "
 			"--haplotypes option.  This can be helpful if there are known haplotypes in the sample, "
 			" but it is also useful for careful abundance estimation.\n", &exe_name[start]);
 	} else if (!strcmp(command, "cluster")) {
@@ -672,9 +675,10 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 	if(!strcmp(command,"error"))
 		fprintf(fp, "\t--partition <pstr> \n\t\tPartition file used for a better error profile. [DEFAULT: none] \n");
 	if (!strcmp(command, "cluster")){
-		fprintf(fp, "\t--n  \n\t\t Disnable sequence alignment during clustering. Use it when there are no indel errors.  [DEFAULT: no]\n");
+		//fprintf(fp, "\t--n  \n\t\t Disnable sequence alignment during clustering. Use it when there are no indel errors.  [DEFAULT: no]\n");
+		fprintf(fp, "\t--nNW\n\t\tDo NOT use Needleman-Wunsch alignment to align candidate haplotypes to the haplotype set to detect indel errors  [DEFAULT: %s]\n", opt->nw_align  ? "use" : "don't use");
     }	else if(!strcmp(command, "assignment")){
-		fprintf(fp, "\t--n  \n\t\t Assign reads without sequence alignment. [DEFAULT: no]\n");
+		fprintf(fp, "\t--nNW  \n\t\t Do NOT use Needleman-Wunsch alignment to assign reads. [DEFAULT: %s]\n", opt->nw_align  ? "use" : "don't use");
 	}
 	if(!strcmp(command, "cluster"))
 		fprintf(fp, "\t--umi \n\t\tCluster UMIs.\n");
@@ -691,7 +695,6 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 		fprintf(fp, "\t--rho <rdbl> \n\t\t Tunning parameter that control the sparsity of the transition matrix gamma.  [DEFAULT: %f]\n", opt->rho);
 	if(!strcmp(command, "daumi"))
 		fprintf(fp, "\t--umilen <uuint> \n\t\t Length of UMI [REQUIRED]\n");
-	fprintf(fp, "\t--help | -h\n\t\tThis help.\n");
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--indel <inddbl>\n\t\tSequencing indel error rate.  Cannot also use options --insertion or --deletion.  [DEFAULT: %f]\n", opt->indel_error);
 	if (!strcmp(command, "cluster"))
@@ -699,7 +702,8 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--kmax <kuint>\n\t\tSet maximum number of clusters K.  [DEFAULT: %i]\n", opt->K_max);
 	if (!strcmp(command, "cluster"))
-		fprintf(fp, "\t--nJC69 \n\t\tDisable JC69 model. [Use it when biological sequences are unrelated]\n");
+	//fprintf(fp, "\t--nJC69 \n\t\tDisable JC69 model. It should be used when biological sequences are unrelated. [DEFAULT: no]\n");
+		fprintf(fp, "\t--nJC69\n\t\tDo NOT use JC69 model for haplotypes. The JC69 model reduces the number of model parameters and increases sensitivity.  [DEFAULT: %s]\n", opt->JC69_model ? "use" : "don't use");
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--log_likelihood | -ll <lldbl>\n\t\tLower bound for screening reads during cluster assignment.  This is the minimum log assignment likelihood, ln pi_k + ln Pr(r_i|h_k). [DEFAULT: %f]\n", opt->ll_cutoff);
 	if (!strcmp(command, "cluster")) {
@@ -712,6 +716,10 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 	}else if (!strcmp(command, "daumi")){
 		fprintf(fp, "\t--outfile, -o FILE \n\t\tOutput file(s) for haplotypes with estimated deduplicated abundance. [REQUIRED]\n");
 	}
+	if (!strcmp(command, "error"))
+		fprintf(fp, "\t--ncollision \n\t\t Assume NO UMI collision during error estimation based on UMI partition file. [DEFAULT: %s]\n", opt->umicollision ? "collision" : "no collision");
+	if (!strcmp(command, "daumi"))
+		fprintf(fp, "\t--ncollisin \n\t\t Assume NO UMI collision, that same UMI can be not attacehd to two (different or identical) haplotypes. [DEFAULT: %s]\n", opt->umicollision ? "collision" : "no collision");
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--per_candidate | --pdiag <pdbl>\n\t\tAdjust diagnostic threshold (--diagnostic) to %f / number_candidates.  [DEFAULT: %s]\n", opt->alpha, opt->per_candidate ? "yes" : "no");
 	if (!strcmp(command, "cluster"))
@@ -719,6 +727,7 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--scores <match> <mismatch> [<transversion_mismatch>] <gap>\n\t\tSet scores of the Needleman-Wunsch aligner.  [DEFAULT: %d %d %d %d]\n", opt->score[0][0], opt->score[0][3], opt->score[0][1], opt->gap_p);
 	fprintf(fp, "\t--verbose INT\n\t\tVerbosity level; set to 8+ for debugging.  [DEFAULT: %d]\n", opt->info);
+	fprintf(fp, "\t--help | -h\n\t\tThis help.\n");
 //	fprintf(fp, "\t-k <kuint>\n\t\tNumber of haplotypes in the haplotype set (used with -i <hstr>).  [DEFAULT: %i]\n", opt->K);	/* KSD: get rid of this option */
 	/* fprintf(fp, "\t--most <mint>\n\t\tReport top m-most abundant sequences and quit. [DEFAULT: %i]\n", opt->most_abundant); */
 	fprintf(fp, "\n");
