@@ -1,37 +1,56 @@
-AmpliCI-UMI
-===========
+AmpliCI
+=======
 
-AmpliCI-UMI, Amplicon Clustering Inference with UMI information, is built on [AmpliCI](https://github.com/DormanLab/AmpliCI), but takes advantage of UMI information for denoising amplicon sequencing data, which contributes to a more accurate error profile and better clustering results.
-AmpliCI-UMI greatly enhances the accuracy of detecting rare sequences and provides deduplicated abundance estimation, elimilating PCR-induced errors and bias.
-
+AmpliCI, Amplicon Clustering Inference, denoises Illumina amplicon data by approximate model-based clustering.
 
 # Table of Contents
+1. [Prerequisites](#prerequisites)
 1. [Installation](#installation)
 1. [Preparing input](#input)
+	1. [Demultiplexing](#demultiplexing)
+	1. [Quality control and read processing](#quality)
+	1. [Input files](#inputfiles)
 1. [Usage](#usage)
-1. [Tunning Parameter](#parameter)
 1. [Output](#output)
-1. [Options](#options)
-1. [Acknowledgments](#acknowledgments)
+1. [Downstream analysis](#downstream)
+1. [Troubleshooting](#troubleshooting)
+1. [Detailed options](#options)
+1. [C library](#library)
+1. [Acknowledgements](#acknowledgements)
 1. [Citation](#citation)
 1. [Contact](#contact)
+
+# Prerequisites <a name = "preresuisites" />
+
+- AmpliCI requires [cmake](https://cmake.org) (3.5.0 or higher version) and [gcc](https://gcc.gnu.org) (5.4.0 or higher version).
+- AmpliCI requires some C and FORTRAN libraries provided by R.  You can download and install R from [https://www.r-project.org](https://www.r-project.org).
+- AmpliCI requires Rmath, the [R Standalone Math Library](https://cran.r-project.org/doc/manuals/r-release/R-admin.html#The-standalone-Rmath-library).  Often, the Rmath library (libRmath.a or libRmath.so for Linux or libRmath.dylib for MacOS) will be installed with R, but not always.  Here are some other locations for the library.
+	- r-mathlib on [Ubuntu](https://ubuntu.com/) and [Debian](https://www.debian.org/)
+	- libRmath on [Fedora](https://ubuntu.com/), [CentOS](https://centos.org/), [Mageia](https://www.mageia.org/en/), and [Mandriva](https://www.openmandriva.org/)
+	- Or if all else fails, you can install the Rmath standalone library from the repository [https://github.com/statslabs/rmath](https://github.com/statslabs/rmath)
+  - If you do not get admin to install Rmath, you can compile the Rmath standalone library and move libRmath.a to the `src` folder. Or you can modify the line in CMakeLists.txt to add the path to your own Rmath library.
+  
+  ```
+  set(RMATH_PATH "path/to/libRmath.a")
+  ```
+    
+ 
 
 
 # Installation <a name = "installation" />
 
-AmpliCI-UMI shares the same prerequisites with AmpliCI. Please check the [prerequisites](https://github.com/DormanLab/AmpliCI#prerequisites) before the following installation. 
-The software has been tested under Linux and MacOS.
+AmpliCI has been tested under Linux and MacOS.
 
 1. Clone the repository.
 
     ```sh
-    git clone https://github.com/xiyupeng/AmpliCI-UMI.git
+    git clone https://github.com/DormanLab/AmpliCI.git
     ```
 
 2. Configure the project.
 
    ```sh
-   cd AmpliCI-UMI/src
+   cd AmpliCI/src
    cmake .
    ```
 
@@ -43,244 +62,316 @@ The software has been tested under Linux and MacOS.
 
 # Preparing input <a name="input" />
 
-The input of AmpliCI is a FASTQ file. 
-Besides the common practice for [preprocessing](https://github.com/DormanLab/AmpliCI#input) raw FASTQ files,
-additional preprocessing steps are required for AmpliCI-UMI.
-For each sample, users need to prepare their data in three FASTQ files.
+The input of AmpliCI is a FASTQ file, but there is some necessary preprocessing.
 
-- `FILENAME.bc.fq`
+## **Demultiplexing** <a name="demultiplexing" />
 
-- `FILENAME.trim.fq`
+Like all other denoising methods, the starting point of the analysis is FASTQ sequence data after demultiplexing.  If you start with separate barcode and read FASTQ files, you can use the qiime script [split\_libraries\_fastq.py](http://qiime.org/scripts/split_libraries_fastq.html) for demultiplexing.  Use the option ```--store_demultiplexed_fastq``` to keep demultiplexed fastq files.
 
-- `FILENAME.fq`
+## **Quality control and read preprocessing** <a name="quality" />
 
+AmpliCI requires all input reads have the **same** length, with no **ambiguous** nucleotides (only A, C, G, T base calls allowed).  (One way to truncate or filter reads with ambiguous nucleotides is via the R package [ShortRead](https://rdrr.io/bioc/ShortRead/).)
 
-Each FASTQ file contains subsequences of the original FASTQ file, UMIs (`FILENAME.bc.fq`), biological sequences (`FILENAME.trim.fq`) or UMIs + biological sequences (`FILENAME.fq`).
-Subsequences from the same read share the same seq ID and are in the same order in all three files.
-In `FILENAME.fq`, UMIs should be at the front of biological sequences.
-It is easy to prepare the three FASTQ files using [seqkit](https://github.com/shenwei356/seqkit) with subcommand `subseq` and `concat`.
+## **Input files** <a name="inputfiles" />
 
-Below is an example how to prepare the other two files from `FILENAME.fq` (total reads length 250nt with UMI length 9nt)
+AmpliCI takes a single demultiplexed FASTQ file (one per sample) generated from the Illumina sequencing platform, with reads trimmed to the same length and containing no ambiguous nucleotides (see above steps). If you have paired end data, AmpliCI can analyze the forward reads, the reverse reads, or the merged reads, but not both forward and reverse reads simultaneously.
 
-```
-seqkit subseq -r 1:9 FILENAME.fq > FILENAME.bc.fq
-seqkit subseq -r 10:250 FILENAME.fq > FILENAME.trim.fq
-```
+You can find example input FASTQ files in the [test](https://github.com/DormanLab/AmpliCI/tree/master/test) directory.
 
-or generate `FILENAME.fq` based on the other two files
+One read in the input FASTQ file should fit in exactly **four** lines, as in the format below.
 
 ```
-seqkit concat FILENAME.bc.fq FILENAME.trim.fq > FILENAME.fq 
+@SRR2990088.351
+TACGGAGGATCCGAGCGTTATCCGGATTTATTGGGTTTAAAGGGTGCGTAGGCGGCCTTTTAAGTCAGCGGTGAAAGTCTGTGGCTCAACCATAGAATTGCCGTTGAAACTGGGAGGCTTGAGTATGTTTGAGGCAGGCGGAATGCGTGGTGTAGCGGTGAAATGCGTAGATATCAAGCAGAACACCGATTGCGAAGGCAGCTTGCTAAGCCATGACTGACGCTGATGCACGAAAGCGTGGGGATGAAACA
++
+CCCCCGGGG8CFCFGGEGGGGGGGGGB@FFEEFFGFCFFFGGGGGGGEFGGG9@@F@FF9EFFG<EEGD@EFFGGGG,ECBCEFGCAFEFEEF<E?FEFFG<F@FFFGGG9FG@FGGG8DEGGGD,A=4,AEDF+F3BCCEEE7DFCGEEDEFEGFEGEGE<@@F>*:?BB7@;,>,5,*;CC:,4C957*:AB5<=DF6:>/*5*121/(/*500.<<;52(444+164-83::>:B021;91-(.<6).
 ```
 
+First line: @sequence name
 
-# Usage <a name="usage" />
+Second line: DNA sequence (A, T, C, G)
 
-AmpliC-UMI contains four major step in the pipeline.
+Third line: +any content on a single line
 
-1. Cluster UMI sequences (the executable is called run_AmpliCI):
+Fourth line: quality score sequence ([ASCII](https://en.wikipedia.org/wiki/FASTQ_format#Encoding) [!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJ])
+
+If your read or quality scores are split over multiple lines, AmpliCI will not work.  One possible script for fixing your FASTQ-formatted files is given by [Damian Kao on BioStars](https://www.biostars.org/p/14828/). You can also use [seqkit](https://github.com/shenwei356/seqkit) with following command,
+```
+seqkit seq reads_1.fq -w 0
+```
+
+# Usage
+
+AmpliCI runs in two major steps:
+
+1. Use AmpliCI to estimate the error profile directly from the data (the executable is called run_AmpliCI):
 
 ```sh
-./run_AmpliCI --umi --fastq <input_umi_fastq_file> --outfile <output_umi_base_filename>
+./run_AmpliCI --fastq <input_fastq_file> --outfile <output_error_profile_file> --error
 ```
 
 An example (from the ```src``` directory):
 
 ```sh
-./run_AmpliCI --umi --fastq ../test/sim2.bc.fq --outfile ../test/sim2.bc
+./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/error.out  --error
 ```
 
-2. Estimate error profile based on partitions indicated by umi clusters:
+2.  Use Amplici to estimate the haplotypes and their abundance using the estimated error profile:
 
 ```sh
-grep "assign" <input_umi_out_file> | awk '{$1="";print}' > <output_umi_partition_file>
-./run_AmpliCI --fastq <input_trim_fastq_file>  --outfile <output_error_profile_file> --partition <input_umi_partition_file> -exclude --abundance 2 --error 
+./run_AmpliCI --fastq <input_fastq_file> --outfile <output_base_filename> --abundance 2 --profile <input_error_profile_file>
 ```
 
-An example:
+An example (from the ```src``` directory):
 
 ```sh
-grep "assign" ../test/sim2.bc.out | awk '{$1="";print}' > ../test/partition.txt
-./run_AmpliCI --fastq ../test/sim2.trim.fq  --outfile ../test/error.out --partition ../test/partition.txt -exclude --abundance 2 --error
+./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/test --abundance 2 --profile ../test/error.out
 ```
 
-3.  Cluster umi-tagged sequences to get initial haplotype set ([seqkit](https://github.com/shenwei356/seqkit) required for truncation and deduplication):
+If you provide no input error profile with the `--profile` option, AmpliCI will assume the error rates are the error rates dictated by [Phred quality scores](https://www.illumina.com/documents/products/technotes/technote_Q-Scores.pdf).
+Assuming Phred quality scores is not a good idea.
+Using Phred quality scores tends to generate high numbers of false positives and runs very slowly.
+
+- You can also use AmpliCI to reassign reads given input haplotypes. You can provide your haplotype set with '--haplotypes' option:
 
 ```sh
-./run_AmpliCI --fastq <input_merge_fastq_file> --outfile <output_merge_base_filename> --profile <input_error_profile_file> -trim <umi_length>
-cat <input_merge_fasta_file> |  seqkit subseq -r <start_idx>:<end_idx> | seqkit rmdup -s | seqkit seq -w 0 > <output_hap_fasta_file>
+./run_AmpliCI --fastq <input_fastq_file> --outfile <output_assignment_filename> --profile <input_error_profile_file> --haplotypes <input_haplotypes_fasta_file>
 ```
 
-`<start_idx>` and `<end_idx>` are start and end position of biological sequences.
-Thus UMI length is `<start_idx>-1` and biological sequence length is `<end_idx>-<start_idx>+1`.
-
-An example (total reads length 250nt with UMI length 9nt):
+An example (from the ```src``` directory):
 
 ```sh
-./run_AmpliCI --fastq ../test/sim2.fq --outfile ../test/sim2.merge --profile ../test/error.out -trim 9 
-cat ../test/sim2.merge.fa |  seqkit subseq -r 10:250 | seqkit rmdup -s | seqkit seq -w 0 > ../test/sim2.merge.trim_dedup.fa
+./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/test.id --profile ../test/error.out --haplotypes ../test/test.fa
 ```
 
-4. Estimate deduplicated abundance of each haplotype. rho is a tunning parameter. We describe how to tun this parameter in the following section.
 
-```sh
-./run_AmpliCI --fastq <input_merge_fastq_file> --umifile <input_umi_fasta_file> --haplotype <input_hap_fasta_file> -umilen <umi_length> --outfile <output_base_filename> --profile error.out -rho <rho>
-```
-
-An example:
-
-```sh
-./run_AmpliCI --fastq ../test/sim2.fq --umifile ../test/sim2.bc.fa -haplotype ../test/sim2.merge.trim_dedup.fa -umilen 9 --outfile ../test/test --profile ../test/error.out -rho 46
-```
-
-- You can run the whole pipeline on this example (from the ```src``` directory):
-
-```sh
-bash ../script/ana.bash
-```
-
-- Alternative step to the 3rd step. The main goal of the 3rd step is to initialize a haplotype set. 
-One alternative step could be directly running AmpliCI on non-UMI-tagged fastq files.
-
-```sh
-./run_AmpliCI --fastq <input_trim_fastq_file> --outfile <output_hap_base_filename> --profile <input_error_profile_file>
-```
-The alternative step costs less time but with a risk of missing some very similar haplotypes.
-We recommend to run the alternative step on massive datasets with sequences with moderate similarity, e.g. 16S rRNA gene sequences.
-
-- More detailed help can be obtained with:
+- Detailed help can be obtained with:
 
 ```sh
 ./run_AmpliCI --help
 ```
 
-# Tunning Parameter <a name = "parameter" />
+- If you apply AmpliCI on longer reads with length > 300 (like merged reads), you may want to decrease the default Lower bound for screening reads during cluster assignment with `--log_likelihood` [DEFAULT: -100.000000]. For example, you can set the lower bound at -200.
 
-A separate program will be used to find the value of the tuning parameter rho. 
-You can find the program from the ```script``` directory.
-
-1. **Preparation**
-
-First, codes can be compiled with
+```sh
+./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/test.id --profile ../test/error.out --haplotypes ../test/test.fa --log_likelihood -200
 ```
-cd ../script
-gcc -Wall -pedantic -Wextra -g -o bp_pmf_mix bp_pmf_mixture.c fft.c -lfftw3 -lm
-```
-You may need to add additional path to the Rmath library (use -L) and header files (use -I) if Rmarh is not on your default path.
-The input file is the count distribution of UMI raw abundance in the sample, 
-that the number in the ith row is the number of unique UMIs with abundance i.
-You can find examples of the input file `.txt` under the ```script``` directory.
 
-2. **Model Fitting**
-
-The first step is to fit our proposed model (details in the paper) to data (the executable is called bp_pmf_mix).
-```
-./bp_pmf_mix -f  <input_data_file>  -t <truncate_position> > <output_csv_file>
-```
-You can use option `-t` to select a truncate position to truncate the long right tail of the distribution, which may be contributed by unmodeled UMI collision.
-
-3. **Refit Model**
-
-You can also use the estimated values of parameters as the input to the program, in order to obtain the desired distribution without reestimating parameters.
-Below we use the input file from a HIV dataset as an example. 
-```
-./bp_pmf_mix -f hiv1_raw_abun.txt -t 100 --efficiency 0.6 --ncycles 11 --epsilon 0.004 --delta 0.01 > text.csv
-```
-Options `--efficiency`, `--ncycles`, `--epsilon` and `--delta` are four parameters in the model, that represent PCR efficiency, number of PCR cycles, PCR error rate and sequence error rate. You can find more details about the model intepretation in the paper. 
-
-4. **Select Rho**
-
-In practice, we currently choose rho as the argmax {Pr(X <= rho | Z = 1) < 0.05},
-which means at most five percent of true variants will have observed abundance below or equal to rho.
-And you can find such information at the 8th column in the output csv file.
 
 # Output Files <a name = "output" />
 
-The final step of the pipeline with argument `--outfile <output_base_filename>` generates two output files:
+## Estimating error profile.
 
-***1.`output_base_filename.fa`***
+When run to estimate the error profile, AmpliCI will output an error profile `<output_error_profile_file>` in text format.  This is simply a list of comma-separated probabilities (times 1000) of the probability that haplotype nucleotide `n` is misread as read nucleotide `m` with quality score `q`.  They are ordered as `(n,m,q)`, with the last index varying the fastest. Both haplotype nucleotide `n` and read nucleotide `m` are in the order (A,C,T,G) , and `q` has the range from 0 to 40 (41 in total). For example, the first 41 entries are estimated transition probabilities for A->A when observed quality score q is in [0:40]; Then the 42nd - 82nd entries are estimated transition probabilities for A->C; the 165th - 205th entries are estimated transition probabilities for C->A.... In our recommended workflow the error profile should only be used with the dataset from which it was estimated. If you apply AmpliCI estimates to other datasets or use other estimates with AmpliCI, you should consider the following:
 
-FASTA-formatted file containing denoised sequences (or haplotypes) as well as their deduplicated abundances. For example, for the first haplotype, the FASTA header might look like:
+- AmpliCI encodes nucleotides in the order of (A, C, T, G), which is different from the commonly used alphabetic order (A, C, G, T).
+
+- Not all quality scores will be observed, especially for quality scores < 3. To avoid extrapolation, error rates for quality scores outside the range of observed quality scores will not be estimated by LOESS regression. Instead, we just assume the error rates dictated by [Phred quality scores](https://www.illumina.com/documents/products/technotes/technote_Q-Scores.pdf) with equal probability of each possible nucleotide substitution when there is an error.
+
+## Estimating haplotypes.
+
+When run to estimate haplotypes and their abundances with argument `--outfile <output_base_filename>` or `--outfile <fasta_output_file> <information_output_file>`, there will be two output files:
+
+***1.`output_base_filename.fa` or `fasta_output_file`***
+
+FASTA-formatted file (will be used in the downstream analysis) containing denoised sequences (or haplotypes).  For each sequence, we also provide `size` (scaled true abundance), `DiagP` (diagnostic probability), `ee` (mean expected number of errors in reads), useful for chimera detection and *post hoc* filtering. For example for the first haplotype, the FASTA header might look like:
 
 ```
->H0;Deduplicated Abundance=18.000;
+>H0;size=516.000;DiagP=0.00e+00;ee=0.405;
 ```
 
-For each haplotype, deduplicated abundance is the estimated number of unamplified sample sequences.
+- `size`: scaled true abundance (expected number of error free reads) estimated for each selected haplotype, required for the subsequent chimera detection with UCHIME3.
+
+- `DiagP`: diagnostic probability, which could be used as a criterion to check false positives. We suggest post hoc removal of haplotypes with `DiagP` > 1e-40 when applying AmpliCI on real datasets with more than 1 million reads to reduce false positives. The diagnostic probability may contain an allowance for contaminating sequences (see option `--contaminants`). For further information of the diagnostic probability and contamination screening, please see [our paper](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1).
+
+- `ee`: mean expected number of errors per read. Edgar and Flyvbjerg ([Edgar and Flyvbjerg, 2015](https://academic.oup.com/bioinformatics/article/31/21/3476/194979)) suggested a strategy to filter reads according to their expected number of errors.  For example, you could remove haplotypes with `ee` > 1. Though this strategy works for some mock datasets, we have observed `ee` > 1 for several true haplotypes with very low abundance when analyzing a specific mock dataset (stag1, see [our paper](https://www.biorxiv.org/content/10.1101/2020.02.23.961227v1)). You can read [more about `ee`](https://www.drive5.com/usearch/manual/exp_errs.html).
 
 
-***2.`output_base_filename.out`***
+***2.`output_base_filename.out` or `information_output_file`***
 
 A text file with the following information provided as key: value pairs, one per line.  The keys are:
 
-- `log likelihood`: Penalized log likelihood of the model. See the paper for more details.
+- `K`: Number of haplotypes selected by AmpliCI.
 
-- `K`: Number of haplotypes (total number of sequences in the input haplotype set <input_hap_fasta_file> )
-
-- `assignments`: model-assigned haplotype for each read in FASTQ-determined input order.  Haplotypes are numbered 0, 1, ..., and match the sequences H0, H1, ... in the output FASTA file of haplotypes.
+- `assignments`: AmpliCI-assigned haplotype by posterior probability for each read in FASTQ-determined input order.  Haplotypes are numbered 0, 1, ..., and match the sequences H0, H1, ... in the output FASTA file of haplotypes.  NA is output if the read's maximum conditional log likelihood (given the source haplotype) does not exceed a user-defined threshold (option `-ll`; default -100).  These assignments are not based on alignment of reads to the haplotypes, so some reads, particularly indel errors, may not be assigned (NA).  See option `--haplotypes` for more careful read assignment.
 
 - `cluster sizes`: Number of reads assigned to each haplotype.
 
-- `UMI K`: Number of unique UMIs (total number of sequences in the input UMI set <input_umi_fasta_file> )
+- `pi`: Estimated $\boldsymbol{\pi}$ from AmpliCI.  Each read is assigned to a haplotype by maximum transition probability $\Pr(r_i|h_k)$ (distinct from posterior probability used for assignments) and $\pi_k$ is the proportion of reads assigned to haplotype $k$.
 
-- `UMI assignment`: model-assigned UMI for each read in FASTQ-determined input order.
+- `reads ll`: For each read, the maximum conditional log likelihood (given the source haplotype), $\ln \pi_k + \ln \Pr(r_i|h_k)$.
 
-- `UMI cluster sizes`: Number of reads assigned to each UMI.
+- There is also a fasta listing of the haplotypes reported in this file.
 
-- `reads ll`: The posterior log likelihood for each read.
+- `ee`: For each read, the mean expected number of errors. See discussion on `ee` in ***`output_base_filename.fa`*** above.
 
-- `Eta`: Relative abundance of each unique UMI
+- `uniq seq id`: The index of each selected haplotype in the unique sequence list, ordered from highest abundance to lowest.  If the haplotypes were selected in observed abundance order, then these will be increasing integers from 0.  If any unique sequence was discarded, some integers will be skipped.  For example, this line is `0   1   2   3   4   5   6   7  10  42  45` for test file `test/sim3.8.1.fastq`, indicating that the first 8 most observed sequences were selected as haplotypes, but the 9th and 10th most observed sequences were discarded, and so on.
 
-- `Gamma`: A UMI_K X K matrix used to indicate dependence between UMI and haplotypes. The deduplicated abundance of the kth haplotype is the kth column sum of the Gamma.
+- `scaled true abun`: The estimated scaled true abundances of each selected haplotype (expected number of error free reads).
 
-- There is also a list of haplotypes with related UMIs reported in this file.
+- `obser abun`: The observed abundance of each selected haplotype.
 
-The example below showed one haplotype with related 3 UMIs. Thus the deduplicated abundance of the haplotype is 3.  
+- `Estimated common ancestor` (value on next two lines in FASTA format): The final, estimated common ancestor of all the haplotypes used in the BIC calculation.
+
+- `Evolution_rate`: The estimated evolutionary time separating each haplotype from the ancestor.
+
+- `log likelihood from JC69 model`: The log likelihood of the JC69 hierarchical model computed on the final, fitted model.
+
+- `Diagnostic Probability threshold`: The threshold used to reject candidate haplotypes in the contamination test.  This is the value input through option `--diagnostic` divided by the number of possible candidate haplotypes.
+
+- `aic`: The estimated [Akaike Information Criterion](https://en.wikipedia.org/wiki/Akaike_information_criterion) value from the final fitted model.
+
+- `bic`: The estimated [Bayesian Information Criterion](https://en.wikipedia.org/wiki/Bayesian_information_criterion) value from the final fitted model.
+
+When run with option `--haplotypes` to reassign reads to the user-provided **haplotype set** (a FASTA-formatted file), AmpliCI will output a read assignment file `<output_assignment_filename>` in text format. The keys are
+
+- `assignments`: See the description above for outfile `output_base_filename.out`.  There should be fewer NA assignments because reads with low log likelihood are aligned to the haplotypes to detect indel sequencing errors.
+
+- `cluster sizes`: See the description above for outfile `output_base_filename.out`.  The sizes should be higher if more reads are successfully assigned to haplotypes.
+
+# Downstream Analysis <a name="downstream" />
+
+The output FASTA file contains denoised raw haplotype sequences, which may include chimeric sequences.  The first step of any downstream analysis should be to remove chimeric sequences.
+
+## **Chimera Detection** <a name="chimera" />
+
+The AmpliCI-outputted FASTA file is in acceptable format to input into the [uchime3_denovo](https://www.drive5.com/usearch/manual/cmd_uchime3_denovo.html) method implemented in [usearch](https://drive5.com/usearch/).
+
+Haplotype sorting by abundance
+```sh
+./usearch -sortbysize <input_fasta_file> -fastaout <output_sorted_fasta_file>
+```
+
+Chimera detection
+```sh
+./usearch -uchime3_denovo <input_sorted_fasta_file> -uchimeout <uchime_outfile> -chimeras <chimera_fasta_outfile> -nonchimeras <nonchimera_fasta_outfile>
+```
+
+You may also use other chimera detection algorithms to remove chimeras.
+
+## **Generate Amplicon Sequence Variant (ASV or sOTU) Table** <a name = "otu" />
+
+We have provided an [R script](https://github.com/DormanLab/AmpliCI/tree/master/script/Make_ASV_Tables.R) to help to generate the ASV (sOTU) table, where scaled true abundances (see `size`) per sample per ASVs/sOTUs are reported.
+
+## **Taxa Assignment** <a name = "taxa" />
+
+You may want to identify the non-chimeric haplotypes detected in your sample.
+There are multiple methods.
+
+1. [DECIPHER](https://bioconductor.org/packages/release/bioc/html/DECIPHER.html) contains [IDTAXA](https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-018-0521-5), a novel approach for taxonomic classification.
+
+2. [RDP classifier](http://rdp.cme.msu.edu), a Naive Bayesian Classifier.
+
+## **Futher Analysis**	<a name = "further" />
+
+[mothur](https://www.mothur.org), [qiime2](https://qiime2.org), [LefSE](https://huttenhower.sph.harvard.edu/galaxy/), [phyloseq](https://bioconductor.org/packages/release/bioc/html/phyloseq.html), ....
+
+
+# Troubleshooting <a name = "troubleshooting" />
+
+The algorithm may stop if your:
+
+- quality scores are not in the typical range for Illumina datasets [33,73]
+
+- reads contain ambiguous nucleotides
+
+- reads are not in the right FASTQ input format, for example reads and quality scores cannot contain newline characters
+
+- there are too few reads or reads are so noisy that there are no sequences observed more than the lower bound number of times (option `--abundance`, default 2.0)
+
+# Detailed options <a name = "options" />
+
+Main options:
+
+- `--fastq` The fastq input file.  [REQUIRED]
+
+- `--outfile` Output file(s) for haplotype discovery, estimated error profile (when used with --error), or cluster assignments (when used with --haplotypes).  [REQUIRED]
+
+- `--profile` The input error profile. If none, convert quality score to Phred error probability.  [DEFAULT: none]
+
+- `--error` Estimate the error profile. [Used in error estimation only]
+
+- `--haplotypes` FASTA file with haplotypes. [Used in reads assignment only]
+
+Options for sensitivity:
+
+- `--abundance` Lower bound for scaled true abundance during haplotype reconstruction (should be >= 2.0).  [DEFAULT: 2.0]
+
+- `--contaminants` Baseline count abundance of contaminating or noise sequences.  [DEFAULT: 1]
+
+- `--indel` Indel sequencing error rate.  Cannot also use options --insertion or --deletion.  [DEFAULT: 0.00006]
+
+- `--diagnostic`  Threshold of diagnostic probability in the diagnostic/contamination test.  [DEFAULT: 0.001 / number_candidates]
+
+Other important options:
+
+- `--align`  Align all reads to haplotypes (slow).  [DEFAULT: none]
+
+- `--log_likelihood`  Lower bound for screening reads during cluster assignment.  This is the minimum log assignment likelihood, $\ln \pi_k + \ln \Pr(r_i|h_k)$. [DEFAULT: -100.000000]
+
+- `--nJC69` Disable JC69 model. By default, AmpliCI assume all sequences are generated from an ancestral sequence, which slightly increases the sensitivity for detecting closed haplotypes. [Use the option when biological sequences are unrelated] 
+
+# C library <a name = "library" />
+
+AmpliCI provides both a shared and a static C library for users to call function ```amplici_wfile()``` to cluster amplicon sequences from another program. The library `libamplici.*` (`libamplici.so` for Linux or `libamplici.dylib` for MacOS, and `libamplici.a`) will appear in the ```src``` directory when you compile AmpliCI.
+
+**Input**
+
+- `fastq_file`: The fastq input file. [REQUIRED]
+
+- `error_profile_name`: The input error profile. If `NULL`, convert quality score to Phred error probability.
+
+- `low_bound`: Allowed lowest abundance. See the description of option `--abundance`. [REQUIRED]
+
+**Output**
+
+- `seeds`: Estimated haplotypes.
+
+- `seeds_length`: Lengths of Estimated haplotypes.
+
+- `cluster_id`: See the description of `assignments` above for outfile `output_base_filename.out`. Note ```amplici_wfile()``` does not filter reads with maximal conditional log likelihood under the given threshold. Instead, it assigns all reads to its closest haplotypes with the maximum likelihood.
+
+- `cluster sizes`: Number of reads assigned to each haplotype.
+
+- `K`: Number of estimated haplotypes.
+
+- `sample_size`: Number of reads in the fastq input file
+
+- `max_read_length`: Maximum read length l. The kth (in [0,1,2,...K-1]) haplotype starts at seeds[k*l].
+
+- `abun`: See the description of `scaled true abun` above for outfile `output_base_filename.out`.
+
+- `ll`: See the description of `reads ll` above for outfile `output_base_filename.out`.
+
+An example to call function ```amplici_wfile()``` is provided in [example_wfile.c](https://github.com/DormanLab/AmpliCI/tree/master/example_wfile.c). You can compile the source file with the C library libamplici.a (in the ```src``` directory):
 
 ```
-AGGATTGATTAAATATTATTGTCCTATTGAAGTGTTCTCTCAATTTTTCACTTACTCTTTGTAAAGTTTTCTCCCATTTAGTTTTATTAATGTTACAATGTGCTTGTCTTATATCTCCTATTATGTCTCCTGTTGCATAGAATGTTTGTCCTGGTCCTATTCTTACACTTTTTCTTGTATTATTGTTGGGTCTTATACAATTAATCTCTACAGATTCATTGAGATGTACTATTATTGTTTT
-TTTTAAAAC GTAAATAGT CGCTAATGA
+gcc -o myprog example_wfile.c -lamplici -lRmath -lm -I ./src/ -L ./src/
 ```
 
-# Options <a name = "options" />
+Use -I to provide path to header file of the library libamplici.h and -L to provide path to the library libamplici.a. You may need to add additional path to Rmath library and header files if needed. Note example_wfile.c needs two more header files in the ```src``` directory, which are not required by the library libamplici.a.
 
-Options of AmpliCI can be found in [here](https://github.com/DormanLab/AmpliCI#options). Below we list options specific for AmpliCI-UMI.
+If you use the shared library (`libamplici.so` or `libamplici.dylib`), you need to add the PATH to the shared library before running your executable file.
 
-- `--partition`: Use a partition file when estimating errors. The partition file contains cluster assignment of each read. Reads assigned with the same number are in the same group. We can use either true partition or UMI-induced partition file to generate a better error profile. 
-
-- `--exclude`: Exclude small clusters during error estimation (set threshold with option --abundance).
-
-- `--abundance` under `error` estimation mode: Lower bound on observed abundance for inclusion of seeded cluster during error estimation.
-
-- `--umi`: Used for clustering UMIs. Compared to the default, we set the gap score -20, and band width 2, used in Needleman Welch alignment. We also disable JC69 model since UMIs are random sequences.
-
-- `--trim`:Ignore first # nucleotides in JC69 model. Since UMIs are random sequences, they should be ignored when fit the JC69 model.
-
-- `--ncollision`: Assume NO UMI collision, that same UMI CANNOT be attached to two different original haplotypes. This option can also be used when estimate errors based on UMI-induced partition file when there is no UMI collision.
-
-- `--umifile`: FASTA file with UMIs.
-
-- `--rho`:  Tunning parameter that control the sparsity of the transition matrix `Gamma`. We have described how to select `rho` above.
-
-- `--umilen`: Length of each UMI.
- 
+```
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/your/full/path/to/library
+```
 
 
-# Acknowledgments <a name = "acknowledgments" />
+# Acknowledgments <a name = "acknowledgements" />
 
-- See acknowledgments of [AmpliCI](https://github.com/DormanLab/AmpliCI#acknowledgements)
+- AmpliCI contains LOESS regression for error estimation, the original file is available at [https://www.netlib.org/a/dloess](https://www.netlib.org/a/dloess).  However, we modified and used related code from R, which derives from the above.
 
+- We used the hash implemented in [uthash.h](https://troydhanson.github.io/uthash/userguide.html).
 
 # Citation <a name = "citation" />
 
 - Peng, X. and Dorman, K. (2020) ‘AmpliCI: A High-resolution Model-Based Approach for Denoising Illumina Amplicon Data’, Bioinformatics. doi: [10.1093/bioinformatics/btaa648](https://academic.oup.com/bioinformatics/article/doi/10.1093/bioinformatics/btaa648/5875058).
 
-- Peng, X. and Dorman, K. (2022) 'Accurate estimation of molecular counts from amplicon sequence data with unique molecular identifiers'. 
-
 # Contact <a name = "contact" />
 
-If you have any problems, please contact:
+If you have any problems with AmpliCI, please contact:
 
-Xiyu Peng (pansypeng124@gmail.com)
+Xiyu Peng (xiyupeng@iastate.edu)
 
 Karin Dorman (kdorman@iastate.edu)
