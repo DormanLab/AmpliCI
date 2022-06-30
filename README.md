@@ -275,7 +275,7 @@ Options of AmpliCI can be found in [here](https://github.com/DormanLab/AmpliCI#o
 
 - Peng, X. and Dorman, K. (2020) ‘AmpliCI: A High-resolution Model-Based Approach for Denoising Illumina Amplicon Data’, Bioinformatics. doi: [10.1093/bioinformatics/btaa648](https://academic.oup.com/bioinformatics/article/doi/10.1093/bioinformatics/btaa648/5875058).
 
-- Peng, X. and Dorman, K. (2022) 'Accurate estimation of molecular counts from amplicon sequence data with unique molecular identifiers'. 
+- Peng, X. and Dorman, K. (2022) 'Accurate estimation of molecular counts from amplicon sequence data with unique molecular identifiers'[BioRxiv](https://www.biorxiv.org/content/10.1101/2022.06.12.495839v1). 
 
 # Contact <a name = "contact" />
 
