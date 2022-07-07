@@ -19,6 +19,11 @@ enum {
 	ALGORITHM_AMPLICI
 };
 
+enum {
+	MLE,
+	MPLE
+};
+
 
 typedef struct _options options;
 /**
@@ -39,6 +44,19 @@ struct _options {
 	char const *outfile_info;  /*<! name of informational outfile */
 	char const *outfile_fasta;  /*<! name of fasta outfile */
 
+	/* UMI information */
+	unsigned int UMI_length;  /* length of UMIs (at the beginning of reads ) */
+	char const *initialization_UMI;  /*<! name of initialization file for UMIs */
+	unsigned int K_UMI;  /*<! num of UMI clusters */
+	unsigned int topN;  /*<! top N possible combinations we considered in the model */
+	int trans_penalty;   /*<! penalty on transiton prob */
+	double rho;          /*<! for MPLE */
+	double omega;       /*< ! for MPLE */
+	double threshold_UMI;   /* ! minimal UMI abundance */
+	double threshold_hap;   /*  !minimal hap abundance */
+	unsigned int max_offset; /* ! maximal allowed offset */
+	unsigned int umicollision; /* ! consider UMI collision or not*/
+
 	/* model */
 	int convergence_amplici;  /*<! convergence or not when updating abundance */
 	int check_false_positive;  /*<! if we check false positive */
@@ -46,10 +64,13 @@ struct _options {
 	int JC69_model;  /*<! use approx. JC69 hierarchical model */
 	int nw_align;  /*<! when and how we perform nw alignment */
 	int indel_model;  /*<! build indel model to calculate trans prob*/
+	int ignor_nc; /*<! Number of nucleotides that will be ignored in JC69 hierarchical model*/
 
 	/* error profile estimation */
 	int error_estimation;  /*<! run error estimate function */
 	char const *partition_file; /*<! given partition file */
+	unsigned int seed_min_observed_abundance; /*<! min. abund. for seed */
+	unsigned char exclude_low_abundance_seeds; /*<! exclude low abundance seeds */
 	int use_error_profile;  /*<! if we choose to use an input error profile */
 	int err_encoding;  /*<! how nucleotides encoded in error profile */
 	char const *error_profile_name;  /*<! name of file name of error profile */
@@ -86,6 +107,7 @@ struct _options {
 	int score[NUM_NUCLEOTIDES][NUM_NUCLEOTIDES];  /* score matrix for nw alignment */
 	int gap_p;  /* penalty for gaps */
 	int band;  /* bandwidth for banded nw alignment */
+	int ends_free; /* counting the indel at the begining ? Yes[0],No[1] */
 
 	int info;  /*<! level of information to output */
 	int use_curses;

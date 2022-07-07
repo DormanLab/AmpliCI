@@ -19,10 +19,11 @@ struct _hash_dna {
     unsigned int count;		/*<! sequence abundance */
     size_t idx;			/*<! index of first sequence in data struct */
     size_t *idx_array;		/*<! indices of all reads */
+    int seeds;          /*<! select as the seeds */
     UT_hash_handle hh;
 };
 
-int add_sequence(hash **seq_count, unsigned char *seq, unsigned int length,size_t idx);
+int add_sequence(hash **seq_count, unsigned char *seq, unsigned int length,size_t idx,int* err);
 int add_seq_idx(hash *seq_count, unsigned char *seq, unsigned int length, size_t idx);
 void delete_all(hash **seq_count);
 unsigned int count_sequences(hash *seq_count, unsigned int k);

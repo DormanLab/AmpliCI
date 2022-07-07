@@ -42,6 +42,9 @@ struct _run_info {
 	unsigned int *optimal_cluster_id;	/*<! optimal hard clustering */
 	unsigned int *optimal_cluster_size;	/*<! optimal cluster sizes */
 	double *optimal_cluster_ll; /*<! maximal read log likelihood */
+	unsigned int *UMI_cluster_id;	/*<! optimal hard clustering for UMIs */
+	unsigned int *UMI_cluster_size;	/*<! optimal cluster sizes for UMIs  */
+	double *UMI_cluster_ll; /*<! maximal read log likelihood for UMIs */
 
 };
 

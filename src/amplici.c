@@ -25,7 +25,7 @@
 #include <math.h>
 
 #define MATHLIB_STANDALONE 1
-//#define DEBUG 0
+// #define DEBUG 0
 //#define ADJUST_PVALUE
 //#define STORE_FP
 #include <Rmath.h>
@@ -58,7 +58,6 @@ int abun_pvalue(options *opt, initializer *ini, size_t *idx_array, double *e_tra
 
 
 /* transition prob with or without alignment */
-double trans_nw(options *opt,unsigned char **align, size_t alen, unsigned int mismatch, unsigned int ngap, double *error_profile,int err_encoding, unsigned char *rqmat, unsigned char n_quality, double adj, unsigned int rlen, double *error_prob);
 int Expected_SelfTrans(options *opt, data *dat, double *self_trans,double *error_profile, int err_encoding, double adj);
 int ExpTrans_nogap(data *dat, options *opt, initializer *ini,unsigned int H_id, unsigned int select, double *error_profile, int err_encoding);
 int ExpTrans_nwalign(data *dat, options *opt, initializer *ini, unsigned char ***nw_result, size_t *nw_alen,unsigned int select, double *error_profile, int err_encoding,unsigned int H_id, double adj);
@@ -215,6 +214,7 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 			return mmessage(ERROR_MSG, FILE_OPEN_ERROR,
 							opt->outfile_fasta);
 		
+		/* [TODO] rewrote the two function below to allow variable length */
 		if (use_size)
 			fprint_haplotypes_size(fp2, ini->seeds, opt->K,
 				ini->seed_lengths, opt->p_threshold, "H",
@@ -643,7 +643,7 @@ int nwalign_matrix(options *opt, data *dat, initializer *ini,
 
 		/* calculate number of indels and mismatch based on alignment */
 		ana_alignment(aln, alen, rlen, &ini->nw_indels[select*size+i], 
-					&ini->nw_mismatch[select*size+i], opt->info);
+					&ini->nw_mismatch[select*size+i], opt->ends_free,opt->info);
 	}
 
 	return err;
@@ -1125,7 +1125,7 @@ int ExpTrans_nwalign(data *dat, options *opt, initializer *ini,
 				ini->nw_indels[dat->hash_length*select+id],
 				error_profile, err_encoding, dat->qmat[r],
 					dat->n_quality, adj, dat->lengths[r],
-							dat->error_prob);
+							dat->error_prob,opt->ends_free);
 		}
 	}
 
@@ -1278,14 +1278,16 @@ int ExpTrans_nogap(data *dat, options *opt, initializer *ini, unsigned int H_id,
  * @param adj			Pr(#{indels} <= read_length)
  * @param rlen			read length 
  * @param n_quality		the number of possible quality scores
- * @param error_prob		error prob indicated by quality score
+ * @param error_prob	error prob indicated by quality score
+ * @param ends_free     count the indel at the beginning of the alignment ?
+ * 						Yes[0], No[1]
  * 
  * @return e_trans		log transition prob
  **/
 double trans_nw(options *opt, unsigned char **aln, size_t alen,
 	unsigned int mismatch, unsigned int ngap, double *error_profile,
 	int err_encoding, unsigned char *rqmat, unsigned char n_quality, 
-	double adj, unsigned int rlen, double *error_prob)
+	double adj, unsigned int rlen, double *error_prob, int ends_free)
 {
 		
 	int fxn_debug = ABSOLUTE_SILENCE;
@@ -1361,7 +1363,7 @@ double trans_nw(options *opt, unsigned char **aln, size_t alen,
 				nins ++;
 
 				if (j == 0)
-					nindel++;
+					nindel += ends_free ? 0: 1;
 				else if (aln[0][j-1] != '-')
 					nindel++;
 
@@ -1376,7 +1378,7 @@ double trans_nw(options *opt, unsigned char **aln, size_t alen,
 			if (aln[1][j] == '-') {
 				ndel ++;
 				if (j == 0)
-					nindel++;
+					nindel += ends_free ? 0: 1;
 				else if (aln[1][j-1] != '-')
 					nindel++;
 				if (opt->indel_model == INDEL_PER_SITE1)
@@ -1562,7 +1564,7 @@ int evaluate_haplotype(options *opt, data *dat, model *mod, initializer *ini,
 	if (opt->JC69_model) {
 		modified_ic(ini->seeds[0], mod->est_ancestor, mod->distance,
 				mod->ll, K, &JC_ll, &new_aic, &new_bic, n_param,
-					dat->max_read_length, dat->sample_size);
+					dat->max_read_length, dat->sample_size,opt->ignor_nc);
 	} else {
 		new_aic = aic(mod->ll, n_param);
 		new_bic = bic(mod->ll, n_param, dat->sample_size);
@@ -1763,7 +1765,7 @@ int check_fp_with_indels(options *opt, data *dat, model *mod, initializer *ini,
 
 		/* calculate number of indels and mismatch based on alignment */
 		ana_alignment(aln, alen, rlen, &nw_indels[k], 
-					&nw_mismatch[k], opt->info);
+					&nw_mismatch[k], opt->ends_free,opt->info);
 
 		/* diagnostic output: */
 		//debug_msg(DEBUG_I, DEBUG_I, "haplotype %u alignment length %zu; #indels %u; #mismatches %u\n", k, alen, nw_indels[k], nw_mismatch[k]);
@@ -1796,7 +1798,7 @@ int check_fp_with_indels(options *opt, data *dat, model *mod, initializer *ini,
 				nw_alen[k], nw_mismatch[k], nw_indels[k],
 				error_profile, mod->err_encoding,
 				dat->qmat[idx_array[r]], dat->n_quality, 
-				mod->adj_trunpois, rlen, dat->error_prob);
+				mod->adj_trunpois, rlen, dat->error_prob,opt->ends_free);
 			tmp += e_trans[k*count + r];
 			#if DEBUG
 			if (nw_indels[k] == 1) {
@@ -2051,7 +2053,7 @@ double Simple_Estep(model *mod, size_t sample_size, double *e_trans,
 		ll += log(sum) + max;
 
 		/* actually these posterior probabilities are not used */
-		for (unsigned k = 0; k < K; ++k)
+		for (unsigned int k = 0; k < K; ++k)
 			mod->eik[k * sample_size + i] /= sum;
 			
 	}
@@ -2218,15 +2220,16 @@ int likelihood_filter(unsigned int K, double ll_cutoff, double *eik, double *pi,
  * @return err
  **/
 int m_JC69(unsigned char * hap, unsigned char * anc, double *dist,
-	unsigned int K, unsigned int len)
+	unsigned int K, unsigned int len, int start)
 {
 	
 	int err = NO_ERROR;
 	unsigned int count[NUM_NUCLEOTIDES];
 	unsigned int max_count;
+	// int start = 9;  // ignore the first 9 nucleotides
 
 	/* most common nucleotide across haplotypes is the estimated ancestor */
-	for (unsigned int j = 0; j < len; j ++){
+	for (unsigned int j = start; j < len; j ++){
 		for (unsigned char n = 0; n < NUM_NUCLEOTIDES; n++)
 			count[n] = 0;
 		for (unsigned int k = 0; k < K; k++)
@@ -2239,11 +2242,14 @@ int m_JC69(unsigned char * hap, unsigned char * anc, double *dist,
 			}
 		}
 	}
+	for (unsigned int j = 0; j < start; j ++)
+		anc[j] = (unsigned char) 4;
+
 
 	/* estimate the expected number of changes per site of all haplotypes */
 	for (unsigned int k = 0; k < K; k++) {		
-		double tmp = (double) hamming_char_dis( (char *) &hap[k*len],
-					(char *) anc, (size_t) len) / len;
+		double tmp = (double) hamming_char_dis( (char *) &hap[k*len+start],
+					(char *) anc, (size_t) len-start) / (len-start);
 		/* Previous there is a bug for the estimated distance out of range */
 		if(tmp >= 0.75)
 			dist[k] = INFINITY;
@@ -2266,12 +2272,13 @@ int m_JC69(unsigned char * hap, unsigned char * anc, double *dist,
  * @return	err status
  **/
 double e_JC69(unsigned char * hap, unsigned char * anc, double *dist,
-	unsigned int K, unsigned int len)
+	unsigned int K, unsigned int len,int start)
 {
 	double ll = 0;
+	// int start = 9;  // ignore the first 9 nucleotides
 
 	for (unsigned int k = 0; k < K; k++)
-		for (unsigned int j = 0; j < len; j++)
+		for (unsigned int j = start; j < len; j++)
 			if (anc[j] == hap[k * len + j])
 				ll += log(0.25 + 0.75 * exp(-dist[k] / 0.75));
 			else
@@ -2301,15 +2308,17 @@ double e_JC69(unsigned char * hap, unsigned char * anc, double *dist,
 int modified_ic(unsigned char *hap, unsigned char *est_anc, double *distance,
 	double best_ll, unsigned int K, double *JC_ll, double *n_aic,
 	double *n_bic, unsigned int n_param, unsigned int max_read_length,
-	size_t sample_size)
+	size_t sample_size, int start)
 {
 	int param_change = 0;
+	// int start = 9;  // ignore the first 9 nucleotides
+
 	
-	m_JC69(hap, est_anc, distance, K, max_read_length);
-	*JC_ll = e_JC69(hap, est_anc, distance, K, max_read_length);
+	m_JC69(hap, est_anc, distance, K, max_read_length,start);
+	*JC_ll = e_JC69(hap, est_anc, distance, K, max_read_length,start);
 
 	/* K branch lengths, ancestral haplotype, but no haplotypes estimated */
-	param_change = K - max_read_length * (K - 1);
+	 param_change = K - (max_read_length -start) * (K - 1);
 
 	*n_aic = aic(best_ll + *JC_ll, n_param + param_change);
 	*n_bic = bic(best_ll + *JC_ll, n_param + param_change, sample_size);
@@ -2341,7 +2350,12 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 		debug_msg(DEBUG_II, fxn_debug, "Use error profile. \n");
 	}
 
-	/* go through with each unique sequences */
+	if((err = trans_expectation(opt, dat, ini, error_profile, 
+					mod->adj_trunpois, mod->eik,0)))
+		return err;
+	/* Keep codes below for debug purpose  */
+	/*
+	
 	for(unsigned int u = 0; u <dat->hash_length; ++u ){
 		unsigned char *read = dat->dmat[ini->uniq_seq_idx[u]];
 		unsigned int rlen = dat->lengths[ini->uniq_seq_idx[u]];
@@ -2353,7 +2367,7 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 			return mmessage(ERROR_MSG, INTERNAL_ERROR,
 					"Cannot find in the hash table !");
 
-		/* align to haplotypes  */
+		//  align to haplotypes  
 		for (unsigned int h = 0; h < opt->K; ++h){
 
 			unsigned char *hap_seq = ini->seeds[h];
@@ -2366,13 +2380,13 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 					for (unsigned int j = 0; j < dat->lengths[r]; j++) {
 
 						if (error_profile) {
-							if (opt->err_encoding == STD_ENCODING)
+							if (mod->err_encoding == STD_ENCODING)
 								eik += translate_error_STD_to_XY(
 									error_profile,
 									dat->n_quality, hap_seq[j],
 									dat->dmat[id][j],
 									dat->qmat[id][j]);
-						else if (opt->err_encoding == XY_ENCODING)
+						else if (mod->err_encoding == XY_ENCODING)
 							eik += error_profile[(NUM_NUCLEOTIDES
 								* hap_seq[j] + dat->dmat[id][j])
 								* dat->n_quality
@@ -2400,7 +2414,7 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 				opt->score, opt->gap_p, opt->band, 1, NULL,
 									&err, &alen);
 
-				/* count for number of indels */
+				// count for number of indels 
 				ana_alignment(aln, alen, rlen, &nindels, 
 						&nmismatch, opt->info);
 
@@ -2415,7 +2429,7 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 							"mismatch: %i\n", nindels, nmismatch);
 
 				}
-				/* free */
+				// free 
 				if(aln){
 					free(aln[0]);
 					free(aln[1]);
@@ -2425,9 +2439,12 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 			}
 		}
 	}
+	*/
 
 	if(opt->trans_matrix){
 		FILE *fp = fopen(opt->trans_matrix, "w");
+		if (!fp)
+			return mmessage(ERROR_MSG, FILE_OPEN_ERROR, opt->trans_matrix);
 		//fprint_vectorized_matrix(fp,mod->eik,dat->sample_size,opt->K,0);  not work 
 		for (size_t i = 0; i < dat->sample_size; ++i) {
 		    fprintf(fp, "%3lu", i);
@@ -2484,3 +2501,130 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 
 	return err;
 } /* reads_assignment */
+
+/* calculate transition probability between reads and haplotypes */
+int trans_expectation(options *opt, data *dat,initializer*ini, double *error_profile, 
+					double adj_trunpois, double *trans_prob, int ends_free){
+
+	int err = NO_ERROR;
+	double l1third = 1./3;
+	int fxn_debug = opt->info;
+
+	for(unsigned int u = 0; u < dat->hash_length; ++u ){
+
+		//mmessage(INFO_MSG, NO_ERROR, "The %5d uniq seq of total %5d sequences\n", u, dat->hash_length);
+
+		unsigned char *read = dat->dmat[ini->uniq_seq_idx[u]];
+		unsigned int rlen = dat->lengths[ini->uniq_seq_idx[u]];
+
+		unsigned int count = ini->uniq_seq_count[u]; // num. of reads wih unique seq
+		size_t *idx_array;  // idx of reads
+
+		if ((err = find_index(dat->seq_count, read, rlen, &idx_array)))
+			return mmessage(ERROR_MSG, INTERNAL_ERROR,
+					"Cannot find in the hash table !");
+
+		/* align to haplotypes  */
+		for (unsigned int h = 0; h < opt->K; ++h){
+
+			unsigned char *hap_seq = ini->seeds[h];
+
+			if(opt->nw_align == NO_ALIGNMENT){
+				
+				for(unsigned int r = 0; r < count; ++r){
+					double eik = 0.;
+					size_t id = idx_array[r];
+					for (unsigned int j = 0; j < dat->lengths[r]; j++) {
+
+						if (error_profile) {
+							if (opt->err_encoding == STD_ENCODING)  // make sure opt->err_encoding is the same as mod->err_encoding
+								eik += translate_error_STD_to_XY(
+									error_profile,
+									dat->n_quality, hap_seq[j],
+									dat->dmat[id][j],
+									dat->qmat[id][j]);
+						else if (opt->err_encoding == XY_ENCODING)
+							eik += error_profile[(NUM_NUCLEOTIDES
+								* hap_seq[j] + dat->dmat[id][j])
+								* dat->n_quality
+								+ dat->qmat[id][j]];
+						} else {
+							//double ep = adj * error_prob(dat->fdata, dat->qmat[r][j]);
+							double ep = dat->error_prob[dat->qmat[id][j]];	
+							if (dat->dmat[id][j] == hap_seq[j] )			
+								eik += log(1 - ep);
+							else
+								eik += log(ep) + l1third;
+						}
+					}
+					trans_prob[h*dat->sample_size+ id] = eik;		
+				}
+
+			}else{
+				size_t alen = dat->max_read_length;
+				unsigned int nindels = 0;
+				unsigned int nmismatch = 0;
+
+				unsigned char **aln = nwalign(hap_seq, read,
+				(size_t) ini->seed_lengths[h],
+				(size_t) rlen,
+				opt->score, opt->gap_p, opt->band, 1, NULL,
+									&err, &alen);
+
+				/* count for number of indels */
+				ana_alignment(aln, alen, rlen, &nindels, 
+						&nmismatch, opt->ends_free,opt->info); // need further check 
+
+				for(unsigned int r = 0; r<count;++r){
+
+					/*	if(idx_array[r] ==0 && h == 2 ){
+					for (size_t j = 0; j < alen; ++j) {
+					fprintf(stderr, "%c", aln[0][j] == '-'
+					? '-' : xy_to_char[(int) aln[0][j]]);
+					}
+					fprintf(stderr, "\n");
+					for (size_t j = 0; j < alen; ++j) {
+					fprintf(stderr, "%c", aln[1][j] == '-'
+					? '-' : xy_to_char[(int) aln[1][j]]);
+					}
+					fprintf(stderr, "\n");
+					}
+					*/
+
+					trans_prob[h*dat->sample_size+ idx_array[r]] = trans_nw(opt, aln,
+						alen, nmismatch, nindels, error_profile, opt->err_encoding,
+						dat->qmat[idx_array[r]], dat->n_quality, adj_trunpois,
+										rlen, dat->error_prob,ends_free);
+					/*
+					if(idx_array[r] ==0 && h == 2 ){
+						 for (size_t j = 0; j < alen; ++j){
+                        	fprintf(stderr, " %8.2e\n", error_profile[(
+							NUM_NUCLEOTIDES
+							* aln[0][j] + aln[1][j])
+							* dat->n_quality +dat->qmat[idx_array[r]][j]]);
+							fprintf(stderr, " %c\n", dat->qmat[idx_array[r]][j]+dat->fdata->min_quality);
+                    	}
+					 fprintf(stderr, "\n");	
+					fprintf(stderr, " %8.2e\n", trans_prob[h*dat->sample_size+ idx_array[r]]);
+					}
+					*/
+					
+					//debug_msg(DEBUG_III, fxn_debug, "num of indels: %i; num of "
+					//		"mismatch: %i\n", nindels, nmismatch);
+
+				}
+				/* free */
+				if(aln){
+					free(aln[0]);
+					free(aln[1]);
+					free(aln);
+					aln = NULL;
+				}
+				if(err)
+					return err;
+			}
+		}
+	}
+
+	return err;
+}

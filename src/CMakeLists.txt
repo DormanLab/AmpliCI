@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.5.0)
 
-project (AmpliCI VERSION 1.0.2)
+project (AmpliCI VERSION 2.0)
 
 SET(CMAKE_CC_COMPILER  gcc)
 
@@ -22,7 +22,8 @@ add_library(loess_raw STATIC ${F_OBJ} ${C_OBJ})
 
 set(C_OBJ2 ./amplici.c ./ampliclust.c ./align.c ./cmdline.c ./data.c 
    ./error.c ./fastq.c ./hash.c ./initialize.c ./io.c ./libamplici.c
-   ./lmath.c ./model.c ./options.c ./statistics.c ./util.c)
+   ./lmath.c ./model.c ./options.c ./statistics.c ./util.c ./amplici_umi.c ./partition.c )
+
 add_library(amplici SHARED ${C_OBJ2} )
 add_library(amplici_static STATIC ${C_OBJ2})
 

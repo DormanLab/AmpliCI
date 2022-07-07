@@ -21,7 +21,8 @@
 #include "error.h"
 #include "hash.h"
 
-int build_hash(data *dat);
+int build_hash(hash **hash_table, data_t **dmat, unsigned int *hash_length, 
+					unsigned int *seq_lengths, unsigned int seq_len, size_t sample_size);
 
 /**
  * Setup data object.
@@ -62,6 +63,13 @@ int make_data(data **dat, options *opt)
 	dp->seq_count = NULL;
 	dp->hash_length = 0;
 
+	/* UMI info */
+	dp->UMI_count = NULL;
+	dp->dmatU = NULL;
+	dp->qmatU = NULL;
+	dp->hash_UMI_length = 0;
+
+
 	return NO_ERROR;
 } /* make_data */
 
@@ -72,7 +80,7 @@ int sync_state(data *dat, options *opt)
 {
 	int fxn_debug = ABSOLUTE_SILENCE;
 	int err = NO_ERROR;
-	UNUSED(opt);
+	// UNUSED(opt);
 
 	/* currently, the sample is the complete data */
 	dat->sample_size = dat->fdata->n_reads;
@@ -86,6 +94,8 @@ int sync_state(data *dat, options *opt)
 			"Unequal reads length! \n");
 
 	dat->n_quality = dat->fdata->max_quality - dat->fdata->min_quality + 1;
+	dat->min_quality = dat->fdata->min_quality;
+	dat->max_quality = dat->fdata->max_quality;
 
 	dat->error_prob = malloc(dat->n_quality * sizeof * dat->error_prob);
 	if(!dat->error_prob)
@@ -109,14 +119,14 @@ int sync_state(data *dat, options *opt)
 		for (size_t i = 0; i < dat->sample_size; ++i)
 			dat->lengths[i] = dat->max_read_length;
 
-	
+
 	/* allocate the index array of reads */
-	dat->read_idx = malloc(dat->fdata->n_reads * sizeof *dat->read_idx);
+	dat->read_idx = malloc(dat->sample_size * sizeof *dat->read_idx);
 
 	if (!dat->read_idx)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "dat.read_idx");
 
-	for (size_t i = 0; i < dat->fdata->n_reads; ++i)
+	for (size_t i = 0; i < dat->sample_size; ++i)
 		dat->read_idx[i] = i;
 
 	/* allocate short-cut pointers to nucleotide sequences */
@@ -126,6 +136,7 @@ int sync_state(data *dat, options *opt)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "dat.dmat");
 
 	unsigned char *rptr = dat->fdata->reads;
+	rptr += opt->UMI_length;  // default = 0 
 	for (size_t i = 0; i < dat->sample_size; ++i) {
 		dat->dmat[i] = rptr;
 		rptr += dat->lengths[i];
@@ -141,13 +152,61 @@ int sync_state(data *dat, options *opt)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "dat.qmat");
 
 	unsigned char *qptr = dat->fdata->quals;
+	qptr += opt->UMI_length;   // default = 0 
 	for (size_t i = 0; i < dat->sample_size; i++) {
 		dat->qmat[i] = qptr;
 		qptr += dat->lengths[i];
 	}
 
+	//for (size_t j = 0; j < 9; ++j) {
+	//		fprintf(stderr, "%c\n", xy_to_char[(int) dat->dmat[0][j]]);
+	//		fprintf(stderr, " %c\n",dat->qmat[0][j]+dat->fdata->min_quality);	
+	//	}
+
+
 	debug_msg(DEBUG_I, fxn_debug, "Allocated %dx(%d) quality matrix\n",
 		  dat->sample_size, dat->max_read_length);
+
+	if(opt->UMI_length){
+
+		/* dmatU */
+		dat->dmatU = malloc(dat->sample_size * sizeof *dat->dmatU);
+		
+		if (!dat->dmatU)
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "dat.dmatU");
+
+		unsigned char * rptr = dat->fdata->reads;
+		for (size_t i = 0; i < dat->sample_size; i++) {
+			dat->dmatU[i] = rptr;
+			rptr += dat->lengths[i];
+		}
+
+		
+		/* qmat U */
+		dat->qmatU = malloc(dat->sample_size *sizeof *dat->qmatU); 
+
+		if (!dat->qmatU )
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "dat.qmatU");
+
+		unsigned char * qptr = dat->fdata->quals;
+		for (size_t i = 0; i < dat->sample_size; i++) {
+			dat->qmatU[i] = qptr;
+			qptr += dat->lengths[i];
+		}
+
+		//for (size_t j = 0; j < 9; ++j) {
+		//	fprintf(stderr, "%c\n", xy_to_char[(int) dat->dmatU[0][j]]);
+		//	fprintf(stderr, " %c\n",dat->qmatU[0][j]+dat->fdata->min_quality);	
+		//}
+
+		/* adjust read lengths */
+		dat->max_read_length -=  opt->UMI_length;
+		dat->min_read_length -= opt->UMI_length;
+		dat->max_read_position -= opt->UMI_length;
+
+		for (size_t i = 0; i < dat->sample_size; ++i)
+			dat->lengths[i] -= opt->UMI_length;
+	}
 
 	/*
 	if (opt->offset_file) {
@@ -193,7 +252,7 @@ int sync_state(data *dat, options *opt)
 	
 	if (!dat->fdata->empty)
 		err = sync_data(dat, opt);
-
+	
 	return err;
 } /* sync_state */
 
@@ -204,25 +263,34 @@ int sync_state(data *dat, options *opt)
  * @param dat	pointer to data object
  * @return	error status
  */
-int build_hash(data *dat)
+int build_hash(hash **hash_table, data_t **dmat, unsigned int *hash_length, 
+					unsigned int *seq_lengths, unsigned int seq_len, size_t sample_size)
 {
 	int err = NO_ERROR;
 	/* build hash table */
-	dat->hash_length = 0;
-	for (size_t i = 0; i < dat->sample_size; ++i) {
+	unsigned int hash_len = 0;
+	unsigned int slen;
+
+
+	for (size_t i = 0; i < sample_size; ++i) {
 //fprintf(stderr, "%zu: %s\n", i, display_sequence(dat->dmat[i], dat->lengths[i], dat->fdata->read_encoding));
-		dat->hash_length += add_sequence(&dat->seq_count, dat->dmat[i],
-							dat->lengths[i], i);
+		if(seq_lengths) slen = seq_lengths[i]; else slen = seq_len;
+		hash_len += add_sequence(hash_table, dmat[i],
+							slen, i, &err);
 	}
 
 	/* store index of reads for all unique sequences */
-	for (size_t i = 0; i < dat->sample_size; ++i)
-		if ((err = add_seq_idx(dat->seq_count, dat->dmat[i],
-							dat->lengths[i], i)))
+	for (size_t i = 0; i < sample_size; ++i){
+		if(seq_lengths) slen = seq_lengths[i]; else slen = seq_len;
+		if ((err = add_seq_idx(*hash_table, dmat[i],
+							slen, i)))
 			return err;
+	}
+
+	*hash_length = hash_len;
 			
 	/* sort hash table by count */
-	sort_by_count(&dat->seq_count);
+	sort_by_count(hash_table);
 
 	return err;
 } /* build_hash */
@@ -243,6 +311,9 @@ void free_data(data *dat)
 		if (dat->coverage) free (dat->coverage);
 		if (dat->seq_count) delete_all(&dat->seq_count);
 		if (dat->error_prob) free(dat->error_prob);
+		if (dat->qmatU) free(dat->qmatU);
+		if (dat->dmatU) free(dat->dmatU);
+		if (dat->UMI_count) delete_all(&dat->UMI_count);
 		free(dat);
 	}
 } /* free_data */
@@ -264,22 +335,39 @@ int sync_data(data *dat, options *opt)
 		delete_all(&dat->seq_count);
 	dat->seq_count = NULL;
 
-	if ((err = build_hash(dat)))
+	if ((err = build_hash(&dat->seq_count,dat->dmat, &dat->hash_length,
+						dat->lengths, 0, dat->sample_size )))
 		return err;
+
+	/* [TODO] maybe need to create a new hash table for UMIs */
+	if(dat->UMI_count)
+		delete_all(&dat->UMI_count);
+	dat->UMI_count = NULL;
+	
+	if(opt->UMI_length){
+		if ((err = build_hash(&dat->UMI_count,dat->dmatU, &dat->hash_UMI_length,
+						NULL, opt->UMI_length, dat->sample_size)))
+			return err;
+	}
+	
 
 	return err;
 } /* sync_data */
 
-/* fill data object with provided dmat and qmat */
+
+/* fill data object with provided dmat and qmat [CURRENTLY UNUSED] */
 int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen, 
-			size_t sample_size, unsigned int n_quality){
+			size_t sample_size, unsigned char max_quality, unsigned char min_quality){
 
 	int err = NO_ERROR;
 
 	 dat->sample_size = sample_size;
      dat->max_read_length = rlen;
+	 dat->min_read_length = rlen;
 	 dat->max_read_position = rlen;
-     dat->n_quality = n_quality;
+     dat->n_quality = max_quality - min_quality + 1;
+	 dat->min_quality = min_quality;
+	 dat->max_quality = max_quality;
      dat->dmat = dmat;
      dat->qmat = qmat;
 
@@ -288,7 +376,8 @@ int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen,
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,"dat.error_prob");
 
 	for (unsigned int q = 0; q < dat->n_quality; q++)
-		dat->error_prob[q] = error_prob(dat->fdata, q);
+		dat->error_prob[q] = exp(- ((char) q + min_quality - 33) / 10. * log(10.));
+		// exp(- (q + fqd->min_quality - 33) / 10. * log(10.));
 
 	dat->lengths = malloc(dat->sample_size * sizeof *dat->lengths);
 
@@ -299,15 +388,17 @@ int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen,
         dat->lengths[i] = dat->max_read_length;
 
 	/* allocate the index array of reads */
-	dat->read_idx = malloc(dat->fdata->n_reads * sizeof *dat->read_idx);
+	dat->read_idx = malloc(sample_size * sizeof *dat->read_idx);
 
 	if (!dat->read_idx)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "dat.read_idx");
 
-	for (size_t i = 0; i < dat->fdata->n_reads; ++i)
+
+	for (size_t i = 0; i < sample_size; ++i)
 		dat->read_idx[i] = i;
 
-    if ((err = build_hash(dat)))
+    if ((err = build_hash(&dat->seq_count,dat->dmat, &dat->hash_length,
+						dat->lengths, 0, dat->sample_size )))
 		return err;
 
 	return NO_ERROR;

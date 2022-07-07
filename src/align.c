@@ -211,7 +211,7 @@ unsigned char **nwalign(unsigned char const * const s1, unsigned char const * co
  * @return	0
  */
 int ana_alignment(unsigned char**aln, size_t alen, unsigned int rlen, unsigned int* nindels, 
-					unsigned int *nmismatch, int dbg){
+					unsigned int *nmismatch, int ends_free, int dbg){
 
 		int fxn_debug = dbg;
 
@@ -229,7 +229,7 @@ int ana_alignment(unsigned char**aln, size_t alen, unsigned int rlen, unsigned i
 				if (aln[0][j] == '-') {
 					nins++;
 					if (j == 0)
-						nind++;
+						nind += ends_free ? 0: 1;
 					else if (aln[0][j-1] != '-')
 						nind++;
 					continue;
@@ -238,7 +238,7 @@ int ana_alignment(unsigned char**aln, size_t alen, unsigned int rlen, unsigned i
 				if (aln[1][j] == '-') {
 					ndel++;
 					if (j == 0)
-						nind++;
+						nind += ends_free ? 0: 1;
 					else if (aln[1][j-1] != '-')
 						nind++;
 					continue;

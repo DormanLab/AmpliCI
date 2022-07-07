@@ -34,7 +34,7 @@
  * @param opt	options object
  * @return	error status
  */
-int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf)
+int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf,fastq_data *fqdfu)
 {
 	int err = NO_ERROR;
 	initializer *in;
@@ -106,6 +106,11 @@ int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf
 			"initializer.cluster_id");
 
 	if(fqdf){
+		if (fqdf->n_lengths || fqdf->n_max_length != dat->max_read_length) 
+			return mmessage(ERROR_MSG, INVALID_USER_INPUT,
+						"invalid input haplotype set. The length of input haplotypes in '%s' must be "
+							"%i.\n",opt->initialization_file, dat->max_read_length);
+		
 		for (unsigned int k = 0; k < opt->K; ++k){
 			memcpy(in->seeds[k],
 				&fqdf->reads[k * fqdf->n_max_length],
@@ -138,8 +143,90 @@ int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf
 	in->uniq_seq_count = NULL;
 	in->reads_uniq_id = NULL;
 
-	if (!dat->fdata->empty)
+	if (dat->dmat && dat->qmat)
 		err = sync_initializer(in, dat);
+
+	/* UMI information */
+	in->seeds_UMI = NULL;
+	in->seeds_hash = NULL;
+	in->UMIs_hash = NULL;
+	in->reads_hap_id = NULL;
+	in->reads_umi_id = NULL;
+
+	int fxn_debug = ABSOLUTE_SILENCE;
+ 
+	if (opt->UMI_length)
+	{	/* seeds_UMI */
+		in->seeds_UMI = malloc(opt->UMI_length * opt->K_UMI * sizeof *in->seeds_UMI);
+		if (!in->seeds_UMI)
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+							"initializer.seeds_UMI");
+		if (fqdfu)
+		{
+			if (fqdfu->n_lengths || fqdfu->n_max_length != opt->UMI_length)
+				return mmessage(ERROR_MSG, INVALID_USER_INPUT,
+								"invalid input UMI set. UMIs in '%s' must be "
+								"%i.\n",opt->initialization_UMI, opt->UMI_length);
+
+			memcpy(in->seeds_UMI, fqdfu->reads,
+				   opt->K_UMI * fqdfu->n_max_length * sizeof *fqdfu->reads);
+		}
+
+		/* seeds_hash */
+		for (size_t k = 0; k < opt->K; ++k) {
+			int first = add_sequence(&in->seeds_hash, in->seeds[k],
+							in->seed_lengths[k], k,&err);
+			if(!first)
+				mmessage(WARNING_MSG, INVALID_USER_INPUT,
+								"Duplicate sequences in '%s'.\n",
+								opt->initialization_file);
+			if(err) return err;
+		}
+
+		/* reads_hap_id (error free) */
+		in->reads_hap_id = malloc(dat->sample_size * sizeof *in->reads_hap_id);
+		if(!in->reads_hap_id)
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,"initializer.reads_hap_id");
+
+		for (size_t i = 0; i < dat->sample_size; ++i){
+			hash *new;
+			HASH_FIND( hh, in->seeds_hash, dat->dmat[i], dat->lengths[i] * sizeof *dat->dmat[i], new);
+			if(new){ in->reads_hap_id[i] = new->idx; }else {in->reads_hap_id[i] = -1;}
+			debug_msg(DEBUG_I, fxn_debug, "%5d,",in->reads_hap_id[i]);
+		}
+		debug_msg(DEBUG_I, fxn_debug, "\n");
+
+		/* UMIs_hash */
+		for (size_t k = 0; k < opt->K_UMI; ++k) {
+			int first = add_sequence(&in->UMIs_hash, &in->seeds_UMI[k*opt->UMI_length],
+							opt->UMI_length, k, &err);
+			if(!first)
+				mmessage(WARNING_MSG, INVALID_USER_INPUT,
+								"Duplicate sequences in '%s'.\n",
+								opt->initialization_UMI);
+			if(err) return err;
+		}
+
+		/* reads_umi_id (error free) */
+		in->reads_umi_id = malloc(dat->sample_size * sizeof *in->reads_umi_id);
+		if(!in->reads_umi_id)
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,"initializer.reads_hap_id");
+
+		for (size_t i = 0; i < dat->sample_size; ++i){
+			hash *newU;
+			HASH_FIND(hh, in->UMIs_hash, dat->dmatU[i], opt->UMI_length * sizeof *dat->dmatU[i], newU);
+			if(newU){ in->reads_umi_id[i] = newU->idx; }else {in->reads_umi_id[i] = -1;}
+			debug_msg(DEBUG_I, fxn_debug, "%5d,",in->reads_umi_id[i]);
+		}
+		debug_msg(DEBUG_I, fxn_debug, "\n");
+
+
+		/* H_abun */
+		in->H_abun = calloc(opt->K, sizeof (*in->H_abun));
+		if(!in->H_abun)
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "initializer.H_abun");	
+	}
+
 
 	return err;
 } /* make_initializer */
@@ -295,7 +382,7 @@ int realloc_initializer(initializer *ini, data *dat, options *opt)
 	ini->reads_uniq_id = reads_uniq_id;
 
 	if(ini->abun_true) free(ini->abun_true);
-	if(ini->p) free(ini->p);
+	//if(ini->p) free(ini->p);
 	if(ini->H) free(ini->H);
 	if(ini->H_abun) free(ini->H_abun);
 	if(ini->e_trans) free(ini->e_trans);
@@ -304,7 +391,7 @@ int realloc_initializer(initializer *ini, data *dat, options *opt)
 	if (ini->nw_indels) free(ini->nw_indels);
 
 	ini->abun_true = NULL;
-	ini->p = NULL;
+	// ini->p = NULL;
 	ini->H = NULL;
 	ini->H_abun = NULL;
 	ini->e_trans = NULL;
@@ -338,15 +425,17 @@ int realloc_initializer(initializer *ini, data *dat, options *opt)
  */
 int realloc_seeds(initializer *ini, unsigned int max_read_length, unsigned int preK, unsigned int K){
 	
-	
+	UNUSED(preK);
 	unsigned int *seed_lengths = realloc(ini->seed_lengths, K * sizeof *ini->seed_lengths);
 
 	data_t **seeds = realloc(ini->seeds, K * sizeof *ini->seeds); 
 
-	if ( !seeds || !seed_lengths) {
+	if (!seeds || !seed_lengths) {
 		//if (seed_idx) free(seed_idx);
-		if (seeds) free(seeds);
-		if (seed_lengths) free(seed_lengths);
+		if (seeds)
+			free(seeds);
+		if (seed_lengths)
+			free(seed_lengths);
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 						"amplici.realloc.seed");
 	}
@@ -354,12 +443,14 @@ int realloc_seeds(initializer *ini, unsigned int max_read_length, unsigned int p
 	ini->seed_lengths = seed_lengths;   // Uninitialized 
 	ini->seeds = seeds;
 
+	//if(ini->seeds[0]) free(ini->seeds[0]);
 	data_t *dptr = realloc(ini->seeds[0], max_read_length * K * sizeof **ini->seeds);
+	//data_t *dptr = malloc(max_read_length * K * sizeof **ini->seeds);
 	if (!dptr)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 			"reallloc.initializer.seeds");
 	size_t s = 0;
-	// if (ini->seeds[0] == dptr)  s = preK; // [FIX A BUG, DON'T understand why it is a bug]
+	// if (ini->seeds[0] == dptr)  s = preK; [Do not understand why it is a bug]
 
 	for (size_t k = s; k < K; k++) {
 		ini->seeds[k] = dptr;
@@ -381,10 +472,9 @@ int realloc_seeds(initializer *ini, unsigned int max_read_length, unsigned int p
  * @param ini		initializer object pointer
  * @return		error status
  */
-int read_initialization_file(char const * const filename, data *dat,
-	options *opt, fastq_data **fqdf){
+int read_initialization_file(char const * const filename, fastq_data **fqdf, int info){
 
-	int fxn_debug = opt->info;	//DEBUG_III;	//
+	int fxn_debug = info;	//DEBUG_III;	//
 	int err = NO_ERROR;
 	FILE *fp = fopen(filename, "r");
 
@@ -420,6 +510,8 @@ int read_initialization_file(char const * const filename, data *dat,
 		"in %s format\n", fqd->n_reads,
 		fqd->file_type == FASTA_FILE ? "fasta" : "fastq");
 
+	/* remove to support haplotypes with multiple length */
+	/* 
 	if (fqd->n_lengths || fqd->n_max_length != dat->max_read_length) {
 		fclose(fp);
 		mmessage(INFO_MSG, NO_ERROR, "haplotypes in '%s' must be same "
@@ -427,6 +519,7 @@ int read_initialization_file(char const * const filename, data *dat,
 		return mmessage(ERROR_MSG, INVALID_USER_INPUT,
 						"invalid input haplotype set");
 	}
+	*/
 
 	fclose(fp);
 	return err;
@@ -453,7 +546,7 @@ void free_initializer(initializer *ini, options *opt)
 		if (ini->uniq_seq_idx) free(ini->uniq_seq_idx);
 		if (ini->reads_uniq_id) free(ini->reads_uniq_id);
 		if (ini->abun_true) free(ini->abun_true);
-		if (ini->p) free(ini->p);
+		// if (ini->p) free(ini->p);
 		if (ini->H) free(ini->H);
 		if (ini->H_abun) free(ini->H_abun);
 		if (ini->H_ee) free(ini->H_ee);
@@ -463,7 +556,13 @@ void free_initializer(initializer *ini, options *opt)
 		if (ini->nw_mismatch) free(ini->nw_mismatch);
 		if (ini->nw_indels) free(ini->nw_indels);
 		if (ini->err_cnt) free(ini->err_cnt); 
+		if(ini->seeds_UMI) free(ini->seeds_UMI);
+		if (ini->seeds_hash) delete_all(&ini->seeds_hash);
+		if (ini->UMIs_hash) delete_all(&ini->UMIs_hash);
+		if (ini->reads_hap_id)free(ini->reads_hap_id);
+		if (ini->reads_umi_id) free(ini->reads_umi_id);
 
 		free(ini);
 	}
 } /* free_initializer */
+

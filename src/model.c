@@ -100,9 +100,9 @@ int make_model(model **mod, data *dat, options *opt)
 			for (unsigned int q = MIN_ASCII_QUALITY_SCORE;
 				 q <= MAX_ASCII_QUALITY_SCORE; q++){
 				fscanf(file, "%lf,", &rate);
-				if (q >= dat->fdata->min_quality && q <= dat->fdata->max_quality)
+				if (q >= dat->min_quality && q <= dat->max_quality)
 					rm->error_profile[r * rm->n_quality +
-									  q - dat->fdata->min_quality] = log(rate / 1000); // log(error_rate)
+									  q - dat->min_quality] = log(rate / 1000); // log(error_rate)
 				debug_msg(DEBUG_I, fxn_debug,
 						  "r: %i,q:%i,rate: %f\n", r, q, rate);
 			}
@@ -132,13 +132,55 @@ int make_model(model **mod, data *dat, options *opt)
 
 	if (opt->JC69_model) {
 		rm->distance = malloc(rm->K * sizeof *rm->distance);
-		rm->est_ancestor = malloc(dat->max_read_length
-					* sizeof * rm->est_ancestor);
+		rm->est_ancestor = calloc(dat->max_read_length, sizeof * rm->est_ancestor);
 		rm->JC_ll_K = malloc(rm->K * sizeof *rm->JC_ll_K);
 
 		if (!rm->distance || !rm->est_ancestor || !rm->JC_ll_K)
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 								"model::JC69");
+	}
+
+	/* UMI information */
+	rm->eik_umi = NULL;
+	rm->gamma = NULL;
+	rm->eta = NULL;
+
+	rm->E2_sparse_hap_id = NULL;
+	rm->E2_sparse_umi_id = NULL;
+	rm->E2_sparse_value = NULL;
+	rm->ll_UMI = -INFINITY;
+    rm->pll_UMI = -INFINITY;
+	rm->penalty_ll = 0.;
+
+	if(opt->UMI_length){
+		/* eik_umi */
+		rm->eik_umi = malloc(dat->sample_size * opt->K_UMI * sizeof *rm->eik_umi);
+		if (!rm->eik_umi)
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "model::eik_umi");
+
+		/* gamma */
+		rm->gamma = calloc(opt->K_UMI * opt->K, sizeof *rm->gamma);
+		//rm->pgamma = calloc(opt->K_UMI * opt->K, sizeof *rm->pgamma);
+		if(!rm->gamma)
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "model::gamma");
+
+		/* eta */
+		rm->eta = calloc(opt->K_UMI, sizeof *rm->eta);
+		//rm->peta = calloc(opt->K_UMI, sizeof *rm->peta);
+		if(!rm->eta)
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "model::eta");
+
+		/* E2_sparse_id */
+		rm->E2_sparse_hap_id = malloc(opt->topN * dat->sample_size * sizeof *rm->E2_sparse_hap_id);
+		rm->E2_sparse_umi_id = malloc(opt->topN * dat->sample_size * sizeof *rm->E2_sparse_umi_id);
+
+		if(!rm->E2_sparse_hap_id || !rm->E2_sparse_umi_id)
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,"model::E2_sparse_id");
+
+		/* E2_sparse_value */
+		rm->E2_sparse_value = malloc(opt->topN * dat->sample_size * sizeof *rm->E2_sparse_value);
+		if(!rm->E2_sparse_value)
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,"model::E2_sparse_value");
 	}
 
 	return NO_ERROR;
@@ -288,6 +330,12 @@ void free_model(model *mod)
 	if (mod->haplotypes) free(mod->haplotypes);
 	if (mod->est_ancestor) free(mod->est_ancestor);
 	if (mod->error_profile) free(mod->error_profile);
+	if (mod->eik_umi) free(mod->eik_umi);
+	if (mod->eta) free(mod->eta);
+	if (mod->gamma) free(mod->gamma);
+	if (mod->E2_sparse_hap_id) free(mod->E2_sparse_hap_id);
+	if (mod->E2_sparse_umi_id) free(mod->E2_sparse_umi_id);
+	if (mod->E2_sparse_value) free(mod->E2_sparse_value);
 	free(mod);
 	mod = NULL;
 } /* free_model */

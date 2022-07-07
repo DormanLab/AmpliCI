@@ -24,6 +24,8 @@ struct _data {
 	fastq_data *fdata;		/*<! contents of fastq file */
 	size_t *coverage;		/*<! coverage at each read position */
 	unsigned char n_quality;	/*<! number quality scores [min, max] */
+	unsigned char min_quality;
+	unsigned char max_quality; 
 	double *error_prob;    /* pre-compute error prob based on quality score */
 
 	/* [KSD] We assume that all reads are trimmed of technical sequence and
@@ -85,6 +87,13 @@ struct _data {
 	/* hash table */
 	hash *seq_count; /*<! frequency of unique sequences (hash table) */
 	unsigned int hash_length;  /*<! num of unique sequences in hash table */
+
+	/* UMI information */
+	data_t **dmatU;  /*<! nucleotide sequences of UMI as matrix */
+	data_t **qmatU; /*<! quality sequences of UMI as matrix */
+	hash *UMI_count; /*<! frequency of unique UMIs (hash table) */
+	unsigned int hash_UMI_length;  /*<! num of unique UMIs in hash table */
+
 }; /* data */
 
 int make_data(data **data, options *opt);
@@ -93,6 +102,6 @@ int sync_data(data *dat, options *opt);
 void free_data(data *dat);
 
 int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen, 
-			size_t sample_size, unsigned int n_quality);
+			size_t sample_size, unsigned char max_quality,unsigned char min_quality);
 
 #endif

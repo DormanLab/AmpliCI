@@ -66,8 +66,13 @@ int assign_clusters(double *eik, unsigned int K, size_t n,
 void fprint_fasta(FILE *fp, data_t *data, size_t n, size_t p, unsigned int*len, char const * const prefix) {
 	for (size_t i = 0; i < n; ++i) {
 		fprintf(fp, ">%s%lu\n", prefix, i);
-		for (size_t j = 0; j < len[i]; ++j)
-			fprintf(fp, "%c", xy_to_char[(int)data[i*p + j]]);
+		for (size_t j = 0; j < len[i]; ++j){
+			if ((int)data[i*p + j] < 4)
+				fprintf(fp, "%c", xy_to_char[(int)data[i*p + j]]);
+			else{
+				fprintf(fp, "N");
+			}
+		}
 		fprintf(fp, "\n");
 	}
 } /* fprint_fasta */
@@ -149,6 +154,35 @@ int make_run_info(run_info **ri, data *dat, options *opt)
 	if (!rio->optimal_cluster_size)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 			"run_info::optimal_cluster_size");
+
+
+	rio->UMI_cluster_id = NULL;
+	rio->UMI_cluster_ll = NULL;
+	rio->UMI_cluster_size = NULL;
+
+	if(opt->UMI_length){
+		rio->UMI_cluster_id = calloc(dat->sample_size,
+		sizeof *rio->UMI_cluster_id);
+
+	if (!rio->UMI_cluster_id)
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+			"run_info::UMI_cluster_id");
+
+	rio->UMI_cluster_ll = calloc(dat->sample_size,
+		sizeof *rio->UMI_cluster_ll);
+
+	if (!rio->UMI_cluster_ll)
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+			"run_info::UMI_cluster_ll");
+
+	rio->UMI_cluster_size = calloc(opt->K_UMI,
+		sizeof *rio->UMI_cluster_size);
+
+	if (!rio->UMI_cluster_size)
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+			"run_info::UMI_cluster_size");
+
+	}
 	
 	return NO_ERROR;
 }/* make_run_info*/

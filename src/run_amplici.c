@@ -1,5 +1,6 @@
 /**
  * @file run_amplici.c
+ * @author Xiyu Peng
  * @author Karin S. Dorman
  *
  * Cluster amplicon sequences.
@@ -27,8 +28,6 @@
  */
 
 
-// modify the functions just keep ampliCI and do simualtions
-
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -43,6 +42,8 @@
 #include "io.h"
 #include "amplici.h"
 #include "error_est.h"
+#include "amplici_umi.h"
+#include "partition.h"
 
 int main(int argc, const char **argv)
 {
@@ -54,6 +55,7 @@ int main(int argc, const char **argv)
 	initializer *ini = NULL;	/* initializer */
 	run_info *ri=NULL;		/*run_info object */
 	fastq_data *fqdf = NULL;    /* initialize fasta file */
+	fastq_data *fqdfu = NULL;    /* initialize fasta UMI file */
 
 	/* parse command line */
 	if ((err = make_options(&opt)))
@@ -82,11 +84,19 @@ int main(int argc, const char **argv)
 		goto CLEAR_AND_EXIT;
 
 	/* read initialization file  into fqdf */
-	if (opt->initialization_file){ 
-		if((err = read_initialization_file(opt->initialization_file, dat,
-				opt, &fqdf)))
+	if (opt->initialization_file) {
+		if ((err = read_initialization_file(opt->initialization_file,
+							&fqdf, opt->info)))
 			goto CLEAR_AND_EXIT;
 		opt->K = fqdf->n_reads;
+	}
+
+	/* read initialization UMI file into fqdfu */
+	if (opt->initialization_UMI) {
+		if((err = read_initialization_file(opt->initialization_UMI,
+							 &fqdfu, opt->info)))
+			goto CLEAR_AND_EXIT;
+		opt->K_UMI = fqdfu->n_reads;
 	}
 
 	/* create model
@@ -96,7 +106,7 @@ int main(int argc, const char **argv)
 		goto CLEAR_AND_EXIT;
 
 	/* make initializer */
-	if ((err = make_initializer(&ini, dat, opt,fqdf)))
+	if ((err = make_initializer(&ini, dat, opt,fqdf,fqdfu)))
 		goto CLEAR_AND_EXIT;
 
 	/* create run_info object */
@@ -121,13 +131,22 @@ int main(int argc, const char **argv)
 	}
 
 	/* main algorithm */
-	if ((!opt->initialization_file) && opt->run_amplici) {
+	if (opt->UMI_length) {
+		if ((err = EM_algorithm(opt, dat, mod, ini, ri)))
+			return err;
 
-		if ((err = ampliCI(opt, dat, mod, ini, ri)))
-			goto CLEAR_AND_EXIT;
+	} else if ((!opt->initialization_file) && opt->run_amplici) {
+
+		if (opt->partition_file) {
+			if ((err = ampliCI_wpartition(opt, dat, mod, ini, ri)))   // currently too slow ....
+				return err;
+		} else {
+			if ((err = ampliCI(opt, dat, mod, ini, ri)))
+				goto CLEAR_AND_EXIT;
+		}
 
 	/* reads assignment with user-provided haplotypes */
-	} else if(opt->initialization_file) {
+	} else if (opt->initialization_file) {
 		if ((err = reads_assignment(opt, dat, mod, ini, ri)))
 			goto CLEAR_AND_EXIT;
 

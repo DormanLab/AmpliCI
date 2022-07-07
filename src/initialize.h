@@ -70,15 +70,22 @@ struct _initializer {
 
 	/* optimal initialization criterion across repeated initialization */
 	double optimal_total;		/*<! optimal criterion across inits */
+
+	/* UMI information */
+	data_t *seeds_UMI;			/*<! True UMI sequences */
+	hash *seeds_hash;           /*<! Hash table for haplotypes */
+	hash *UMIs_hash;            /*<! Hash table for UMIs */
+	int *reads_hap_id;  /*<! idx of reads in the input haplotypes (N x 1)  (-1 for no match) */
+	int *reads_umi_id;  /*<! idx of reads in the input UMIs (N x 1) (-1 for no match)  */
+
 }; /* initializer */
 
 
-int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf);
+int make_initializer(initializer **ini, data *dat, options *opt,fastq_data *fqdf,fastq_data *fqdfu);
 int sync_initializer(initializer *ini, data *dat);
 int realloc_initializer(initializer *ini, data *dat, options *opt);
 int realloc_seeds(initializer *ini, unsigned int max_read_length, unsigned int preK, unsigned int K);
 void free_initializer(initializer *ini, options *opt);
-int read_initialization_file(char const * const filename, data *dat,
-	options *opt, fastq_data **fqdf);
+int read_initialization_file(char const * const filename, fastq_data **fqdf, int info);
 
 #endif

@@ -23,7 +23,7 @@
  * @return		The first observation time
  */
 int add_sequence(hash **seq_count, unsigned char *seq, unsigned int length,
-								size_t idx)
+								size_t idx, int *err)
 {
 	hash *new;
 	int first = 0;
@@ -32,12 +32,19 @@ int add_sequence(hash **seq_count, unsigned char *seq, unsigned int length,
 
 	if (!new) {
 		new = (hash *) malloc(sizeof *new);
+		if (!new) {
+			*err = MEMORY_ALLOCATION;
+			mmessage(ERROR_MSG, *err, "hash");
+			return 0;
+		}
+
 		new->sequence = seq;
 		new->count = 1;
 		new->idx = idx;	
 		new->idx_array = NULL;
 		HASH_ADD_KEYPTR(hh, *seq_count, new->sequence,
 						length * sizeof *seq, new);
+		new->seeds = 0;
 		first = 1;
 	} else {
 		new->count++;
