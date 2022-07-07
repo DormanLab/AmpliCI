@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.5.0)
 
-project (AmpliCI VERSION 1.99)
+project (AmpliCI VERSION 2.0)
 
 SET(CMAKE_CC_COMPILER  gcc)
 

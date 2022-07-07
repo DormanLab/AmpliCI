@@ -3,7 +3,7 @@ AmpliCI
 
 AmpliCI, Amplicon Clustering Inference, denoises Illumina amplicon data by approximate model-based clustering.
 
-Note: AmpliCI V2.0 now includes a new module to denoise UMI-tagged Illumina amplicon sequences. See more in the [page](https://github.com/xiyupeng/AmpliCI-UMI).
+AmpliCI v2.0 now includes a new module to denoise UMI-tagged Illumina amplicon sequences. See details in the [page](https://github.com/xiyupeng/AmpliCI-UMI).
 
 # Table of Contents
 1. [Prerequisites](#prerequisites)
@@ -370,12 +370,12 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/your/full/path/to/library
 
 - Peng, X. and Dorman, K. (2020) ‘AmpliCI: A High-resolution Model-Based Approach for Denoising Illumina Amplicon Data’, Bioinformatics. doi: [10.1093/bioinformatics/btaa648](https://academic.oup.com/bioinformatics/article/doi/10.1093/bioinformatics/btaa648/5875058).
 
-- Peng, X. and Dorman, K. (2022) 'Accurate estimation of molecular counts from amplicon sequence data with unique molecular identifiers'[BioRxiv](https://www.biorxiv.org/content/10.1101/2022.06.12.495839v1). 
+- Peng, X. and Dorman, K. (2022) 'Accurate estimation of molecular counts from amplicon sequence data with unique molecular identifiers',[BioRxiv](https://www.biorxiv.org/content/10.1101/2022.06.12.495839v1). 
 
 # Contact <a name = "contact" />
 
 If you have any problems with AmpliCI, please contact:
 
-Xiyu Peng (xiyupeng@iastate.edu)
+Xiyu Peng (pansypeng124@gmail.com)
 
 Karin Dorman (kdorman@iastate.edu)

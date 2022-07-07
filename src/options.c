@@ -607,7 +607,7 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 	for (size_t i = start; i < strlen(exe_name); ++i)
 		fputc(toupper(exe_name[i]), fp);
 	//fprintf(fp, "(%d)\n", 1);
-	fprintf(fp, "(v1.99)\n");
+	fprintf(fp, "(v2.0)\n");
 	/* default command is to cluster */
 	if (!command) {
 		command = "cluster";
