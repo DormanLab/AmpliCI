@@ -640,7 +640,7 @@ int M_step(options *opt, model *mod,size_t sample_size, unsigned int topN,
 /* Caculate the MPLE for gamma for each s and return the panalty turn */
 double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, double rho, double omega){
 
-    int fxn_debug = DEBUG_I;
+    int fxn_debug = ABSOLUTE_SILENCE;
     double lls;
     int start = s*K;
     double max_xi = 0.;
