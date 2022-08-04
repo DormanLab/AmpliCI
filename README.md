@@ -166,7 +166,6 @@ First, codes can be compiled with
 cd ../script
 gcc -Wall -pedantic -Wextra -g -o bp_pmf_mix bp_pmf_mixture.c fft.c -lfftw3 -lm
 ```
-You may need to add additional path to the Rmath library (use -L) and header files (use -I) if Rmarh is not on your default path.
 The input file is the count distribution of UMI raw abundance in the sample, 
 that the number in the ith row is the number of unique UMIs with abundance i.
 You can find examples of the input file `.txt` under the ```script``` directory.

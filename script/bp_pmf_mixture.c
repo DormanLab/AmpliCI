@@ -2,18 +2,9 @@
  * @file bp_pmf.c
  * @author Xiyu Peng, K. S. Dorman
  *
- * Demonstrate use of fft for branching process pmf.  Requires fft.c and fft.h
- * from fft directory.
- *
- * Compile as: varying precisions from double, long double, to float
-gcc -Wall -pedantic -o bp_pmf bp_pmf.c fft.c -lfftw3 -lm
-gcc -Wall -pedantic -o bp_pmf bp_pmf.c fft.c -DFFTW_LONG_DOUBLE -lfftw3l -lm
-gcc -Wall -pedantic -o bp_pmf bp_pmf.c fft.c -DFFTW_FLOAT -lfftw3f -lm
- *
- * Learning objectives:
- * - use of FFTW library
- * - use of FFT to estimate PGFs
- * - the low precision of pow() and even powl()
+ * Select parameter rho with a branching process model considering errors for modeling UMI abundancee distribution.
+ * 
+ * 
  */
 
 #include <stdio.h>
