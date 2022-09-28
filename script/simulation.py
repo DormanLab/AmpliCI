@@ -12,7 +12,8 @@ parser.add_argument('-o', required=True, type=str, help="output file base name")
 parser.add_argument('-k', required=False, default= 25, type=int, help="number of haplotypes")
 parser.add_argument('-c', required=False, default= 7, type=int, help="number of PCR cycles")
 parser.add_argument('-e', required=False, default= 0.9, type= float, help="PCR efficiency")
-parser.add_argument('-n', required=False, default= 400, type= int, help="number of simulated moleculars")
+parser.add_argument('-n', required=False, default= 400, type= int, help="number of simulated molecules")
+parser.add_argument('-nu', required=False, default= 400, type= int, help="the number of UMIs can be selected if allow collision")
 parser.add_argument('-a', required=False, default= 0.5, type= float, help="parameter for power-law distribution")
 parser.add_argument('-collision', required=False, default= 0, type= int, help="allow collision ?")
 
@@ -24,9 +25,10 @@ output_file = params.o
 K = params.k   ## number of haplotypes
 n_cycle = params.c  # PCR amplification
 p_amp = params.e
-num_uniq = params.n   ## number of sequences before amplification
+num_uniq = params.n   ## number of sequences before amplification max 41
 alpha = params.a ## controling the abundance distribution 
 collision = params.collision  ##  if 0, there is no collision happened. If 1, allow collision.
+num_uniq_umi = params.nu   ## max 550
 
 class Error(Exception):
     pass
@@ -124,9 +126,11 @@ def simulate_fasta():
         raise Error("No haplotype fasta file") 
 
     ### randomly select real_barcodes and haplotypes
-    real_barcodes = np.random.choice(real_barcodes,num_uniq,replace = False)
     if collision:
+        real_barcodes = np.random.choice(real_barcodes,num_uniq_umi,replace = False)
         real_barcodes = np.random.choice(real_barcodes,num_uniq,replace = True)
+    else:
+        real_barcodes = np.random.choice(real_barcodes,num_uniq,replace = False)
     #print(len(np.unique(real_barcodes)))
      
     haplotypes = np.random.choice(haplotypes,K,replace = False)
@@ -176,5 +180,9 @@ def simulate_fasta():
         print(list_true_hap,file = f)
         print("true UMI id:",file = f)
         print(list_true_UMI,file = f)
+    with open(output_file+".true.fa","w") as f:
+        for i in range(0,K):
+           print_fasta(f,str(i)+";Deduplicated Abundance="+str(abundance[i]),haplotypes[i])
+
 
 simulate_fasta()

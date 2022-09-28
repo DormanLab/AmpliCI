@@ -230,7 +230,7 @@ A text file with the following information provided as key: value pairs, one per
 
 - `Eta`: Relative abundance of each unique UMI
 
-- `Gamma`: A UMI_K X K matrix used to indicate dependence between UMI and haplotypes. The deduplicated abundance of the kth haplotype is the kth column sum of the Gamma.
+- `Gamma`: A UMI K X K matrix used to indicate dependence between UMI and haplotypes. The deduplicated abundance of the kth haplotype is the kth column sum of the Gamma.
 
 - There is also a list of haplotypes with related UMIs reported in this file.
 
@@ -261,7 +261,7 @@ Options of AmpliCI can be found in [here](https://github.com/DormanLab/AmpliCI#o
 
 - `--rho`:  Tunning parameter that control the sparsity of the transition matrix `Gamma`. We have described how to select `rho` above.
 
-- `--umilen`: Length of each UMI.
+- `--umilen`: UMI Length.
  
 
 
