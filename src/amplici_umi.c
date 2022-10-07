@@ -141,12 +141,14 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
         for(unsigned int k = 0; k < opt->K; ++k){
                 for (unsigned int b = 0; b < opt->K_UMI; ++b){
                     // post hoc separate UMI+ haplotypes if there is an UMI collision
-                    if( mod->gamma[b*opt->K + k] > 0)
+                    if( mod->gamma[b*opt->K + k] > 0 && mod->eta[b] > thres_eta)
                         mod->gamma[b*opt->K + k] = 1.0;
                 }   
         }
     }else{ // Or just assign UMIs to the haplotype with the highest probability 
         for (unsigned int b = 0; b < opt->K_UMI; ++b){
+            if(mod->eta[b] < thres_eta)
+                continue;
             double max = 0.;
             unsigned int max_idx = 0;
             for(unsigned int k = 0; k < opt->K; ++k){

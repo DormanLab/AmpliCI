@@ -116,7 +116,7 @@ int make_options(options **opt) {
 	op->UMI_length = 0;
 	op->initialization_UMI = NULL;
 	op->K_UMI = 0;
-	op->topN = 10;
+	op->topN = 10;      // should > than 1 and < K_UMI * K
 	op->trans_penalty = MPLE;
 	op->rho = 1.01;
 	op->omega = 1e-20;
@@ -359,6 +359,8 @@ int parse_options(options *opt, int argc, const char **argv)
 				//opt->ends_free = 0;   // not counting the offset the begining 
 				// opt->nw_align = NO_ALIGNMENT;
 				opt->JC69_model = 0;
+				opt->use_aic = 1;
+				// opt->per_candidate = 0;
 				mmessage(INFO_MSG, NO_ERROR, "Cluster UMIs .... \n");
 			}else if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
@@ -411,6 +413,11 @@ int parse_options(options *opt, int argc, const char **argv)
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
 			}
+			if (!strcmp(&argv[i][j], "omega")) {
+				opt->omega = read_cmdline_double(argc,
+					argv, ++i, (void *)opt);
+				break; 
+			} 
 
 			/* single option argument */
 			if (i + 1 == argc - 1 || argv[i + 2][0] == '-') {
@@ -502,6 +509,16 @@ int parse_options(options *opt, int argc, const char **argv)
 						argv, ++i, (void *)opt);
 				mmessage(INFO_MSG, NO_ERROR, "ignore first "
 					"%i nucleotides in JC69 model\n", opt->ignor_nc);
+			}else if (!strcmp(&argv[i][j], "topT")) {
+				if (argv[i + 1][0] >= 48
+						&& argv[i + 1][0] <= 57)
+					opt->topN = read_uint(argc,
+						argv, ++i, (void *)opt);
+				if(opt->topN < 1){
+					err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
+						"topN is set below 1 \n");
+					goto CMDLINE_ERROR;
+				}
 			} else {
 				opt->trans_matrix = argv[++i];
 				mmessage(INFO_MSG, NO_ERROR, "Output "

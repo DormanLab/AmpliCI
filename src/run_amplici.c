@@ -99,6 +99,8 @@ int main(int argc, const char **argv)
 		opt->K_UMI = fqdfu->n_reads;
 	}
 
+	
+
 	/* create model
 	 * [TODO] reasonable defaults, but uses data for binned quality models
 	 */
@@ -132,13 +134,18 @@ int main(int argc, const char **argv)
 
 	/* main algorithm */
 	if (opt->UMI_length) {
+
+		if(opt->topN > (opt->K * opt->K_UMI))
+			err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
+				"topN should be set below the product between number of input haplotypes and number of input UMIs\n");
+
 		if ((err = EM_algorithm(opt, dat, mod, ini, ri)))
 			return err;
 
 	} else if ((!opt->initialization_file) && opt->run_amplici) {
 
 		if (opt->partition_file) {
-			if ((err = ampliCI_wpartition(opt, dat, mod, ini, ri)))   // currently too slow ....
+			if ((err = ampliCI_wpartition(opt, dat, mod, ini, ri)))   
 				return err;
 		} else {
 			if ((err = ampliCI(opt, dat, mod, ini, ri)))
