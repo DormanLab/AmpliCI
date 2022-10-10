@@ -131,7 +131,7 @@ else()
 endif()
 
 # Rmath
-find_library(RMATH_LIBRARY NAMES Rmath HINTS ${RMATH_PATH} ${LIBR_LIB_DIR} ${_LIBR_EXECUTABLE_DIR}/lib ${_LIBR_EXECUTABLE_DIR}/lib64)
+find_library(RMATH_LIBRARY NAMES Rmath rmath HINTS ${RMATH_PATH} ${LIBR_LIB_DIR} ${_LIBR_EXECUTABLE_DIR}/lib ${_LIBR_EXECUTABLE_DIR}/lib64)
 find_package_handle_standard_args(LibRmath DEFAULT_MSG RMATH_LIBRARY)
 if(RMATH_LIBRARY)
    target_link_libraries(run_AmpliCI ${RMATH_LIBRARY})
