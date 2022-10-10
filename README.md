@@ -4,6 +4,7 @@ AmpliCI-UMI
 AmpliCI-UMI, Amplicon Clustering Inference with UMI information, is built on [AmpliCI](https://github.com/DormanLab/AmpliCI), but takes advantage of UMI information for denoising amplicon sequencing data, which contributes to a more accurate error profile and better clustering results.
 AmpliCI-UMI greatly enhances the accuracy of detecting rare sequences and provides deduplicated abundance estimation, elimilating PCR-induced errors and bias.
 
+AmpliCI-UMI now has been merged in AmpliCI v2.0+. 
 
 # Table of Contents
 1. [Installation](#installation)
@@ -25,13 +26,13 @@ The software has been tested under Linux and MacOS.
 1. Clone the repository.
 
     ```sh
-    git clone https://github.com/xiyupeng/AmpliCI-UMI.git
+    git clone https://github.com/xiyupeng/AmpliCI.git
     ```
 
 2. Configure the project.
 
    ```sh
-   cd AmpliCI-UMI/src
+   cd AmpliCI/src
    cmake .
    ```
 
