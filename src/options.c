@@ -359,7 +359,7 @@ int parse_options(options *opt, int argc, const char **argv)
 				//opt->ends_free = 0;   // not counting the offset the begining 
 				// opt->nw_align = NO_ALIGNMENT;
 				opt->JC69_model = 0;
-				opt->use_aic = 1;
+				// opt->use_aic = 1;
 				// opt->per_candidate = 0;
 				mmessage(INFO_MSG, NO_ERROR, "Cluster UMIs .... \n");
 			}else if (i == argc - 1) {
@@ -624,7 +624,7 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 	for (size_t i = start; i < strlen(exe_name); ++i)
 		fputc(toupper(exe_name[i]), fp);
 	//fprintf(fp, "(%d)\n", 1);
-	fprintf(fp, "(v2.1)\n");
+	fprintf(fp, "(v2.0.1)\n");
 	/* default command is to cluster */
 	if (!command) {
 		command = "cluster";
