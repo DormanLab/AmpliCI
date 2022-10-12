@@ -362,6 +362,9 @@ int parse_options(options *opt, int argc, const char **argv)
 				// opt->use_aic = 1;
 				// opt->per_candidate = 0;
 				mmessage(INFO_MSG, NO_ERROR, "Cluster UMIs .... \n");
+			}else if (!strcmp(&argv[i][j], "useAIC")){
+				opt->use_aic = 1;
+				mmessage(INFO_MSG, NO_ERROR, "Use AIC instead of BIC .... \n");
 			}else if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
@@ -703,6 +706,8 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 	}
 	if(!strcmp(command, "cluster"))
 		fprintf(fp, "\t--umi \n\t\tCluster UMIs. [DEFAULT: no] \n");
+	if(!strcmp(command, "cluster"))
+		fprintf(fp, "\t--useAIC \n\t\tUse AIC instead of BIC to remove false positive sequences. [DEFAULT: %s]\n",opt->use_aic  ? "use" : "don't use");
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--trim <tuint>\n\t\tIgnore first <tuint> nucleotides in the JC69 model.  [DEFAULT: %i]\n", opt->ignor_nc);
 	if (!strcmp(command, "error"))
