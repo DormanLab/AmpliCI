@@ -492,7 +492,7 @@ double E_step(model *mod, size_t sample_size, unsigned int topN,
         s += 1;
         maximum = max;  // maximum value among top N
        
-        while (s < topN)
+        while (s < topN)  //Need a more efficient algorithm here
         {    
             max = -INFINITY;
             for (unsigned int k = 0; k < K; ++k)
@@ -752,7 +752,7 @@ double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s, doubl
     if (isnan(lambda)){ /* Use MLE instead */
         debug_msg(DEBUG_I, fxn_debug, "lambda for the %d th UMI: %15.3f\n", s, lambda);
         // return NAN;
-        
+        fprintf(stderr,"Fail to update lambda, use MLE instead of MPLE.\n");
         //debug_msg(DEBUG_I, fxn_debug, "ll penalty: %15.3f\n",lls);
         
         unsigned int idx;
