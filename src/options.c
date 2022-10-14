@@ -655,7 +655,7 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 			"--haplotypes option.  This can be helpful if there are known haplotypes in the sample, "
 			" but it is also useful for careful abundance estimation.\n", &exe_name[start]);
 		fprintf(fp, "\n\tPlease check %s subcommand cluster, error, assignment, "
-				"cluster-wumi with option -h for more information.\n",&exe_name[start]);
+				"cluster_wumi with option -h for more information.\n",&exe_name[start]);
 	} else if (!strcmp(command, "cluster")) {
 		fprintf(fp, "\nNAME\n\t%s-%s - Cluster Reads\n", &exe_name[start], command);
 		fprintf(fp, "\nSYNOPSIS\n\t%s cluster [--profile FILE] [--abundance FLOAT] [--log_likelihood FLOAT] [--contaminants UINT --diagnostic FLOAT --per_candidate] [--align --scores INT INT INT] [--umi --nJC69 --nNW] --fastq FILE --outfile FILE\n", &exe_name[start]);
