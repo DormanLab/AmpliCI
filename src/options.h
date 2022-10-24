@@ -102,6 +102,7 @@ struct _options {
 	unsigned int most_abundant;  /*<! report these most abundant only */
 	unsigned int contamination_threshold; /*<! Maximum abundance for contamination */
 	int associate_zc; /*<! contamination_threshold = low_bound - 1 */
+  unsigned int wsize; /*<! window length */
 
 	/* alignment */
 	int score[NUM_NUCLEOTIDES][NUM_NUCLEOTIDES];  /* score matrix for nw alignment */

@@ -100,6 +100,7 @@ int make_options(options **opt) {
 	op->p_threshold = 1e-40;   /* will be overwritten by alpha / M or alpha */
 	op->per_candidate = 1;
 	op->most_abundant = 0;
+  op->wsize = 0; /* SA: no seq-lengths truncation while searching for candidate haplotypes*/
 
 	/* for sequence alignment */
 	op->score[0][0] = 2; op->score[0][1] = -3; op->score[0][2] = -3;op->score[0][3] = -2;
@@ -147,6 +148,8 @@ int parse_options(options *opt, int argc, const char **argv)
 	char const *cmd = "cluster";	/* default command */
 	char const *user_cmd = NULL;
 	char a;
+  
+  opt->wsize = 10; // SA: Hard-code wsize, for now
 
 	for (i = 1; i < argc; i++) {
 		/* new command format */
@@ -699,7 +702,7 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 	if(!strcmp(command,"error"))
 		fprintf(fp, "\t--partition <pstr> \n\t\tPartition file used for a better error profile. [DEFAULT: none] \n");
 	if (!strcmp(command, "cluster")){
-		//fprintf(fp, "\t--n  \n\t\t Disnable sequence alignment during clustering. Use it when there are no indel errors.  [DEFAULT: no]\n");
+		//fprintf(fp, "\t--n  \n\t\t Disable sequence alignment during clustering. Use it when there are no indel errors.  [DEFAULT: no]\n");
 		fprintf(fp, "\t--nNW\n\t\tDo NOT use Needleman-Wunsch alignment to align candidate haplotypes to the haplotype set to detect indel errors  [DEFAULT: %s]\n", opt->nw_align  ? "use" : "don't use");
     }	else if(!strcmp(command, "assignment")){
 		fprintf(fp, "\t--nNW  \n\t\t Do NOT use Needleman-Wunsch alignment to assign reads. [DEFAULT: %s]\n", opt->nw_align  ? "use" : "don't use");

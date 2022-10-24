@@ -24,6 +24,10 @@
 int build_hash(hash **hash_table, data_t **dmat, unsigned int *hash_length, 
 					unsigned int *seq_lengths, unsigned int seq_len, size_t sample_size);
 
+int build_hash_trunc(hash **hash_table, data_t **dmat, unsigned int *hash_length, 
+          unsigned int wsize, size_t sample_size);
+
+
 /**
  * Setup data object.
  */
@@ -295,6 +299,45 @@ int build_hash(hash **hash_table, data_t **dmat, unsigned int *hash_length,
 	return err;
 } /* build_hash */
 
+/**
+ * Build hash based on partial-length of reads.
+ *
+ * @param dat	pointer to data object
+ * @return	error status
+ */
+int build_hash_trunc(hash **hash_table, data_t **dmat, unsigned int *hash_length, 
+          unsigned int wsize, size_t sample_size)
+{
+	int err = NO_ERROR;
+	/* build hash table */
+	unsigned int hash_len = 0;
+	unsigned int wlen;
+
+
+	for (size_t i = 0; i < sample_size; ++i) {
+//fprintf(stderr, "%zu: %s\n", i, display_sequence(dat->dmat[i], dat->lengths[i], dat->fdata->read_encoding));
+		//if(seq_lengths) slen = seq_lengths[i]; else slen = seq_len; // Accomodate unequal lengths
+    wlen = wsize; 
+		hash_len += add_sequence(hash_table, dmat[i],
+							wlen, i, &err);
+	}
+
+	/* store index of reads for all unique sequences */
+	for (size_t i = 0; i < sample_size; ++i){
+		//if(seq_lengths) slen = seq_lengths[i]; else slen = seq_len;
+    wlen = wsize; 
+		if ((err = add_seq_idx(*hash_table, dmat[i],
+							wlen, i)))
+			return err;
+	}
+
+	*hash_length = hash_len;
+			
+	/* sort hash table by count */
+	sort_by_count(hash_table);
+
+	return err;
+} /* build_hash_trunc */
 
 /**
  * Free data object.
@@ -334,22 +377,28 @@ int sync_data(data *dat, options *opt)
 	if(dat->seq_count)
 		delete_all(&dat->seq_count);
 	dat->seq_count = NULL;
+  
+  if(opt->wsize > 0){  
+    if ((err = build_hash_trunc(&dat->seq_count,dat->dmat, &dat->hash_length,
+              opt->wsize, dat->sample_size )))
+      return err;
+  }
+  else{
+    if ((err = build_hash(&dat->seq_count,dat->dmat, &dat->hash_length,
+              dat->lengths, 0, dat->sample_size )))
+      return err;
+  }
 
-	if ((err = build_hash(&dat->seq_count,dat->dmat, &dat->hash_length,
-						dat->lengths, 0, dat->sample_size )))
-		return err;
-
-	/* [TODO] maybe need to create a new hash table for UMIs */
-	if(dat->UMI_count)
-		delete_all(&dat->UMI_count);
-	dat->UMI_count = NULL;
-	
-	if(opt->UMI_length){
-		if ((err = build_hash(&dat->UMI_count,dat->dmatU, &dat->hash_UMI_length,
-						NULL, opt->UMI_length, dat->sample_size)))
-			return err;
-	}
-	
+  /* [TODO] maybe need to create a new hash table for UMIs */
+  if(dat->UMI_count)
+    delete_all(&dat->UMI_count);
+  dat->UMI_count = NULL;
+  
+  if(opt->UMI_length){
+    if ((err = build_hash(&dat->UMI_count,dat->dmatU, &dat->hash_UMI_length,
+            NULL, opt->UMI_length, dat->sample_size)))
+      return err;
+  }
 
 	return err;
 } /* sync_data */
