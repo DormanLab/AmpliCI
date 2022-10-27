@@ -30,7 +30,7 @@ AmpliCI v2.0 now includes a new module to denoise UMI-tagged Illumina amplicon s
 	- r-mathlib on [Ubuntu](https://ubuntu.com/) and [Debian](https://www.debian.org/)
 	- libRmath on [Fedora](https://ubuntu.com/), [CentOS](https://centos.org/), [Mageia](https://www.mageia.org/en/), and [Mandriva](https://www.openmandriva.org/)
 	- Or if all else fails, you can install the Rmath standalone library from the repository [https://github.com/statslabs/rmath](https://github.com/statslabs/rmath)
-  - If you do not get admin to install Rmath, you can compile the Rmath standalone library and move libRmath.a to the `src` folder. Or you can modify the line in CMakeLists.txt to add the path to your own Rmath library.
+	- If you do not get admin to install Rmath, you can compile the Rmath standalone library and move libRmath.a to the `src` folder. Or you can modify the line in CMakeLists.txt to add the path to your own Rmath library.
   
   ```
   set(RMATH_PATH "path/to/libRmath.a")
@@ -44,22 +44,16 @@ AmpliCI v2.0 now includes a new module to denoise UMI-tagged Illumina amplicon s
 AmpliCI has been tested under Linux and MacOS.
 
 1. Clone the repository.
-
     ```sh
     git clone https://github.com/DormanLab/AmpliCI.git
     ```
-
-2. Configure the project.
-
+1. Configure the project.
    ```sh
    cd AmpliCI/src
    cmake .
    ```
-
-If `cmake` complains about a missing the Rmath or other libraries, please see [Prerequisites](#prerequisites) for installation instructions.
-
-3. Compile AmpliCI.  The executable is called ```run_AmpliCI```.  It will appear in the ```src``` directory you are currently in.
-
+   If `cmake` complains about a missing the Rmath or other libraries, please see [Prerequisites](#prerequisites) for installation instructions.
+1. Compile AmpliCI.  The executable is called `run_AmpliCI`.  It will appear in the `src` directory you are currently in.
    ```sh
    make
    ```
