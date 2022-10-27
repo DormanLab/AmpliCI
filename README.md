@@ -56,6 +56,8 @@ AmpliCI has been tested under Linux and MacOS.
    cmake .
    ```
 
+If `cmake` complains about a missing the Rmath or other libraries, please see [Prerequisites](#prerequisites) for installation instructions.
+
 3. Compile AmpliCI.  The executable is called ```run_AmpliCI```.  It will appear in the ```src``` directory you are currently in.
 
    ```sh
