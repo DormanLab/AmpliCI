@@ -105,7 +105,7 @@ AmpliCI runs in two major steps:
 	```sh
 	./run_AmpliCI --fastq <input_fastq_file> --outfile <output_error_profile_file> --error
 	```
-An example (from the ```src``` directory):
+	An example (from the `src` directory):
 	```sh
 	./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/error.out  --error
 	```
@@ -113,18 +113,17 @@ An example (from the ```src``` directory):
 	```sh
 	./run_AmpliCI --fastq <input_fastq_file> --outfile <output_base_filename> --abundance 2 --profile <input_error_profile_file>
 	```
-An example (from the ```src``` directory):
+	An example (from the ```src``` directory):
 	```sh
 	./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/test --abundance 2 --profile ../test/error.out
 	```
-If you provide no input error profile with the `--profile` option, AmpliCI will assume the error rates are the error rates dictated by [Phred quality scores](https://www.illumina.com/documents/products/technotes/technote_Q-Scores.pdf).
-Assuming Phred quality scores is not a good idea.
-Using Phred quality scores tends to generate high numbers of false positives and runs very slowly.
+	If you provide no input error profile with the `--profile` option, AmpliCI will assume the error rates are the error rates dictated by [Phred quality scores](https://www.illumina.com/documents/products/technotes/technote_Q-Scores.pdf).  Assuming Phred quality scores is not a good idea.  Using Phred quality scores tends to generate high numbers of false positives and runs very slowly.
+
 	- You can also use AmpliCI to reassign reads given input haplotypes. You can provide your haplotype set with '--haplotypes' option:
 		```sh
 		./run_AmpliCI --fastq <input_fastq_file> --outfile <output_assignment_filename> --profile <input_error_profile_file> --haplotypes <input_haplotypes_fasta_file>
 		```
-	An example (from the ```src``` directory):
+		An example (from the ```src``` directory):
 		```sh
 		./run_AmpliCI --fastq ../test/sim3.8.1.fastq --outfile ../test/test.id --profile ../test/error.out --haplotypes ../test/test.fa
 		```
