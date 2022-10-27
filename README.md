@@ -3,7 +3,7 @@ AmpliCI
 
 AmpliCI, Amplicon Clustering Inference, denoises Illumina amplicon data by approximate model-based clustering.
 
-AmpliCI v2.0 now includes a new module to denoise UMI-tagged Illumina amplicon sequences. See details in the [page](https://github.com/xiyupeng/AmpliCI-UMI).
+AmpliCI v2.0 now incorporates our new UMI-aware software DAUMI to denoise UMI-tagged Illumina amplicon sequences. See usage instructions for DAUMI at this [page](https://github.com/xiyupeng/AmpliCI-UMI).
 
 # Table of Contents
 1. [Prerequisites](#prerequisites)
