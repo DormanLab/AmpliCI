@@ -1845,7 +1845,7 @@ int check_fp_with_indels(options *opt, data *dat, model *mod, initializer *ini,
 
 		if (delta < 0 || true_abun_new < 0)
 			return mmessage(WARNING_MSG, INTERNAL_ERROR,
-				"True abundnace increase or under 0\n");
+				"True abundance increase or under 0\n");
 
 		if (delta < opt->epsilon || true_abun_new < low_bound)
 			break;
