@@ -34,7 +34,7 @@ int fft(int n, FFTW_COMPLEX *f, int sign)
 	FFTW_PLAN p;
 	int i;
 
-	if (!fabs(sign)) {
+	if (!abs(sign)) {
 		fprintf(stderr, "ERROR: Please specify one of FFTW_FORWARD or "
 			"FFTW_BACKWARD for forward/inverse transform\n");
 		exit(1);
@@ -76,7 +76,7 @@ int fft2(int m, int n, FFTW_COMPLEX **f, int sign)
 	FFTW_PLAN p;
 	int i, j;
 
-	if (!fabs(sign)) {
+	if (!abs(sign)) {
 		fprintf(stderr, "ERROR: Please specify one of FFTW_FORWARD or "
 			"FFTW_BACKWARD for forward/inverse transform\n");
 		exit(1);
