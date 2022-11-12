@@ -33,6 +33,7 @@ struct _options {
 	
 	/* ampliCI */
 	int run_amplici;  /* if we only run ampliCI */
+	int histogram;	/*<! run histogram command */
 	double low_bound;  /*<! minimum haplotype abundance */
 	/* input */
 	char const *offset_file;  /*<! name of offset file */
