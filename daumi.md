@@ -155,7 +155,7 @@ gcc -Wall -pedantic -Wextra -g -o bp_pmf_mix bp_pmf_mixture.c fft.c -lfftw3 -lm
 
 2. **Data Preparation**
 
-Install the R package (DADA2)[https://benjjneb.github.io/dada2/].
+Install the R package [DADA2](https://benjjneb.github.io/dada2/).
 Obtain the UMI raw abundance distribution.
 ```
 script/UMI_abun_dist.R FILENAME.bc.fq FILENAME.bc.hist
@@ -264,7 +264,7 @@ If you have paired-end reads, you may simply concatenate them and follow the [Us
 Here we justify this advice.
 
 If your read pairs overlap, then we would not recommend merging overlapping reads prior to analysis, as most read merging tools do not properly update the quality scores, which we rely on to detect sequencing errors.
-Overlapping reads can be denoised separately and merged later, a strategy employed in [DADA2][https://benjjneb.github.io/dada2/].
+Overlapping reads can be denoised separately and merged later, a strategy employed in [DADA2](https://benjjneb.github.io/dada2/).
 However the easiest solution is simply to concatenate the reads, even if they overlap, and treat the concatenated reads as a single sampled sequence.
 It is true that some of the base calls are reads of the same true nucleotide, and we are not using the full information available in these replicate reads to estimate the original molecule, but there is no harm done in ignoring the information.
 If there is a PCR error in the overlap region, then two sites will register that change, which could lead to more false positives than a post-merge solution.
