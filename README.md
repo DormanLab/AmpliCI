@@ -5,7 +5,7 @@ AmpliCI, Amplicon Clustering Inference, denoises Illumina amplicon data by appro
 
 AmpliCI v2.0 now incorporates our new Unique Molecular Identifier (UMI)-aware software DAUMI to denoise UMI-tagged Illumina amplicon sequences.
 This README focuses on installation of AmpliCI and how to use it to estimate haplotypes and abundance for amplicons without UMIs.
-See the [DAUMI instructions](https://github.com/DormanLab/AmpliCI/daumi.md) for information on how to estimate haplotypes and abundance for amplicons with UMIs.
+See the [DAUMI instructions](https://github.com/DormanLab/AmpliCI/blob/master/daumi.md) for information on how to estimate haplotypes and abundance for amplicons with UMIs.
 The development version of DAUMI is at this [page](https://github.com/xiyupeng/AmpliCI-UMI).
 
 # Table of Contents
