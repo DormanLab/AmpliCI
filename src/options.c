@@ -641,9 +641,9 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 		fprintf(fp, "\nDESCRIPTION\n\tProgram %s clusters amplicon sequences presented "
 			"as reads in fastq file <fstr> in two steps.\n"
 			"\n\tStep 1:\n\t\tEstimate error profile and write to file <ostr> given input fastq file <fstr> with option -e error."
-			"\n\t\tExample: \n\t\t\trun_ampliCI --error --fastq <fstr> --outfile <ostr>"
+			"\n\t\tExample: \n\t\t\trun_ampliCI error --fastq <fstr> --outfile <ostr>"
 			"\n\tStep 2:\n\t\tCluster amplicon sequences in fastq file <fstr> with estimated error profile from file <pstr>, using lower bound 2, and output results in file <ostr>."
-			"\n\t\tExample: \n\t\t\trun_ampliCI --profile <pstr> --abundance <adbl> --fastqs <fstr> --outfile <ostr>"
+			"\n\t\tExample: \n\t\t\trun_ampliCI cluster --profile <pstr> --abundance <adbl> --fastqs <fstr> --outfile <ostr>"
 
 			"\n\n\tBy default, %s will automatically select K true haplotypes with estimated scaled "
 			"true abundance greater than or equal to <adbl> using an alignment-free strategy. "
@@ -655,7 +655,7 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 			"--haplotypes option.  This can be helpful if there are known haplotypes in the sample, "
 			" but it is also useful for careful abundance estimation.\n", &exe_name[start]);
 		fprintf(fp, "\n\tPlease check %s subcommand cluster, error, assignment, "
-				"cluster_wumi (daumi) with option -h for more information.\n",&exe_name[start]);
+				"daumi (cluster_wumi) with option -h for more information.\n",&exe_name[start]);
 	} else if (!strcmp(command, "cluster")) {
 		fprintf(fp, "\nNAME\n\t%s-%s - Cluster Reads\n", &exe_name[start], command);
 		fprintf(fp, "\nSYNOPSIS\n\t%s cluster [--profile FILE] [--abundance FLOAT] [--log_likelihood FLOAT] [--contaminants UINT --diagnostic FLOAT --per_candidate] [--align --scores INT INT INT] [--umi --nJC69 --nNW] --fastq FILE --outfile FILE\n", &exe_name[start]);
@@ -670,12 +670,11 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 		fprintf(fp, "\n\tGiven a partition of the reads, either obtained by AmpliCI clustering or the partition, we fit an error model to the counts of errors across all clusters in the partition. For an externally provided partition, perhaps given by an independent clustering of UMIs, possible collisions within clusters may be detected (NOT detected with --ncollision) by checking for other high abundance members in a cluster and splitting by Hamming distance to the candidate members. A high abundance member reaches a minimum observed abundance and has at least (max. abundance + 1)/2 the abundance of the most abundant member. The user can set the minimum observed abundance threshold using the --abundance option. The user may also choose to exclude clusters that have no member meeting the minimum observed abundance threshold (--exclude). Without replication, it is hard to be sure the cluster represents a real variant or what is the true center of the cluster, so the counts of errors from such clusters may be less reliable. If there is high replication in the dataset, there may be plenty of information to estimate errors from only the clusters around high abundance centers.\n");
 		fprintf(fp, "\n\tLike DADA2, we use LOESS regression to estimate the relationship between quality score and each of the error probabilities.\n");
 	} else if (!strcmp(command, "assignment")) {
-		fprintf(fp, "\nNAME\n\t\t%s-%s -- Assign Reads to Clusters\n", &exe_name[start], command);
 		fprintf(fp, "\nSYNOPSIS\n\t%s assignment [--log_likelihood FLOAT] [--profile FILE --nNW] --fastq FILE --haplotype FILE --outfile FILE\n", &exe_name[start]);
 		fprintf(fp, "\nDESCRIPTION\n\tAssigns reads to provided haplotypes (--haplotype) with possible lower bound on log likelihood to exclude poorly explained reads. You may use --nNW to avoid time-consuming sequence alignment.\n");
 	} else if (!strcmp(command, "cluster_wumi") || !strcmp(command, "daumi")){
-		fprintf(fp, "\nNAME\n\t\t%s-%s -- cluster reads tagged with UMIs\n", &exe_name[start], command);
-		fprintf(fp, "\nSYNOPSIS\n\t%s cluster_wumi [--profile FILE] [--ncollision] --fastq FILE --haplotype FILE --umifile FILE --umilen UINT --outfile FILE --rho FLOAT  \n", &exe_name[start]);
+		fprintf(fp, "\nNAME\n\t\t%s-%s -- Cluster reads tagged with UMIs\n", &exe_name[start], command);
+		fprintf(fp, "\nSYNOPSIS\n\t%s %s [--profile FILE] [--ncollision] --fastq FILE --haplotype FILE --umifile FILE --umilen UINT --outfile FILE --rho FLOAT\n", &exe_name[start], command);
 		fprintf(fp, "\nDESCRIPTION\n\t Cluster reads tagged with UMIs. Assume UMIs with length (--umilen) are at the beginning of each read in the fastq file. You need to provide two fasta files for initialization, one for haplotypes (--haplotype), one for umis (--umilen). Parameter rho controls the sparsity of transition matrix gamma and needs to be preselected (see the github page for how to select rho). You can provide an error profile (--profile) or use the PHRED defaults.\n");
 		fprintf(fp, "\n\tThe algorithm assumes UMI collision by default. The deduplicated abundances of haplotypes would be adjusted if you assume NO UMI collision (--ncollision).\n");
 	}
@@ -717,9 +716,9 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 		fprintf(fp, "\t--haplotypes | -i <hstr>\n\t\tFASTA file with haplotypes.  [REQUIRED]\n");
 	if(!strcmp(command, "cluster_wumi") || !strcmp(command, "daumi"))
 		fprintf(fp, "\t--umifile | -u <ustr>\n\t\tFASTA file with UMIs.  [REQUIRED]\n");
-	if(!strcmp(command, "cluster_wumi")|| !strcmp(command, "daumi"))
+	if(!strcmp(command, "cluster_wumi") || !strcmp(command, "daumi"))
 		fprintf(fp, "\t--rho <rdbl> \n\t\t Tunning parameter that control the sparsity of the transition matrix gamma.  [DEFAULT: %f]\n", opt->rho);
-	if(!strcmp(command, "cluster_wumi")|| !strcmp(command, "daumi"))
+	if(!strcmp(command, "cluster_wumi") || !strcmp(command, "daumi"))
 		fprintf(fp, "\t--umilen <uuint> \n\t\t Length of UMI [REQUIRED]\n");
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--indel <inddbl>\n\t\tSequencing indel error rate.  Cannot also use options --insertion or --deletion.  [DEFAULT: %f]\n", opt->indel_error);
@@ -739,16 +738,16 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 		fprintf(fp, "\t--outfile, -o FILE\n\t\tOutput file for estimated error profile.  [REQUIRED]\n");
 	} else if (!strcmp(command, "assignment")) {
 		fprintf(fp, "\t--outfile, -o FILE\n\t\tOutput file for cluster assignments.  [REQUIRED]\n");
-	}else if (!strcmp(command, "cluster_wumi")|| !strcmp(command, "daumi")){
+	}else if (!strcmp(command, "cluster_wumi") || !strcmp(command, "daumi")){
 		fprintf(fp, "\t--outfile, -o FILE \n\t\tOutput file(s) for haplotypes with estimated deduplicated abundance. [REQUIRED]\n");
 	}
 	if (!strcmp(command, "error"))
 		fprintf(fp, "\t--ncollision \n\t\t Assume NO UMI collision when estimating errors based on UMI-induced partition file. [DEFAULT: %s]\n", opt->umicollision ? "collision" : "no collision");
-	if (!strcmp(command, "cluster_wumi")|| !strcmp(command, "daumi"))
+	if (!strcmp(command, "cluster_wumi") || !strcmp(command, "daumi"))
 		fprintf(fp, "\t--ncollision \n\t\t Assume NO UMI collision, that same UMI CANNOT be attached to two different original haplotypes. [DEFAULT: %s]\n", opt->umicollision ? "collision" : "no collision");
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--per_candidate | --pdiag <pdbl>\n\t\tAdjust diagnostic threshold (--diagnostic) to %f / number_candidates.  [DEFAULT: %s]\n", opt->alpha, opt->per_candidate ? "yes" : "no");
-	if (!strcmp(command, "cluster") || !strcmp(command, "cluster_wumi") || !strcmp(command, "assignment")|| !strcmp(command, "daumi"))
+	if (!strcmp(command, "cluster") || !strcmp(command, "cluster_wumi") || !strcmp(command, "assignment") || !strcmp(command, "daumi"))
 		fprintf(fp, "\t--profile | -p <estr>\n\t\tThe input error profile. If none, convert quality score to Phred error probability.  [DEFAULT: none]\n");
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--scores <match> <mismatch> [<transversion_mismatch>] <gap>\n\t\tSet scores of the Needleman-Wunsch aligner.  [DEFAULT: %d %d %d %d]\n", opt->score[0][0], opt->score[0][3], opt->score[0][1], opt->gap_p);
