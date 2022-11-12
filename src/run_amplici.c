@@ -83,7 +83,12 @@ int main(int argc, const char **argv)
 	if ((err = sync_state(dat, opt)))
 		goto CLEAR_AND_EXIT;
 
-	/* read initialization file  into fqdf */
+	if (opt->histogram) {
+		write_abundance_histogram(dat, opt);
+		goto CLEAR_AND_EXIT;
+	}
+
+	/* read initialization file into fqdf */
 	if (opt->initialization_file) {
 		if ((err = read_initialization_file(opt->initialization_file,
 							&fqdf, opt->info)))
