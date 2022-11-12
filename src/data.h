@@ -99,6 +99,7 @@ struct _data {
 int make_data(data **data, options *opt);
 int sync_state(data *dat, options *opt);
 int sync_data(data *dat, options *opt);
+int write_abundance_histogram(data *dat, options *opt);
 void free_data(data *dat);
 
 int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen, 

@@ -98,7 +98,7 @@ int sync_state(data *dat, options *opt)
 	dat->max_quality = dat->fdata->max_quality;
 
 	dat->error_prob = malloc(dat->n_quality * sizeof * dat->error_prob);
-	if(!dat->error_prob)
+	if (!dat->error_prob)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,"dat.error_prob");
 
 	for (unsigned int q = 0; q < dat->n_quality; q++)
@@ -167,7 +167,7 @@ int sync_state(data *dat, options *opt)
 	debug_msg(DEBUG_I, fxn_debug, "Allocated %dx(%d) quality matrix\n",
 		  dat->sample_size, dat->max_read_length);
 
-	if(opt->UMI_length){
+	if (opt->UMI_length) {
 
 		/* dmatU */
 		dat->dmatU = malloc(dat->sample_size * sizeof *dat->dmatU);
@@ -331,7 +331,7 @@ int sync_data(data *dat, options *opt)
 	int err = NO_ERROR;
 	
 	/* rebuild a new hash table if previous hash table exist */
-	if(dat->seq_count)
+	if (dat->seq_count)
 		delete_all(&dat->seq_count);
 	dat->seq_count = NULL;
 
@@ -340,11 +340,11 @@ int sync_data(data *dat, options *opt)
 		return err;
 
 	/* [TODO] maybe need to create a new hash table for UMIs */
-	if(dat->UMI_count)
+	if (dat->UMI_count)
 		delete_all(&dat->UMI_count);
 	dat->UMI_count = NULL;
 	
-	if(opt->UMI_length){
+	if (opt->UMI_length) {
 		if ((err = build_hash(&dat->UMI_count,dat->dmatU, &dat->hash_UMI_length,
 						NULL, opt->UMI_length, dat->sample_size)))
 			return err;
@@ -354,6 +354,34 @@ int sync_data(data *dat, options *opt)
 	return err;
 } /* sync_data */
 
+/**
+ * Write observed abundance histogram to outfile.
+ *
+ * @param dat	data pointer
+ * @param opt	options pointer
+ * @return	error status
+ */
+int write_abundance_histogram(data *dat, options *opt)
+{
+	unsigned int *abun = NULL;
+
+	/* hash has been sorted by abundance */
+	abun = calloc(dat->seq_count->count, sizeof(*abun));
+
+	if (!abun)
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "abun");
+
+	for (hash *s = dat->seq_count; s != NULL; s = s->hh.next)
+		++abun[s->count - 1];
+
+	FILE *fp = opt->outfile_base ? fopen(opt->outfile_base, "w") : stdout;
+
+	for (size_t i = 0; i < dat->seq_count->count; ++i)
+		fprintf(fp, "%u\n", abun[i]);
+
+	return NO_ERROR;
+} /* write_abundance_histogram */
+
 
 /* fill data object with provided dmat and qmat [CURRENTLY UNUSED] */
 int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen, 
@@ -361,18 +389,18 @@ int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen,
 
 	int err = NO_ERROR;
 
-	 dat->sample_size = sample_size;
-     dat->max_read_length = rlen;
-	 dat->min_read_length = rlen;
-	 dat->max_read_position = rlen;
-     dat->n_quality = max_quality - min_quality + 1;
-	 dat->min_quality = min_quality;
-	 dat->max_quality = max_quality;
-     dat->dmat = dmat;
-     dat->qmat = qmat;
+	dat->sample_size = sample_size;
+	dat->max_read_length = rlen;
+	dat->min_read_length = rlen;
+	dat->max_read_position = rlen;
+	dat->n_quality = max_quality - min_quality + 1;
+	dat->min_quality = min_quality;
+	dat->max_quality = max_quality;
+	dat->dmat = dmat;
+	dat->qmat = qmat;
 
-    dat->error_prob = malloc(dat->n_quality * sizeof * dat->error_prob);
-	if(!dat->error_prob)
+	dat->error_prob = malloc(dat->n_quality * sizeof * dat->error_prob);
+	if (!dat->error_prob)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,"dat.error_prob");
 
 	for (unsigned int q = 0; q < dat->n_quality; q++)
