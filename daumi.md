@@ -9,10 +9,10 @@ DAUMI greatly enhances the accuracy of detecting rare sequences and provides ded
 # Table of Contents
 1. [Installation](#installation)
 1. [Preparing input](#input)
-1. [Usage](#usage)
+1. [Usage and tutorial](#usage)
 1. [Choosing rho](#parameter)
 1. [Output](#output)
-1. [Options](#options)
+1. [Command-line options](#options)
 1. [Paired-end reads](#paired)
 1. [Acknowledgments](#acknowledgments)
 1. [Citation](#citation)
@@ -111,13 +111,13 @@ We provide more details and demonstrate each of these steps below.
 1. Estimate deduplicated abundance of each haplotype. We describe how to select parameter rho in the following section.
 
 	```sh
-	./run_AmpliCI --fastq FILENAME.fq --umifile FILENAME.bc.fa --haplotype FILENAME.merge.trim_dedup.fa -umilen UMI_LENGTH --outfile FILENAME --profile FILENAME.err -rho RHO
+	./run_AmpliCI daumi --fastq FILENAME.fq --umifile FILENAME.bc.fa --haplotype FILENAME.merge.trim_dedup.fa -umilen UMI_LENGTH --outfile FILENAME --profile FILENAME.err -rho RHO
 	```
 
 	An example:
 
 	```sh
-	./run_AmpliCI --fastq ../test/sim2.fq --umifile ../test/sim2.bc.fa -haplotype ../test/sim2.merge.trim_dedup.fa -umilen 9 --outfile ../test/sim2 --profile ../test/sim2.err -rho 46
+	./run_AmpliCI daumi --fastq ../test/sim2.fq --umifile ../test/sim2.bc.fa -haplotype ../test/sim2.merge.trim_dedup.fa -umilen 9 --outfile ../test/sim2 --profile ../test/sim2.err -rho 46
 	```
 
 You can run the whole pipeline on this example (from the ```src``` directory):
@@ -146,7 +146,7 @@ You can always get more help with:
 A separate program will be used to find the value of the tuning parameter rho. 
 You can find the program from the ```script``` directory.
 
-1. **Preparation**
+1. **Code Preparation**
 
 First, you need to install the [Fastest Fourier Transform of the West](https://tlo.mit.edu/technologies/fftw-fastest-fourier-transform-west).
 Then, the necessary code can be compiled with
@@ -157,10 +157,9 @@ gcc -Wall -pedantic -Wextra -g -o bp_pmf_mix bp_pmf_mixture.c fft.c -lfftw3 -lm
 
 2. **Data Preparation**
 
-Install the R package [DADA2](https://benjjneb.github.io/dada2/).
-Obtain the UMI raw abundance distribution.
+Run the histogram command available in AmpliCI to obtain the UMI abundance table.
 ```
-script/UMI_abun_dist.R FILENAME.bc.fq FILENAME.bc.hist
+./run_AmpliCI histogram --fastq FILENAME.bc.fq --outfile FILENAME.bc.hist
 ```
 
 3. **Model Fitting**
@@ -186,7 +185,10 @@ Options `--efficiency`, `--ncycles`, `--epsilon` and `--delta` are four paramete
 
 We recommend choosing rho as the argmax {Pr(X <= rho | Z = 1) < 0.05}, which means at most five percent of true variants will have observed abundance below or equal to rho.
 You can find this probability in the 8th column of the output csv file.
-The corresponding rho is found in the first column.
+Examine the lines in the output file until you find the last line with 8th column less than 0.05.
+Then, the corresponding rho is found in the first column.
+
+You can find more information about selecting rho in the [publication](#citation).
 
 # Output Files <a name = "output" />
 
