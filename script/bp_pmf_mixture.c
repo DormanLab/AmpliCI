@@ -331,8 +331,8 @@ double bp_err(unsigned int *obser_abun, unsigned int n, double E,
 	}
 
 	double D = KS_test_stat(&emp_pmf[lthres], &pmf_mix[lthres], hthres-lthres);
-	double ll = multi_ll(&obser_abun[lthres], &pmf_mix[lthres], hthres-lthres);  // -log likelihood
-	double bic = 4 * log(total_num) + 2*ll;
+	//double ll = multi_ll(&obser_abun[lthres], &pmf_mix[lthres], hthres-lthres);  // -log likelihood
+	//double bic = 4 * log(total_num) + 2*ll;
 
 	// fprintf(stderr, "D: %f; ll: %f\n", D, ll);
 	
