@@ -55,6 +55,12 @@ seqkit concat FILENAME.bc.fq FILENAME.trim.fq > FILENAME.fq
 # Usage <a name="usage" />
 
 DAUMI consists of four major steps.
+1. Obtain candidate UMI sequences. We use `AmpliCI cluster` for this purpose. You may use other software.
+1. Estimate an error profile for use in the next step using `AmpliCI error`.
+1. Obtain candidate haplotype sequences using `AmpliCI cluster`. You may use other software.
+1. Estimate the true haplotypes and their abundance using `AmpliCI daumi`.
+
+We provide more details and demonstrate each of these steps below.
 
 1. Cluster UMI sequences (the executable is called `run_AmpliCI`):
 
@@ -146,7 +152,7 @@ cd ../script
 gcc -Wall -pedantic -Wextra -g -o bp_pmf_mix bp_pmf_mixture.c fft.c -lfftw3 -lm
 ```
 
-1. **Data Preparation**
+2. **Data Preparation**
 
 Install the R package (DADA2)[https://benjjneb.github.io/dada2/].
 Obtain the UMI raw abundance distribution.
@@ -154,7 +160,7 @@ Obtain the UMI raw abundance distribution.
 script/UMI_abun_dist.R FILENAME.bc.fq FILENAME.bc.hist
 ```
 
-2. **Model Fitting**
+3. **Model Fitting**
 
 The input file is the UMI raw abundance distribution in the sample, that is the number in the ith row is the number of unique UMIs with abundance i.
 You can find examples of this input file with `*.txt` extension under the ```script``` directory.
@@ -164,7 +170,7 @@ The first step is to fit our proposed model (details in the paper) to data (the 
 ```
 You can use option `-t` to select a truncation position to truncate the long right tail of the distribution, which may be contributed by unmodeled UMI collision.
 
-3. **Refit Model**
+4. **Refit Model**
 
 You can also use the estimated values of parameters as the input to the program, in order to obtain the desired distribution without reestimating parameters.
 Below we use the input file from a HIV dataset as an example. 
@@ -173,7 +179,7 @@ Below we use the input file from a HIV dataset as an example.
 ```
 Options `--efficiency`, `--ncycles`, `--epsilon` and `--delta` are four parameters in the model, that represent PCR efficiency, number of PCR cycles, PCR error rate and sequence error rate. You can find more details about the model in the paper. 
 
-4. **Select Rho**
+5. **Select Rho**
 
 We recommend choosing rho as the argmax {Pr(X <= rho | Z = 1) < 0.05}, which means at most five percent of true variants will have observed abundance below or equal to rho.
 You can find this probability in the 8th column of the output csv file.
