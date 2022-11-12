@@ -100,8 +100,8 @@ void delete_all(hash **seq_count){
 	hash *tmp, *current,*hash_count;
 	hash_count = *seq_count;
 
-	HASH_ITER( hh, hash_count, current, tmp ) {
-		if(current->idx_array) free(current->idx_array);
+	HASH_ITER ( hh, hash_count, current, tmp ) {
+		if (current->idx_array) free(current->idx_array);
 		HASH_DEL( hash_count, current );
 		free(current);
 	}
