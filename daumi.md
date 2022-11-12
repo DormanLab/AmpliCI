@@ -10,7 +10,7 @@ DAUMI greatly enhances the accuracy of detecting rare sequences and provides ded
 1. [Installation](#installation)
 1. [Preparing input](#input)
 1. [Usage](#usage)
-1. [Tuning Parameter](#parameter)
+1. [Choosing rho](#parameter)
 1. [Output](#output)
 1. [Options](#options)
 1. [Paired-end reads](#paired)
@@ -55,85 +55,87 @@ seqkit concat FILENAME.bc.fq FILENAME.trim.fq > FILENAME.fq
 
 # Usage <a name="usage" />
 
-DAUMI consists of four major steps.
-1. Obtain candidate UMI sequences. We use `AmpliCI cluster` for this purpose. You may use other software.
-1. Estimate an error profile for use in the next step using `AmpliCI error`.
-1. Obtain candidate haplotype sequences using `AmpliCI cluster`. You may use other software.
+DAUMI consists of three major steps.
+1. Obtain candidate UMI sequences. We use `AmpliCI cluster` for this purpose. You may use other software to obtain a FASTA file with candidate UMIs.
+1. Obtain candidate haplotype sequences (sample sequences without the UMI) in two steps using AmpliCI. You may use other software to obtain a FASTA file with candidate haplotypes.
+	1. Estimate an error profile using `AmpliCI error`.
+	1. Obtain candidate haplotype sequences using `AmpliCI cluster`.
 1. Estimate the true haplotypes and their abundance using `AmpliCI daumi`.
 
 We provide more details and demonstrate each of these steps below.
 
 1. Cluster UMI sequences (the executable is called `run_AmpliCI`):
 
-```sh
-./run_AmpliCI cluster --umi --fastq FILENAME.bc.fq --outfile FILENAME.bc
-```
+	```sh
+	./run_AmpliCI cluster --umi --fastq FILENAME.bc.fq --outfile FILENAME.bc
+	```
 
-An example (from the ```src``` directory):
+	An example (from the ```src``` directory):
 
-```sh
-./run_AmpliCI cluster --umi --fastq ../test/sim2.bc.fq --outfile ../test/sim2.bc
-```
+	```sh
+	./run_AmpliCI cluster --umi --fastq ../test/sim2.bc.fq --outfile ../test/sim2.bc
+	```
 
-2. Estimate error profile based on partitions indicated by umi clusters:
+1. Obtain candidate haplotype sequences.
+	1. Estimate error profile based on partitions indicated by umi clusters:
 
-```sh
-grep "assign" FILENAME.bc.out | awk '{$1="";print}' > FILENAME.partition
-./run_AmpliCI error --fastq FILENAME.trim.fq --outfile FILENAME.err --partition FILENAME.partition --exclude
-```
+		```sh
+		grep "assign" FILENAME.bc.out | awk '{$1="";print}' > FILENAME.partition
+		./run_AmpliCI error --fastq FILENAME.trim.fq --outfile FILENAME.err --partition FILENAME.partition --exclude
+		```
 
-An example:
+		An example:
 
-```sh
-grep "assign" ../test/sim2.bc.out | awk '{$1="";print}' > ../test/sim2.partition
-./run_AmpliCI error --fastq ../test/sim2.trim.fq  --outfile ../test/error.out --partition ../test/sim2.partition --exclude
-```
+		```sh
+		grep "assign" ../test/sim2.bc.out | awk '{$1="";print}' > ../test/sim2.partition
+		./run_AmpliCI error --fastq ../test/sim2.trim.fq  --outfile ../test/error.out --partition ../test/sim2.partition --exclude
+		```
 
-3.  Cluster umi-tagged sequences to get initial haplotype set ([seqkit](https://github.com/shenwei356/seqkit) required for truncation and deduplication):
+	1.  Cluster umi-tagged sequences to get initial haplotype set ([seqkit](https://github.com/shenwei356/seqkit) required for truncation and deduplication):
 
-```sh
-./run_AmpliCI cluster --fastq FILENAME.fq --outfile FILENAME.merge --profile FILENAME.err -trim UMI_LENGTH
-cat FILENAME.merge.fa | seqkit subseq -r START_IDX:END_IDX | seqkit rmdup -s | seqkit seq -w 0 > FILENAME.merge.trim_dedup.fa
-```
+		```sh
+		./run_AmpliCI cluster --fastq FILENAME.fq --outfile FILENAME.merge --profile FILENAME.err -trim UMI_LENGTH
+		cat FILENAME.merge.fa | seqkit subseq -r START_IDX:END_IDX | seqkit rmdup -s | seqkit seq -w 0 > FILENAME.merge.trim_dedup.fa
+		```
 
-`START_IDX` and `END_IDX` are start and end position of the sampled biological sequences, 1-based and inclusive.
-Thus UMI length is `START_IDX - 1` and biological sequence length is `END_IDX - START_IDX + 1`.
+		`START_IDX` and `END_IDX` are start and end position of the sampled biological sequences, 1-based and inclusive.
+		Thus UMI length is `START_IDX - 1` and biological sequence length is `END_IDX - START_IDX + 1`.
 
-An example (total read length 250nt with UMI length 9nt):
+		An example (total read length 250nt with UMI length 9nt):
 
-```sh
-./run_AmpliCI cluster --fastq ../test/sim2.fq --outfile ../test/sim2.merge --profile ../test/sim2.err -trim 9 
-cat ../test/sim2.merge.fa | seqkit subseq -r 10:250 | seqkit rmdup -s | seqkit seq -w 0 > ../test/sim2.merge.trim_dedup.fa
-```
+		```sh
+		./run_AmpliCI cluster --fastq ../test/sim2.fq --outfile ../test/sim2.merge --profile ../test/sim2.err -trim 9 
+		cat ../test/sim2.merge.fa | seqkit subseq -r 10:250 | seqkit rmdup -s | seqkit seq -w 0 > ../test/sim2.merge.trim_dedup.fa
+		```
 
-4. Estimate deduplicated abundance of each haplotype. We describe how to select parameter rho in the following section.
+1. Estimate deduplicated abundance of each haplotype. We describe how to select parameter rho in the following section.
 
-```sh
-./run_AmpliCI --fastq FILENAME.fq --umifile FILENAME.bc.fa --haplotype FILENAME.merge.trim_dedup.fa -umilen UMI_LENGTH --outfile FILENAME --profile FILENAME.err -rho RHO
-```
+	```sh
+	./run_AmpliCI --fastq FILENAME.fq --umifile FILENAME.bc.fa --haplotype FILENAME.merge.trim_dedup.fa -umilen UMI_LENGTH --outfile FILENAME --profile FILENAME.err -rho RHO
+	```
 
-An example:
+	An example:
 
-```sh
-./run_AmpliCI --fastq ../test/sim2.fq --umifile ../test/sim2.bc.fa -haplotype ../test/sim2.merge.trim_dedup.fa -umilen 9 --outfile ../test/sim2 --profile ../test/sim2.err -rho 46
-```
+	```sh
+	./run_AmpliCI --fastq ../test/sim2.fq --umifile ../test/sim2.bc.fa -haplotype ../test/sim2.merge.trim_dedup.fa -umilen 9 --outfile ../test/sim2 --profile ../test/sim2.err -rho 46
+	```
 
-- You can run the whole pipeline on this example (from the ```src``` directory):
+You can run the whole pipeline on this example (from the ```src``` directory):
 
 ```sh
 bash ../script/ana.bash
 ```
 
-- Alternative to the third step. The main goal of the third step is to initialize a haplotype set. 
-An alternative step could be directly running AmpliCI on non-UMI-tagged FASTQ files.
+There are many possible modifications of this pipeline.
+On possible alternative to the second step for initializing the haplotype set is to directly run AmpliCI on non-UMI-tagged FASTQ files.
 
 ```sh
 ./run_AmpliCI --fastq FILENAME.trim.fq --outfile FILENAME --profile FILENAME.err
 ```
-The alternative step costs less time but with a risk of missing some very similar haplotypes.
+The alternative step costs less time but risks missing some very similar haplotypes.
 We recommend running the alternative step on massive datasets with sequences of moderate similarity, e.g., 16S rRNA gene sequences.
 
-- More detailed help can be obtained with:
+You can always get more help with:
 
 ```sh
 ./run_AmpliCI --help
