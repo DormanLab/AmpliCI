@@ -96,6 +96,8 @@ We provide more details and demonstrate each of these steps below.
 	The input of this command is the FASTQ file with UMIs only from [preparing data](#input).
 	The output of this command are the found UMIs in `FILENAME.umi.fa` and the clusterings, among other information, in `FILENAME.umi.out`.
 	You will need both files moving forward.
+	This command can fail if there is no replication in the UMIs.
+	If your data falls in this scenario then UMI-based deduplication will fail (or you have misidentified the UMIs).
 
 	An example (from the ```src``` directory):
 
@@ -130,8 +132,8 @@ We provide more details and demonstrate each of these steps below.
 		```
 
 		The input of this command are the FASTQ file `FILENAME.fq` with UMI and sampled read from [preparing data](#input) and the error profile `FILENAME.trim.err` from step 1.
-		The output of the AmpliCI command are the estimated candidate haplotypes with UMIs `FILENAME.fa` and additional information `FILENAME.out`.
-		We need to remove the UMI tags and the resulting duplicated haplotypes from these candidate haplotypes.
+		The output of the AmpliCI command are the estimated candidate haplotypes with UMIs in file `FILENAME.fa` and additional information in file `FILENAME.out`.
+		The second step shown above removes the UMI tags and the resulting duplicated haplotypes from the candidate haplotypes in `FILENAME.fa`.
 		The software [seqkit](https://github.com/shenwei356/seqkit) is useful for this purpose.
 		`START_IDX` and `END_IDX` are start and end position of the sampled biological sequences, 1-based and inclusive.
 		In other wrods, the UMI length is `START_IDX - 1` and the biological sequence (candidate haplotype) length is `END_IDX - START_IDX + 1`.
@@ -144,14 +146,14 @@ We provide more details and demonstrate each of these steps below.
 		cat ../test/sim2.fa | seqkit subseq -r 10:250 | seqkit rmdup -s | seqkit seq -w 0 > ../test/sim2.trim.fa
 		```
 
-1. Estimate deduplicated abundance of each haplotype. We describe how to select parameter rho in the following section.
+1. Estimate deduplicated abundance of each haplotype. We describe how to [select parameter rho](#parameter) in the following section.
 
 	```sh
 	./run_AmpliCI daumi --fastq FILENAME.fq --umifile FILENAME.umi.fa --haplotype FILENAME.trim.fa --profile FILENAME.trim.err --rho RHO -umilen UMI_LENGTH --outfile FILENAME
 	```
 
-	The input of this command are the FASTQ file `FILENAME.fq` with UMI and sampled read from [preparing data](#input), the candidate UMI file `FILENAME.umi.fa` from Step 1, the error profile `FILENAME.trim.err` and candidate haplotype file `FILENAME.trim.fa` from Step 2, and the choice of rho (see [Choosing Rho](#parameter)).
-	The output of this command si described in (Output Files)[#output]
+	The input of this command is the FASTQ file `FILENAME.fq` with UMI and sampled read from [preparing data](#input), the candidate UMI file `FILENAME.umi.fa` from Step 1, the error profile `FILENAME.trim.err` and candidate haplotype file `FILENAME.trim.fa` from Step 2, and the choice of rho (see [Choosing Rho](#parameter)).
+	The output of this command is described in [Output Files](#output).
 
 	An example:
 
