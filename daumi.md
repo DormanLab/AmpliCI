@@ -67,7 +67,7 @@ Here we justify this advice.
 
 If your read pairs overlap, then we would not recommend merging overlapping reads prior to analysis, as most read merging tools do not properly update the quality scores, which we rely on to detect sequencing errors.
 A better and easier solution with UMI-tagged paired-end reads is to simply to concatenate the reads, even if they overlap, and treat the concatenated reads as a single sampled sequence.
-It is true that some of the base calls are reads of the same true nucleotide, and we are not using the full information available in these replicate reads to estimate the original molecule, but there is no harm done in ignoring the information.
+It is true that some of the base calls are reads of the same true nucleotide, and we are not using the full information available in these replicate reads to estimate the original molecule, but there is little harm done in ignoring the information.
 If there is a PCR error in the overlap region, then two sites will register that change, which could lead to more false positives than a post-merge solution.
 However, our method (and other methods) only accidentally handle PCR errors, so it seems foolhardy to recommend a step (merging reads) that is likely to disrupt the signal we do model (sequencing errors) to partially overcome a signal we do not model (PCR errors).
 
