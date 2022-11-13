@@ -604,8 +604,6 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 
 	unsigned int K_partitions = max + 1;  // new K, number of UMI clusters
 
-	fprintf(stderr, "new K = %d\n", K_partitions);
-
 	/* find the most abundant sequence for each partition */
 	hash **hash_list = NULL;
 	hash_list = malloc(K_partitions * sizeof(*hash_list));
@@ -613,6 +611,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 						"Err_cnt.hash_list");
 
+	/* use existing array to store number of haplotypes in each UMI subset */
 	ini->cluster_size = malloc(K_partitions * sizeof(*ini->cluster_size));
 
 	if (!ini->cluster_size)
@@ -621,7 +620,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 
 	for (unsigned int k = 0; k < K_partitions; k++) {
 		hash_list[k] = NULL;
-		ini->cluster_size[k] = 0;   // used to store number of haplotypes in each UMI clusters
+		ini->cluster_size[k] = 0;
 	}
 
 	// check bugs in hash (currently not find any bugs )
@@ -639,7 +638,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 
 	// simple idea to detect collision in each UMI clusters
 	// consider every member with abundance at least half of most
-	// abundanct and at least 2 to be a true molecule
+	// abundant and at least 2 to be a true molecule
 	// [TODO] Put these choices under user control!
 	// remember need to update both ini->cluster_id, ini->seeds
 
@@ -648,7 +647,6 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 	unsigned int K_seeds = 0;
 
 	for (unsigned int k = 0; k < K_partitions; ++k) {
-
 		if (!hash_list[k])
 			continue;
 
@@ -658,24 +656,23 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 		for (hash *s = hash_list[k]; s != NULL; s = s->hh.next) {
 			if (s->count >= thres && s->count
 					>= opt->seed_min_observed_abundance) {
-				K_seeds ++;
-				ini->cluster_size[k] ++;
+				++K_seeds;
+				++ini->cluster_size[k];
 
 				// if we just need the most abundant sequence for each UMI cluster
-				if(!opt->umicollision){
+				if (!opt->umicollision)
 					break;
-				}
 
 			} else {
 				break;
 			}
 			//
 			//if(s->count > max_abun){
-				//if(s->count > 20) fprintf(stderr, "s->count > 20\n");
+			//	if(s->count > 20) fprintf(stderr, "s->count > 20\n");
 			//	max_abun = s->count;
 			//	idx = s->idx;
-				//memcpy(ini->seeds[k], s->sequence,
-				//	dat->max_read_length * sizeof **ini->seeds);
+			//	memcpy(ini->seeds[k], s->sequence,
+			//	dat->max_read_length * sizeof **ini->seeds);
 			//}
 		}
 	}
@@ -686,16 +683,19 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 	//}
 	//fprintf(stderr, "sum_subK : %d\n", sum_subK);
 
-	// There are some zero clusters in the K partitions
+	/* some clusters have no sufficiently replicate haplotype to be considered candidate */
 	unsigned int num_null = 0;
 	for (unsigned int k = 0; k < K_partitions; ++k)
 		if (ini->cluster_size[k] == 0)
 			num_null++;
 
-	fprintf(stderr, "K_seeds: %u\n", K_seeds);
 	K_seeds += (opt->exclude_low_abundance_seeds ? 0 : num_null);
 
-	fprintf(stderr, "K_seeds: %u\n", K_seeds);
+	if (!K_seeds)
+		return mmessage(ERROR_MSG, NO_DATA, "No subset of UMI partition"
+			" contains a haplotype observed at least %u times.  "
+			"Cannot estimate error profile!\n",
+			opt->seed_min_observed_abundance);
 
 	/* realloc space for seeds */
 	if (K_seeds != opt->K)
@@ -820,8 +820,8 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 		ini->cluster_id = new_cluster_id;
 	}
 
-	mmessage(INFO_MSG, NO_ERROR, "Kept %u reads in %u out of %u "
-			"clusters.\n", kept_reads, K_seeds, K_partitions);
+	mmessage(INFO_MSG, NO_ERROR, "Will estimate errors from %u reads in "
+		"%u out of %u clusters.\n", kept_reads, K_seeds, K_partitions);
 
 	//for(unsigned int i = 0; i < dat->sample_size; i++){
 	//	fprintf(stderr, "%d",ini->cluster_id[i]);
