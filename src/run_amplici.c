@@ -147,7 +147,7 @@ int main(int argc, const char **argv)
 		if ((err = EM_algorithm(opt, dat, mod, ini, ri)))
 			return err;
 
-	} else if ((!opt->initialization_file) && opt->run_amplici) {
+	} else if (!opt->initialization_file && opt->run_amplici) {
 
 		if (opt->partition_file) {
 			if ((err = ampliCI_wpartition(opt, dat, mod, ini, ri)))   
