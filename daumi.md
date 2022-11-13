@@ -9,11 +9,11 @@ DAUMI greatly enhances the accuracy of detecting rare sequences and provides ded
 # Table of Contents
 1. [Installation](#installation)
 1. [Preparing input](#input)
+	1. [Paired-end reads](#paired)
 1. [Usage and tutorial](#usage)
 1. [Choosing rho](#parameter)
 1. [Output files](#output)
 1. [Command-line options](#options)
-1. [Paired-end reads](#paired)
 1. [Acknowledgments](#acknowledgments)
 1. [Citation](#citation)
 1. [Contact](#contact)
@@ -25,7 +25,7 @@ DAUMI is part of the AmpliCI software. Please check the [AmpliCI](https://github
 
 In addition, you may find the following software useful to implement the DAUMI pipeline:
 
-- Automatic selection of [rho](#parameter) requires the [Fastest Fourier Transform of the West](https://tlo.mit.edu/technologies/fftw-fastest-fourier-transform-west) library.
+- Automatic selection of command-line option [rho](#parameter) requires the [Fastest Fourier Transform of the West](https://tlo.mit.edu/technologies/fftw-fastest-fourier-transform-west) library.
 - Processing of the FASTQ files in the pipeline may be easiest with [seqkit](https://github.com/shenwei356/seqkit).
 
 We use both software packages in the tutorial and demonstrations below.
@@ -59,6 +59,21 @@ or generate `FILENAME.fq` from the other two files
 ```
 seqkit concat FILENAME.umi.fq FILENAME.trim.fq > FILENAME.fq 
 ```
+
+## Paired-end reads <a name = "paired" />
+
+If you have paired-end reads, you may simply concatenate them and follow the regular [Usage pipeline](#usage).
+Here we justify this advice.
+
+If your read pairs overlap, then we would not recommend merging overlapping reads prior to analysis, as most read merging tools do not properly update the quality scores, which we rely on to detect sequencing errors.
+A better and easier solution with UMI-tagged paired-end reads is to simply to concatenate the reads, even if they overlap, and treat the concatenated reads as a single sampled sequence.
+It is true that some of the base calls are reads of the same true nucleotide, and we are not using the full information available in these replicate reads to estimate the original molecule, but there is no harm done in ignoring the information.
+If there is a PCR error in the overlap region, then two sites will register that change, which could lead to more false positives than a post-merge solution.
+However, our method (and other methods) only accidentally handle PCR errors, so it seems foolhardy to recommend a step (merging reads) that is likely to disrupt the signal we do model (sequencing errors) to partially overcome a signal we do not model (PCR errors).
+
+If your paired-end reads do not overlapped, then we would recommend the same concatenation strategy without the caveats.
+The error model does not utilize the read position to predict errors or assume any dependence in the errors between sites, so there is no problem with concatenating reads, where you will lose information about the sequencing cycle of each nucleotide.
+
 
 
 # Usage <a name="usage" />
@@ -297,21 +312,6 @@ Options of AmpliCI can be found in [here](https://github.com/DormanLab/AmpliCI#o
 
 - `--umilen`: UMI Length.
  
-
-# Paired-end reads <a name = "paired" />
-
-If you have paired-end reads, you may simply concatenate them and follow the [Usage pipeline](#usage) described above.
-Here we justify this advice.
-
-If your read pairs overlap, then we would not recommend merging overlapping reads prior to analysis, as most read merging tools do not properly update the quality scores, which we rely on to detect sequencing errors.
-A better and easier solution with UMI-tagged paired-end reads is to simply to concatenate the reads, even if they overlap, and treat the concatenated reads as a single sampled sequence.
-It is true that some of the base calls are reads of the same true nucleotide, and we are not using the full information available in these replicate reads to estimate the original molecule, but there is no harm done in ignoring the information.
-If there is a PCR error in the overlap region, then two sites will register that change, which could lead to more false positives than a post-merge solution.
-However, our method (and other methods) only accidentally handle PCR errors, so it seems foolhardy to recommend a step (merging reads) that is likely to disrupt the signal we do model (sequencing errors) to partially overcome a signal we do not model (PCR errors).
-
-If your paired-end reads do not overlapped, then we would recommend the same concatenation strategy without the caveats.
-The error model does not utilize the read position to predict errors or assume any dependence in the errors between sites, so there is no problem with concatenating reads, where you will lose information about the sequencing cycle of each nucleotide.
-
 
 # Acknowledgments <a name = "acknowledgments" />
 
