@@ -5,6 +5,7 @@
 #include "align.h"
 #include "lmath.h"
 #include "error.h"
+#include "io.h"
 
 /**
  * XY used penultimate 2 bits to encode 4 nucleotides.
@@ -118,21 +119,6 @@ xy_t const nuc_to_xy[NUCLEOTIDE_ALPHABET_SIZE] = {
 	/*                  1                   2
         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 */
 };
-
-/**
- * Macro forward to the next newline or EOF.
- */
-#define fforward(f, c, t) do {                                                 \
-	(c) = fgetc((f));                                                      \
-} while ((c) != EOF && (c) != (t));
-
-/**
- * Macro forward to the next newline or EOF, and count characters consumed.
- */
-#define fforward_cnt(f, c, t, a)                                               \
-while (((c) = fgetc((f))) != EOF && (c) != (t)) {                              \
-	(a)++;                                                                 \
-}
 
 /**
  * Validate human-readable nucleotide characters as IUPAC symbols or one
