@@ -94,7 +94,7 @@ We provide more details and demonstrate each of these steps below.
 	1.  Cluster umi-tagged sequences to get initial haplotype set ([seqkit](https://github.com/shenwei356/seqkit) required for truncation and deduplication):
 
 		```sh
-		./run_AmpliCI cluster --fastq FILENAME.fq --outfile FILENAME.merge --profile FILENAME.err -trim UMI_LENGTH
+		./run_AmpliCI cluster --fastq FILENAME.fq --outfile FILENAME.merge --profile FILENAME.err --trim UMI_LENGTH
 		cat FILENAME.merge.fa | seqkit subseq -r START_IDX:END_IDX | seqkit rmdup -s | seqkit seq -w 0 > FILENAME.merge.trim_dedup.fa
 		```
 
@@ -104,7 +104,7 @@ We provide more details and demonstrate each of these steps below.
 		An example (total read length 250nt with UMI length 9nt):
 
 		```sh
-		./run_AmpliCI cluster --fastq ../test/sim2.fq --outfile ../test/sim2.merge --profile ../test/sim2.err -trim 9 
+		./run_AmpliCI cluster --fastq ../test/sim2.fq --outfile ../test/sim2.merge --profile ../test/sim2.err --trim 9
 		cat ../test/sim2.merge.fa | seqkit subseq -r 10:250 | seqkit rmdup -s | seqkit seq -w 0 > ../test/sim2.merge.trim_dedup.fa
 		```
 
