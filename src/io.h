@@ -7,6 +7,32 @@
 #endif
 
 /**
+ * Macro forward to next instance of selected char or EOF.
+ */
+#define fforward(f, c, t) do {                                                 \
+	(c) = fgetc((f));                                                      \
+} while ((c) != EOF && (c) != (t));
+
+/**
+ * Macro forward to next instance of selected char or EOF, counting characters
+ * consumed.
+ */
+#define fforward_cnt(f, c, t, a)                                               \
+while (((c) = fgetc((f))) != EOF && (c) != (t)) {                              \
+	(a)++;                                                                 \
+}
+
+/**
+ * Macro read next max n chars up to selected char.
+ */
+#define next_word(f, s, n, t) {                                                \
+	unsigned int i = 0;                                                    \
+	while (i < (n) && ((s)[i] = fgetc((f))) != EOF && (s)[i++] != t);      \
+        s[i] = 0;                                                              \
+}
+
+
+/**
  * Seamlessly handle presence/absence of ncurses window.
  */
 #ifdef USE_CURSES
