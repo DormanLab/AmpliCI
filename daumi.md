@@ -23,6 +23,12 @@ DAUMI greatly enhances the accuracy of detecting rare sequences and provides ded
 
 DAUMI is part of the AmpliCI software. Please check the [AmpliCI](https://github.com/DormanLab/AmpliCI) instructions for installation.
 
+In addition, you may find the following software useful to implement the DAUMI pipeline:
+	- Automatic selection of [rho](#parameter) requires the [Fastest Fourier Transform of the West](https://tlo.mit.edu/technologies/fftw-fastest-fourier-transform-west) library.
+	- Processing of the FASTQ files in the pipeline may be easiest with [seqkit](https://github.com/shenwei356/seqkit).
+We use both software packages in the tutorial and demonstrations below.
+
+
 # Preparing input <a name="input" />
 
 The input to AmpliCI is a FASTQ file. 
