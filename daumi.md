@@ -168,7 +168,7 @@ bash ../script/ana.bash
 ```
 
 There are many possible modifications of this pipeline.
-On possible alternative to the second step for initializing the haplotype set is to directly run AmpliCI on non-UMI-tagged FASTQ files.
+One possible alternative to the second step for initializing the haplotype set is to directly run AmpliCI on non-UMI-tagged FASTQ files.
 
 ```sh
 ./run_AmpliCI --fastq FILENAME.trim.fq --outfile FILENAME.trim --profile FILENAME.err
