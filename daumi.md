@@ -11,7 +11,7 @@ DAUMI greatly enhances the accuracy of detecting rare sequences and provides ded
 1. [Preparing input](#input)
 1. [Usage and tutorial](#usage)
 1. [Choosing rho](#parameter)
-1. [Output](#output)
+1. [Output files](#output)
 1. [Command-line options](#options)
 1. [Paired-end reads](#paired)
 1. [Acknowledgments](#acknowledgments)
@@ -37,12 +37,12 @@ The input to AmpliCI is a FASTQ file.
 Besides the common practice for [preprocessing](https://github.com/DormanLab/AmpliCI#input) raw FASTQ files, additional preprocessing steps are required for DAUMI.
 For each sample, users need to prepare three FASTQ files:
 
-- `FILENAME.bc.fq`
+- `FILENAME.umi.fq`
 - `FILENAME.trim.fq`
 - `FILENAME.fq`
 
 
-Each FASTQ file contains subsequences of the original FASTQ file: UMIs (`FILENAME.bc.fq`), biological sequences (`FILENAME.trim.fq`) or UMIs + biological sequences (`FILENAME.fq`).
+Each FASTQ file contains subsequences of the original FASTQ file: UMIs (`FILENAME.umi.fq`), biological sequences (`FILENAME.trim.fq`) or UMIs + biological sequences (`FILENAME.fq`).
 Subsequences from the same read share the same seq ID and are in the same order in all three files.
 In `FILENAME.fq`, UMIs should be at the front of biological sequences.
 It is easy to prepare the three FASTQ files using [seqkit](https://github.com/shenwei356/seqkit) with subcommands `subseq` and `concat`.
@@ -50,14 +50,14 @@ It is easy to prepare the three FASTQ files using [seqkit](https://github.com/sh
 Below is an example demonstrating how to prepare the other two files from `FILENAME.fq`, when the total read length is 250nt with a UMI length of 9nt.
 
 ```
-seqkit subseq -r 1:9 FILENAME.fq > FILENAME.bc.fq
+seqkit subseq -r 1:9 FILENAME.fq > FILENAME.umi.fq
 seqkit subseq -r 10:250 FILENAME.fq > FILENAME.trim.fq
 ```
 
 or generate `FILENAME.fq` from the other two files
 
 ```
-seqkit concat FILENAME.bc.fq FILENAME.trim.fq > FILENAME.fq 
+seqkit concat FILENAME.umi.fq FILENAME.trim.fq > FILENAME.fq 
 ```
 
 
@@ -75,57 +75,73 @@ We provide more details and demonstrate each of these steps below.
 1. Cluster UMI sequences (the executable is called `run_AmpliCI`):
 
 	```sh
-	./run_AmpliCI cluster --umi --fastq FILENAME.bc.fq --outfile FILENAME.bc
+	./run_AmpliCI cluster --umi --fastq FILENAME.umi.fq --outfile FILENAME.umi
 	```
+
+	The input of this command is the FASTQ file with UMIs only from [preparing data](#input).
+	The output of this command are the found UMIs in `FILENAME.umi.fa` and the clusterings, among other information, in `FILENAME.umi.out`.
+	You will need both files moving forward.
 
 	An example (from the ```src``` directory):
 
 	```sh
-	./run_AmpliCI cluster --umi --fastq ../test/sim2.bc.fq --outfile ../test/sim2.bc
+	./run_AmpliCI cluster --umi --fastq ../test/sim2.umi.fq --outfile ../test/sim2.umi
 	```
 
 1. Obtain candidate haplotype sequences.
-	1. Estimate error profile based on partitions indicated by umi clusters:
+	1. Estimate error profile based on partition induced by umi clusters:
 
 		```sh
-		grep "assign" FILENAME.bc.out | awk '{$1="";print}' > FILENAME.partition
-		./run_AmpliCI error --fastq FILENAME.trim.fq --outfile FILENAME.err --partition FILENAME.partition --exclude
+		./run_AmpliCI error --fastq FILENAME.trim.fq --outfile FILENAME.trim.err --partition FILENAME.umi.out --exclude
 		```
+
+		The input of this command is the FASTQ file without UMIs from [preparing data](#input).
+		The output of this command is the error profile stored in `FILENAME.trim.err` or filename of your choice.
+		This command will fail if there are no replicated reads in the input file.
+		AmpliCI relies on data replication to work.
+		It assumes PCR amplification and low error rates guarantee that every true UMI and molecule is observed at least twice in the input file.
 
 		An example:
 
 		```sh
-		grep "assign" ../test/sim2.bc.out | awk '{$1="";print}' > ../test/sim2.partition
-		./run_AmpliCI error --fastq ../test/sim2.trim.fq  --outfile ../test/error.out --partition ../test/sim2.partition --exclude
+		./run_AmpliCI error --fastq ../test/sim2.trim.fq  --outfile ../test/sim2.trim.err --partition ../test/sim2.umi.out --exclude
 		```
 
 	1.  Cluster umi-tagged sequences to get initial haplotype set ([seqkit](https://github.com/shenwei356/seqkit) required for truncation and deduplication):
 
 		```sh
-		./run_AmpliCI cluster --fastq FILENAME.fq --outfile FILENAME.merge --profile FILENAME.err --trim UMI_LENGTH
-		cat FILENAME.merge.fa | seqkit subseq -r START_IDX:END_IDX | seqkit rmdup -s | seqkit seq -w 0 > FILENAME.merge.trim_dedup.fa
+		./run_AmpliCI cluster --fastq FILENAME.fq --outfile FILENAME --profile FILENAME.trim.err --trim UMI_LENGTH
+		cat FILENAME.fa | seqkit subseq -r START_IDX:END_IDX | seqkit rmdup -s | seqkit seq -w 0 > FILENAME.trim.fa
 		```
 
+		The input of this command are the FASTQ file `FILENAME.fq` with UMI and sampled read from [preparing data](#input) and the error profile `FILENAME.trim.err` from step 1.
+		The output of the AmpliCI command are the estimated candidate haplotypes with UMIs `FILENAME.fa` and additional information `FILENAME.out`.
+		We need to remove the UMI tags and the resulting duplicated haplotypes from these candidate haplotypes.
+		The software [seqkit](https://github.com/shenwei356/seqkit) is useful for this purpose.
 		`START_IDX` and `END_IDX` are start and end position of the sampled biological sequences, 1-based and inclusive.
-		Thus UMI length is `START_IDX - 1` and biological sequence length is `END_IDX - START_IDX + 1`.
+		In other wrods, the UMI length is `START_IDX - 1` and the biological sequence (candidate haplotype) length is `END_IDX - START_IDX + 1`.
+		The final output of this step is the candidate haplotype file `FILENAME.trim.fa`. All other intermediate files from this step can be discarded.
 
 		An example (total read length 250nt with UMI length 9nt):
 
 		```sh
-		./run_AmpliCI cluster --fastq ../test/sim2.fq --outfile ../test/sim2.merge --profile ../test/sim2.err --trim 9
-		cat ../test/sim2.merge.fa | seqkit subseq -r 10:250 | seqkit rmdup -s | seqkit seq -w 0 > ../test/sim2.merge.trim_dedup.fa
+		./run_AmpliCI cluster --fastq ../test/sim2.fq --outfile ../test/sim2 --profile ../test/sim2.trim.err --trim 9
+		cat ../test/sim2.fa | seqkit subseq -r 10:250 | seqkit rmdup -s | seqkit seq -w 0 > ../test/sim2.trim.fa
 		```
 
 1. Estimate deduplicated abundance of each haplotype. We describe how to select parameter rho in the following section.
 
 	```sh
-	./run_AmpliCI daumi --fastq FILENAME.fq --umifile FILENAME.bc.fa --haplotype FILENAME.merge.trim_dedup.fa -umilen UMI_LENGTH --outfile FILENAME --profile FILENAME.err -rho RHO
+	./run_AmpliCI daumi --fastq FILENAME.fq --umifile FILENAME.umi.fa --haplotype FILENAME.trim.fa --profile FILENAME.trim.err --rho RHO -umilen UMI_LENGTH --outfile FILENAME
 	```
+
+	The input of this command are the FASTQ file `FILENAME.fq` with UMI and sampled read from [preparing data](#input), the candidate UMI file `FILENAME.umi.fa` from Step 1, the error profile `FILENAME.trim.err` and candidate haplotype file `FILENAME.trim.fa` from Step 2, and the choice of rho (see [Choosing Rho](#parameter)).
+	The output of this command si described in (Output Files)[#output]
 
 	An example:
 
 	```sh
-	./run_AmpliCI daumi --fastq ../test/sim2.fq --umifile ../test/sim2.bc.fa -haplotype ../test/sim2.merge.trim_dedup.fa -umilen 9 --outfile ../test/sim2 --profile ../test/sim2.err -rho 46
+	./run_AmpliCI daumi --fastq ../test/sim2.fq --umifile ../test/sim2.umi.fa -haplotype ../test/sim2.merge.trim_dedup.fa -umilen 9 --outfile ../test/sim2 --profile ../test/sim2.trim.err -rho 46
 	```
 
 You can run the whole pipeline on this example (from the ```src``` directory):
@@ -138,7 +154,7 @@ There are many possible modifications of this pipeline.
 On possible alternative to the second step for initializing the haplotype set is to directly run AmpliCI on non-UMI-tagged FASTQ files.
 
 ```sh
-./run_AmpliCI --fastq FILENAME.trim.fq --outfile FILENAME --profile FILENAME.err
+./run_AmpliCI --fastq FILENAME.trim.fq --outfile FILENAME.trim --profile FILENAME.err
 ```
 The alternative step costs less time but risks missing some very similar haplotypes.
 We recommend running the alternative step on massive datasets with sequences of moderate similarity, e.g., 16S rRNA gene sequences.
@@ -151,8 +167,20 @@ You can always get more help with:
 
 # Choosing Rho <a name = "parameter" />
 
-A separate program will be used to find the value of the tuning parameter rho. 
-You can find the program from the ```script``` directory.
+Rho should be chosen as the expected number of copies of a molecule in the dataset that best separates error molecules from true molecules.
+One can examine the histogram of observed UMI abundances to choose a good value of Rho.
+In the cleanest situation, there will be a peak near 1 consisting of the errored UMIs and another well-separated peak (or multiple peaks) representing the true UMIs that have been amplified and sequenced multiple times.
+Unfortunately, several forces collaborate to smear and overlap the two distributions of errored and true UMIs.
+In particular, PCR amplification is not 100% perfect, so not every molecule is copied in every PCR cycle.
+Furthermore, only a subset of amplified molecules will be sampled for sequencing and some of those will be sequenced with error.
+These forces reduce the number of observed copies of true molecules.
+Furthermore, errors during PCR amplification can amplify errored molecules to high levels, making some errored molecules look like true molecules.
+Together, these forces cause the two distributions to overlap making it difficult to choose a threshold for some datasets.
+
+We have written a separate program to help you make a good choice for parameter rho given the UMI abundance histogram.
+Be warned that this program cannot do magic, and if the errored and true abundance distributions are highly overlapped, just like you, it will have a hard time finding a good threshold.
+You can find the program in the ```script``` directory.
+The following demonstration shows how to compile and run the script.
 
 1. **Code Preparation**
 
@@ -167,7 +195,7 @@ gcc -Wall -pedantic -Wextra -g -o bp_pmf_mix bp_pmf_mixture.c fft.c -lfftw3 -lm
 
 Run the histogram command available in AmpliCI to obtain the UMI abundance table.
 ```
-./run_AmpliCI histogram --fastq FILENAME.bc.fq --outfile FILENAME.bc.hist
+./run_AmpliCI histogram --fastq FILENAME.umi.fq --outfile FILENAME.umi.hist
 ```
 
 3. **Model Fitting**
@@ -176,7 +204,7 @@ The input file is the UMI raw abundance distribution in the sample, that is the 
 You can find examples of this input file with `*.txt` extension under the ```script``` directory.
 The first step is to fit our proposed model (details in the paper) to data (the executable is called `bp_pmf_mix`).
 ```
-./bp_pmf_mix -f FILENAME.bc.hist -t TRUNCATION_POSITION > OUPUT_CSV_FILE
+./bp_pmf_mix -f FILENAME.umi.hist -t TRUNCATION_POSITION > OUPUT_CSV_FILE
 ```
 You can use option `-t` to select a truncation position to truncate the long right tail of the distribution, which may be contributed by unmodeled UMI collision.
 
