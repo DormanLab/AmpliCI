@@ -1,11 +1,12 @@
-cmake_minimum_required (VERSION 3.5.0)
+cmake_minimum_required(VERSION 3.3.0)
 
-project (AmpliCI VERSION 2.0)
+project(AmpliCI VERSION 2.0)
 
-SET(CMAKE_CC_COMPILER  gcc)
+SET(CMAKE_C_COMPILER gcc)
 
-set(CMAKE_BUILD_TYPE release)
-set(CMAKE_CXX_STANDARD 11)
+# run cmake -S . -B debug -DCMAKE_BUILD_TYPE=Debug && cmake --build debug to compile debugging version
+#set(CMAKE_BUILD_TYPE release)
+set(CMAKE_C_STANDARD 11)
 
 set(RMATH_PATH ".")
 
@@ -36,10 +37,10 @@ if(APPLE)
    find_library(LIBR_LIBRARIES R)
    
    if(LIBR_LIBRARIES MATCHES ".*\\.framework")
-   set(LIBR_HOME "${LIBR_LIBRARIES}/Resources" CACHE PATH "R home directory")
-      set(LIBR_INCLUDE_DIRS "${LIBR_HOME}/include" CACHE PATH "R include directory")
-      set(LIBR_LIB_DIR "${LIBR_HOME}/lib" CACHE PATH "R lib directory")
-      set(LIBR_EXECUTABLE "${LIBR_HOME}/bin/R" CACHE PATH "R executable")
+     set(LIBR_HOME "${LIBR_LIBRARIES}/Resources" CACHE PATH "R home directory")
+     set(LIBR_INCLUDE_DIRS "${LIBR_HOME}/include" CACHE PATH "R include directory")
+     set(LIBR_LIB_DIR "${LIBR_HOME}/lib" CACHE PATH "R lib directory")
+     set(LIBR_EXECUTABLE "${LIBR_HOME}/bin/R" CACHE PATH "R executable")
    else()
       get_filename_component(_LIBR_LIBRARIES "${LIBR_LIBRARIES}" REALPATH)
       get_filename_component(_LIBR_LIBRARIES_DIR "${_LIBR_LIBRARIES}" PATH)
@@ -161,15 +162,3 @@ set_target_properties(amplici_static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 
 ## version for the shared 
 # set_target_properties(amplici PROPERTIES VERSION 1.0)
-
-
-
-
-
-
-
-
- 
-
-
-
