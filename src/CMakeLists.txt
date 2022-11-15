@@ -92,6 +92,9 @@ message(STATUS "Found R include directory: ${LIBR_INCLUDE_DIRS}")
 message(STATUS "Found R lib directory: ${LIBR_LIB_DIR}")
 message(STATUS "Found R executable directory: ${_LIBR_EXECUTABLE_DIR}")
 
+include_directories(${LIBR_INCLUDE_DIRS})
+link_directories(${LIBR_LIB_DIR} ${RMATH_PATH})
+
 ## loess library
 set(F_OBJ ./libblas_lite.f ./linpack_lite.f ./loessf.f)
 set(C_OBJ_LOESS ./loessc.c)
