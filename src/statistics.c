@@ -59,13 +59,13 @@ double ppoisbin(int k, unsigned int n, double *perr, int upper_tail)
 {
 	double prob = 0.;
 	
-	if (k < 0){
+	if (k < 0) {
 		//mmessage(INFO_MSG, NO_ERROR, "1\n");
 		if(upper_tail)
 			return 1.;
 		else
 			return 0.;
-	}else if (k >= n){
+	} else if ((unsigned int) k >= n) {
 		//mmessage(INFO_MSG, NO_ERROR, "0\n");
 		if (upper_tail) 
 			return prob;
@@ -75,7 +75,7 @@ double ppoisbin(int k, unsigned int n, double *perr, int upper_tail)
 
 	/* [KSD] You should compute left tail probability if k is small. */
 	/* currently most k are very large, close to n */
-	for (unsigned int i = n; i > k; i--)
+	for (unsigned int i = n; i > (unsigned int) k; i--)
 		prob += dpoisbind(n, i, perr);
 
 	if (upper_tail) 

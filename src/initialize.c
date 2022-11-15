@@ -283,8 +283,6 @@ int realloc_initializer(initializer *ini, data *dat, options *opt)
 	if(preK <2)
 		return mmessage(ERROR_MSG, INTERNAL_ERROR,"realloc.initializer");
 	ini->K = opt->K;
-	size_t *seed_idx = NULL;
-	double *criterion = NULL;
 
 	//size_t *seed_idx = realloc(ini->seed_idx,
 	//				opt->K * sizeof *ini->seed_idx);
@@ -483,7 +481,7 @@ int read_initialization_file(char const * const filename, fastq_data **fqdf, int
 	if (!fp)
 		return mmessage(ERROR_MSG, FILE_OPEN_ERROR, filename);
 
-	char c = fgetc(fp);
+	fgetc(fp);
 
 	rewind(fp);
 
@@ -527,6 +525,7 @@ int read_initialization_file(char const * const filename, fastq_data **fqdf, int
 
 void free_initializer(initializer *ini, options *opt)
 {
+	UNUSED(opt);
 	if (ini) {
 		if (ini->cluster_id) free(ini->cluster_id);
 		if (ini->seed_idx) free(ini->seed_idx);

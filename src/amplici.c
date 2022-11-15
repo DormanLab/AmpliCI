@@ -1151,7 +1151,7 @@ int Expected_SelfTrans(options *opt, data *dat, double *self_trans,
 			double *error_profile, int err_encoding, double adj)
 {
 
-	double log_epsilon = opt->epsilon_aln;
+	//double log_epsilon = opt->epsilon_aln;
 
 	/* [TODO] parallelize */
 	//#pragma omp parallel for
@@ -1208,6 +1208,7 @@ int Expected_SelfTrans(options *opt, data *dat, double *self_trans,
 int ExpTrans_nogap(data *dat, options *opt, initializer *ini, unsigned int H_id,
 		unsigned int select, double *error_profile, int err_encoding)
 {
+	UNUSED(opt);
 
 //	double log_epsilon = opt->epsilon_aln;
 	unsigned char *seq = ini->seeds[select];
@@ -1466,6 +1467,7 @@ int evaluate_haplotype(options *opt, data *dat, model *mod, initializer *ini,
 	unsigned int K, double low_bound, double *error_profile,
 	unsigned int ord, unsigned int n_candidates, int *fp, int final)
 {
+	UNUSED(n_candidates);
 		
 	int fxn_debug = opt->info;
 	int err = NO_ERROR;
@@ -1921,7 +1923,7 @@ int abun_pvalue(options *opt, initializer *ini, size_t *idx_array,
 	double true_abun_var = 0.;
 	double abun_null = 0.;  //  estimated number of count from others under null hypothesis
 	double gamma = 0.;
-	unsigned int rlen = ini->seed_lengths[select];
+	//unsigned int rlen = ini->seed_lengths[select];
 	double true_abun = ini->H_abun[select];  // note the abundance of the haplotype is fixed when generate p value
 	double *perr = NULL;
 
@@ -2006,7 +2008,7 @@ int abun_pvalue(options *opt, initializer *ini, size_t *idx_array,
 	if (*p < 0 || *p >1)
 		return mmessage(ERROR_MSG, INTERNAL_ERROR,
 				"Diagnostic Probability is not in [0,1] ");
-EXITNOW:
+//EXITNOW:
 
 	if (perr)
 		free(perr);
@@ -2242,7 +2244,7 @@ int m_JC69(unsigned char * hap, unsigned char * anc, double *dist,
 			}
 		}
 	}
-	for (unsigned int j = 0; j < start; j ++)
+	for (int j = 0; j < start; j ++)
 		anc[j] = (unsigned char) 4;
 
 
@@ -2341,7 +2343,7 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 {
 	int err = NO_ERROR;
 	int fxn_debug = opt->info;
-	double l1third = 1./3;
+	//double l1third = 1./3;
 
 	/* maybe use error profile */
 	double *error_profile = NULL;
@@ -2508,7 +2510,7 @@ int trans_expectation(options *opt, data *dat,initializer*ini, double *error_pro
 
 	int err = NO_ERROR;
 	double l1third = 1./3;
-	int fxn_debug = opt->info;
+	//int fxn_debug = opt->info;
 
 	for(unsigned int u = 0; u < dat->hash_length; ++u ){
 

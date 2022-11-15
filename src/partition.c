@@ -30,12 +30,13 @@
 int ampliCI_wpartition(options *opt, data *dat, model *mod, initializer *ini, run_info *ri)
 {
 
+	UNUSED(mod);
+	UNUSED(ri);
 
 	int err = NO_ERROR;
 	int fxn_debug = opt->info;
 
 	unsigned int K_space = opt->K;
-	unsigned int ini_K = opt->K;
 	unsigned int max_size = 0;
 
 	//double abun_cutoff = opt->low_bound;

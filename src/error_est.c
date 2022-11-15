@@ -571,7 +571,7 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
 		for (unsigned int k = lb; k < ub; k++)
 			if (k != self_lines[nuc])
 				error_profile[idx] -= exp(error_profile[k*n_quality+q]);
-			error_profile[idx] = log(error_profile[idx]); // log version
+		error_profile[idx] = log(error_profile[idx]); // log version
 	}
 
 	return NO_ERROR;
@@ -723,7 +723,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 		if (!hash_list[k])
 			continue;
 
-		hash *s = hash_list[k], *cs;
+		hash *s = hash_list[k];
 		unsigned int subK = ini->cluster_size[k];
 
 		// no collision or zero cluster

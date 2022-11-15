@@ -412,8 +412,8 @@ int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen,
 	if (!dat->lengths)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "data.lengths");
 
-    for (size_t i = 0; i < dat->sample_size; ++i)
-        dat->lengths[i] = dat->max_read_length;
+	for (size_t i = 0; i < dat->sample_size; ++i)
+		dat->lengths[i] = dat->max_read_length;
 
 	/* allocate the index array of reads */
 	dat->read_idx = malloc(sample_size * sizeof *dat->read_idx);
