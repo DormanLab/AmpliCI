@@ -125,7 +125,8 @@ add_library(amplici_static STATIC ${C_OBJ_AMPLICI})
 target_include_directories(amplici PUBLIC ${LIBR_INCLUDE_DIRS})
 
 # Rmath library
-find_library(RMATH_LIBRARY NAMES Rmath rmath HINTS ${LIBR_LIB_DIR} ${_LIBR_EXECUTABLE_DIR} PATH_SUFFIXES lib lib64)
+set(RMATH_PATH ".")
+find_library(RMATH_LIBRARY NAMES Rmath rmath HINTS ${RMATH_PATH} ${LIBR_LIB_DIR} ${_LIBR_EXECUTABLE_DIR} PATH_SUFFIXES lib lib64)
 find_package_handle_standard_args(LibRmath DEFAULT_MSG RMATH_LIBRARY)
 
 if(RMATH_LIBRARY-NOTFOUND)
