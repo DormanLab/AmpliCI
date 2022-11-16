@@ -18,7 +18,7 @@
 #include "error_est.h"
 #include "util.h"
 #include "partition.h"
-#include <R.h>
+//#include <R.h>
 
 #define DEBUG 0
 #define WEIGHTS_LOESS

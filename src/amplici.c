@@ -24,17 +24,18 @@
 #include <stdio.h>
 #include <math.h>
 
-#define MATHLIB_STANDALONE 1
+//#define MATHLIB_STANDALONE 1
 // #define DEBUG 0
 //#define ADJUST_PVALUE
 //#define STORE_FP
-#include <Rmath.h>
+//#include <Rmath.h>
 
 #include "amplici.h"
 #include "ampliclust.h"
 #include "initialize.h"
 #include "statistics.h"
 #include "lmath.h"
+#include "nmath.h"
 #include "io.h"
 #include "hash.h"
 #include "align.h"

@@ -20,8 +20,9 @@
 #include "amplici_umi.h"
 #include "error.h"
 
-#define MATHLIB_STANDALONE 1
-#include <Rmath.h>
+//#define MATHLIB_STANDALONE 1
+//#include <Rmath.h>
+#include "nmath.h"
 
 
 int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod);

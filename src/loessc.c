@@ -28,13 +28,19 @@
  *  'protoize'd to ANSI C headers; indented: M.Maechler
  */
 
-#define MATHLIB_STANDALONE
 
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <limits.h>
-#include <R.h>
+//#include <R.h>
+//#define MATHLIB_STANDALONE
+
+#define F77_CALL(x)	x ## _
+#define F77_NAME(x)    F77_CALL(x)
+#define F77_SUB(x)     F77_CALL(x)
+
 
 #include "error.h"
 #include "constants.h"

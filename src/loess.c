@@ -23,13 +23,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <R.h>
+#include <math.h>
+//#include <R.h>
 
 /* modify from the original source file */
 
 /* These (and many more) are in ./loessf.f : */
-void F77_NAME(lowesw)(double*, int*, double*, int*);
-void F77_NAME(lowesp)(int*, double*, double*, double*,double*, int*, double*);
+//void F77_NAME(lowesw)(double*, int*, double*, int*);
+void lowesw_(double*, int*, double*, int*);
+//void F77_NAME(lowesp)(int*, double*, double*, double*,double*, int*, double*);
+void lowesp_(int*, double*, double*, double*,double*, int*, double*);
 
 
 static char *surf_stat;
@@ -269,10 +272,12 @@ loess_(double *y, double *x_, int *size_info, double *weights, double *span,
             fitted_residuals[i] = y[i] - fitted_values[i];
         };
         if(j < (*iterations))
-            F77_CALL(lowesw)(fitted_residuals, &N, robust, tempi); //previously F77_CALL(lowesw)(fitted_residuals, &N, robust, temp);
+            //F77_CALL(lowesw)(fitted_residuals, &N, robust, tempi); //previously F77_CALL(lowesw)(fitted_residuals, &N, robust, temp);
+            lowesw_(fitted_residuals, &N, robust, tempi); //previously F77_CALL(lowesw)(fitted_residuals, &N, robust, temp);
     }
     if((*iterations) > 0) {
-        F77_CALL(lowesp)(&N, y, fitted_values, weights, robust, tempi,
+        //F77_CALL(lowesp)(&N, y, fitted_values, weights, robust, tempi,
+        lowesp_(&N, y, fitted_values, weights, robust, tempi,
 						pseudovalues);     //previously F77_CALL(lowesp)(&N, y, fitted_values, weights, robust, temp, pseudovalues); 
         loess_raw(pseudovalues, x, weights, weights, &D, &N, span,
                   degree, &nonparametric, order_drop_sqr, &sum_drop_sqr,

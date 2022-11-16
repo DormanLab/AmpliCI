@@ -15,12 +15,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MATHLIB_STANDALONE 1
-#include <Rmath.h>
+//#define MATHLIB_STANDALONE 1
+//#include <Rmath.h>
 
 #include "model.h"
 #include "data.h"
 #include "options.h"
+#include "nmath.h"
 
 /**
  * Create model object.
