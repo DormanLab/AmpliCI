@@ -156,3 +156,8 @@ set_target_properties(amplici_static PROPERTIES OUTPUT_NAME "amplici")
 ### allow ouput both static and shared library 
 set_target_properties(amplici PROPERTIES CLEAN_DIRECT_OUTPUT 1)
 set_target_properties(amplici_static PROPERTIES CLEAN_DIRECT_OUTPUT 1)
+
+install(TARGETS run_AmpliCI amplici amplici_static
+	RUNTIME DESTINATION bin
+	LIBRARY DESTINATION lib
+	ARCHIVE DESTINATION lib)
