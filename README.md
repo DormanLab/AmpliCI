@@ -27,18 +27,8 @@ The development version of DAUMI is at this [page](https://github.com/xiyupeng/A
 
 # Prerequisites <a name = "prerequisites" />
 
-- AmpliCI requires [cmake](https://cmake.org) (3.5.0 or higher version) and [gcc](https://gcc.gnu.org) (5.4.0 or higher version).
+- AmpliCI requires [cmake](https://cmake.org) (3.3.0 or higher version) and [gcc](https://gcc.gnu.org) (5.4.0 or higher version).
 - AmpliCI requires some C and FORTRAN libraries provided by R.  You can download and install R from [https://www.r-project.org](https://www.r-project.org).
-- AmpliCI requires Rmath, the [R Standalone Math Library](https://cran.r-project.org/doc/manuals/r-release/R-admin.html#The-standalone-Rmath-library).  Often, the Rmath library (libRmath.a or libRmath.so for Linux or libRmath.dylib for MacOS) will be installed with R, but not always. We recommend to skip the step and configure the project first with cmake, which will automatically find the Rmath library in your system. But if the cmake fails to find Rmath, here are some other locations for the library.
-	- r-mathlib on [Ubuntu](https://ubuntu.com/) and [Debian](https://www.debian.org/)
-	- libRmath on [Fedora](https://ubuntu.com/), [CentOS](https://centos.org/), [Mageia](https://www.mageia.org/en/), and [Mandriva](https://www.openmandriva.org/)
-	- Or if all else fails, you can install the Rmath standalone library from the repository [https://github.com/statslabs/rmath](https://github.com/statslabs/rmath)
-	- If you do not get admin to install Rmath, you can compile the Rmath standalone library and move libRmath.a to the `src` folder. Or you can modify the line in CMakeLists.txt to add the path to your own Rmath library.
-		```
-		set(RMATH_PATH "path/to/libRmath.a")
-		```
-    
- 
 
 
 # Installation <a name = "installation" />
@@ -54,7 +44,6 @@ AmpliCI has been tested under Linux and MacOS.
    cd AmpliCI/src
    cmake .
    ```
-   If `cmake` complains about a missing Rmath or other library, please see [Prerequisites](#prerequisites) for installation instructions.
 1. Compile AmpliCI.  The executable is called `run_AmpliCI`.  It will appear in the `src` directory you are currently in.
    ```sh
    make
