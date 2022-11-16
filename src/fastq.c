@@ -182,7 +182,7 @@ unsigned int fcnt_reads(FILE *fp)
 	int fxn_debug = ABSOLUTE_SILENCE;	//DEBUG_I;	//
 	int file_type = FASTQ_FILE;
 	unsigned int nread = 0;
-	char c;
+	int c;
 
 	debug_msg(DEBUG_I, fxn_debug, "entering\n");
 
@@ -260,7 +260,7 @@ int findex_reads(FILE *fp, fastq_data *fqd)
 	int fxn_debug = ABSOLUTE_SILENCE;	//DEBUG_II;	//
 	unsigned int i = 0;
 	size_t nbytes = 0;
-	char c;
+	int c;
 
 	debug_msg(DEBUG_I, fxn_debug, "entering\n");
 
@@ -587,7 +587,7 @@ int read_read(FILE *fp, fastq_data *fqd, unsigned int *len, unsigned char *nptr,
 	(*len) = 0;	/* signal incomplete read */
 
 	/* check for @ at start of read record */
-	char c = fgetc(fp);
+	int c = fgetc(fp);
 
 	debug_msg(DEBUG_I, fxn_debug, "First character: '%c'\n", c);
 
@@ -1023,7 +1023,7 @@ int pw_align_reads(fastq_data *fqd, char const * const rfile) {
 	if (!fp)
 		return mmessage(ERROR_MSG, FILE_OPEN_ERROR, rfile);
 
-	char c = fgetc(fp);
+	int c = fgetc(fp);
 	if (c != '>') {
 		fclose(fp);
 		return FILE_FORMAT_ERROR;

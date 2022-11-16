@@ -284,7 +284,7 @@ int read_partition_file(char const * const filename, unsigned int *cluster_id, u
 		return mmessage(ERROR_MSG, FILE_OPEN_ERROR, filename);
 
 	/* detect if AmpliCI out file */
-	char c = fgetc(fp);
+	int c = fgetc(fp);
 	ungetc(c, fp);
 
 	//mmessage(DEBUG_MSG, NO_ERROR, "Read char '%c'.\n", c);

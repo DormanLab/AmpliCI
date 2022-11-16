@@ -1718,6 +1718,8 @@ int check_fp_with_indels(options *opt, data *dat, model *mod, initializer *ini,
 	size_t *nw_alen = NULL;
 	unsigned int *nw_mismatch = NULL;
 	unsigned int *nw_indels = NULL;
+	double *e_trans = NULL;
+	size_t *idx_array = NULL;
 
 	*fp = 0;
 
@@ -1779,8 +1781,6 @@ int check_fp_with_indels(options *opt, data *dat, model *mod, initializer *ini,
 	 * candidate haplotype now using NW alignment; need to allocate memory
 	 */
 
-	double *e_trans = NULL;
-	size_t *idx_array = NULL;
 	unsigned int count = ini->uniq_seq_count[ini->H[select]];
 
 	if ((err = find_index(dat->seq_count, rseq, rlen, &idx_array)))
