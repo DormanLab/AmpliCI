@@ -28,7 +28,6 @@ The development version of DAUMI is at this [page](https://github.com/xiyupeng/A
 # Prerequisites <a name = "prerequisites" />
 
 - AmpliCI requires [cmake](https://cmake.org) (3.3.0 or higher version) and [gcc](https://gcc.gnu.org) (5.4.0 or higher version).
-- AmpliCI requires some C and FORTRAN libraries provided by R.  You can download and install R from [https://www.r-project.org](https://www.r-project.org).
 
 
 # Installation <a name = "installation" />
@@ -332,6 +331,8 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/your/full/path/to/library
 # Acknowledgments <a name = "acknowledgements" />
 
 - AmpliCI contains LOESS regression for error estimation, the original file is available at [https://www.netlib.org/a/dloess](https://www.netlib.org/a/dloess).  However, we modified and used related code from R, which derives from the above.
+
+- AmpliCI uses some C and FORTRAN libraries provided by R. The relative codes have been cooperated in the software.
 
 - We used the hash implemented in [uthash.h](https://troydhanson.github.io/uthash/userguide.html).
 

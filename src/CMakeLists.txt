@@ -14,63 +14,6 @@ include(FindPackageHandleStandardArgs)
 enable_language(Fortran)
 set(CMAKE_FORTRAN_COMPILER gfortran)
 
-# below modified from RStudio's FindLibR.cmake to find R include and lib path
-# https://github.com/rstudio/rstudio/blob/master/cmake/modules/FindLibR.cmake
-if(APPLE)  # mac
-
-   find_library(LIBR_LIBRARIES R)
-
-   if(LIBR_LIBRARIES MATCHES ".*\\.framework")
-     set(LIBR_HOME "${LIBR_LIBRARIES}/Resources" CACHE PATH "R home directory")
-     set(LIBR_INCLUDE_DIRS "${LIBR_HOME}/include" CACHE PATH "R include directory")
-     set(LIBR_EXECUTABLE "${LIBR_HOME}/bin/R" CACHE PATH "R executable")
-   else()
-      get_filename_component(_LIBR_LIBRARIES "${LIBR_LIBRARIES}" REALPATH)
-      get_filename_component(_LIBR_LIBRARIES_DIR "${_LIBR_LIBRARIES}" PATH)
-      set(LIBR_EXECUTABLE "${_LIBR_LIBRARIES_DIR}/../bin/R")
-      execute_process(
-         COMMAND ${LIBR_EXECUTABLE} "--slave" "--vanilla" "-e" "cat(R.home())"
-                   OUTPUT_VARIABLE LIBR_HOME
-      )
-      set(LIBR_HOME ${LIBR_HOME} CACHE PATH "R home directory")
-      set(LIBR_INCLUDE_DIRS "${LIBR_HOME}/include" CACHE PATH "R include directory")
-   endif()
-
-else()  # UNIX
-   # find executable
-   find_program(LIBR_EXECUTABLE R)
-   
-   # ask R for the home path
-   if(NOT LIBR_HOME)
-      execute_process(
-         COMMAND ${LIBR_EXECUTABLE} "--slave" "--vanilla" "-e" "cat(R.home())"
-                   OUTPUT_VARIABLE LIBR_HOME
-      )
-      if(LIBR_HOME)
-        set(LIBR_HOME ${LIBR_HOME} CACHE PATH "R home directory")
-      endif()
-   endif()
-
-   # ask R for the include dir
-   if(NOT LIBR_INCLUDE_DIRS)
-      execute_process(
-         COMMAND ${LIBR_EXECUTABLE} "--slave" "--no-save" "-e" "cat(R.home('include'))"
-         OUTPUT_VARIABLE LIBR_INCLUDE_DIRS
-      )
-      if(LIBR_INCLUDE_DIRS)
-        set(LIBR_INCLUDE_DIRS ${LIBR_INCLUDE_DIRS} CACHE PATH "R include directory")
-      endif()
-   endif()
-
-   # sometimes lib and include are not under R.home()
-   get_filename_component(_LIBR_EXECUTABLE "${LIBR_EXECUTABLE}" PATH)
-   get_filename_component(_LIBR_EXECUTABLE_DIR "${_LIBR_EXECUTABLE}" PATH)
-   #message(STATUS "Found R upper directory: ${_LIBR_EXECUTABLE_DIR}")
-
-endif()
-
-include_directories(${LIBR_INCLUDE_DIRS})
-
 ## loess library
 set(F_OBJ ./libblas_lite.f ./linpack_lite.f ./loessf.f)
 set(C_OBJ_LOESS ./loessc.c)
