@@ -16,6 +16,7 @@ DAUMI greatly enhances the accuracy of detecting rare sequences and provides ded
 1. [Command-line options](#options)
 1. [Acknowledgments](#acknowledgments)
 1. [Citation](#citation)
+1. [Data used in DAUMI publication](#data)
 1. [Contact](#contact)
 
 
@@ -322,9 +323,17 @@ Options of AmpliCI can be found in [here](https://github.com/DormanLab/AmpliCI#o
 
 # Citation <a name = "citation" />
 
-- Peng, X. and Dorman, K. (2020) ‘AmpliCI: A High-resolution Model-Based Approach for Denoising Illumina Amplicon Data’, Bioinformatics. doi: [10.1093/bioinformatics/btaa648](https://academic.oup.com/bioinformatics/article/doi/10.1093/bioinformatics/btaa648/5875058).
+- Peng, X. and Dorman, K. S. (2020) 'AmpliCI: A High-resolution Model-Based Approach for Denoising Illumina Amplicon Data', Bioinformatics. doi: [10.1093/bioinformatics/btaa648](https://academic.oup.com/bioinformatics/article/doi/10.1093/bioinformatics/btaa648/5875058).
 
-- Peng, X. and Dorman, K. (2022) 'Accurate estimation of molecular counts from amplicon sequence data with unique molecular identifiers'[BioRxiv](https://www.biorxiv.org/content/10.1101/2022.06.12.495839v1). 
+- Peng, X. and Dorman, K. S. (2022) 'Accurate estimation of molecular counts from amplicon sequence data with unique molecular identifiers', *BioRxiv*. doi: [10.1101/2022.06.12.495839v1](https://www.biorxiv.org/content/10.1101/2022.06.12.495839v1). 
+
+- Peng, X. and Dorman, K. S. (2023) 'Accurate estimation of molecular counts from amplicon sequence data with unique molecular identifiers', *Bioinformatics*. [Advanced access](https://academic.oup.com/bioinformatics/advance-article-abstract/doi/10.1093/bioinformatics/btad002/6971842).
+
+# Data used in DAUMI publication <a name = "data" />
+
+- [HIV-1 V1V3 Data, SRR2241783](https://www.ncbi.nlm.nih.gov/sra/?term=SRR2241783) 
+- [HIV-1 V3 Data, SRR5105420](https://www.ncbi.nlm.nih.gov/sra/?term=SRR5105420)
+- [scRNA-seq Data, E-MTAB-10372](https://www.ebi.ac.uk/biostudies/arrayexpress/studies/E-MTAB-10372/sdrf)
 
 # Contact <a name = "contact" />
 
