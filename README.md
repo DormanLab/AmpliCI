@@ -338,9 +338,10 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/your/full/path/to/library
 
 # Citation <a name = "citation" />
 
-- Peng, X. and Dorman, K. (2020) ‘AmpliCI: A High-resolution Model-Based Approach for Denoising Illumina Amplicon Data’, Bioinformatics. doi: [10.1093/bioinformatics/btaa648](https://academic.oup.com/bioinformatics/article/doi/10.1093/bioinformatics/btaa648/5875058).
+- For amplicons without UMIs: Peng, X. and Dorman, K. (2020) ‘AmpliCI: A High-resolution Model-Based Approach for Denoising Illumina Amplicon Data’, Bioinformatics. doi: [10.1093/bioinformatics/btaa648](https://academic.oup.com/bioinformatics/article/doi/10.1093/bioinformatics/btaa648/5875058).
 
-- Peng, X. and Dorman, K. (2022) 'Accurate estimation of molecular counts from amplicon sequence data with unique molecular identifiers',[BioRxiv](https://www.biorxiv.org/content/10.1101/2022.06.12.495839v1). 
+- For amplicons with UMIs (also see [DAUMI instructions](https://github.com/DormanLab/AmpliCI/blob/master/daumi.md)): Peng, X. and Dorman, K. S. (2023) 'Accurate estimation of molecular counts from amplicon sequence data with unique molecular identifiers', *Bioinformatics*. [Advanced access](https://academic.oup.com/bioinformatics/advance-article-abstract/doi/10.1093/bioinformatics/btad002/6971842).
+
 
 # Contact <a name = "contact" />
 
