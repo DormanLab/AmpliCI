@@ -58,7 +58,11 @@ Like all other denoising methods, the starting point of the analysis is FASTQ se
 
 ## **Quality control and read preprocessing** <a name="quality" />
 
-AmpliCI requires all input reads have the **same** length, with no **ambiguous** nucleotides (only A, C, G, T base calls allowed).  (One way to truncate or filter reads with ambiguous nucleotides is via the R package [ShortRead](https://rdrr.io/bioc/ShortRead/).)
+AmpliCI requires all input reads have the **same** length, with no **ambiguous** nucleotides (only A, C, G, T base calls allowed). One way to truncate or filter reads with ambiguous nucleotides is via the R package [ShortRead](https://rdrr.io/bioc/ShortRead/) or simply use [seqkit](https://github.com/shenwei356/seqkit) with following command,
+```
+seqkit grep -srv -p 'N' reads1.fastq > reads1_noN.fastq
+```
+
 
 ## **Input files** <a name="inputfiles" />
 
