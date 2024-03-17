@@ -15,14 +15,14 @@
 1.  Note the name of the container (last column): `docker container ls -a`
 
 
-To try it out on data, the process would be generally as follows. I will type NAME instead of the name of the container you discovered in step 8 above.
+To try it out on data, the process would be generally as follows. I will type `NAME` instead of the name of the container you discovered in step 8 above.
 
 # Running AmpliCI on your data:
 
 1.  Go to the Windows command line
-1.  Copy data to the container (assuming your data are on the C disk in directory MyDataDir): `docker cp c:\MyDataDir\MyData.fastq NAME:/data`
+1.  Copy data to the container (assuming your data are on the `C` disk in directory `MyDataDir`): `docker cp c:\MyDataDir\MyData.fastq NAME:/data`
 1.  Start the container: `docker start -a -i NAME`
 1.  In the container (you should see the prompt change to `/ #`), go to where you copied the data: `cd data`
-1.  Run AmpliCI commands (see the README.md), producing output file I'll call AMPLICI_OUTPUT.
+1.  Run AmpliCI commands (see the README.md), producing output file I'll call `AMPLICI_OUTPUT`.
 1.  When you are done: `exit`
 1.  Copy the results files to your Windows machine: `docker cp NAME:/data/AMPLICI_OUTPUT c:\MyDataDir`
