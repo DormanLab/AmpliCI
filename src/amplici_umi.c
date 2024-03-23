@@ -86,7 +86,7 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
 			return err;
 
 
-		rdelta = (mod->pll_UMI - mod->ll_UMI)/mod->pll_UMI;
+		rdelta = (mod->pll_UMI - mod->ll_UMI) / mod->pll_UMI;
 		mmessage(INFO_MSG, NO_ERROR, "%5u: %15.3f (%15.3f - %15.3f, %5.3e)\n", EM_iter,
 					mod->ll_UMI,mod->ll_UMI+mod->penalty_ll, mod->penalty_ll, rdelta);
 
@@ -94,7 +94,7 @@ int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info
 		mmessage(INFO_MSG, NO_ERROR, "The M step of the %5u iteration...\n", EM_iter);
 
 		/* update gamma and eta */
-		if ((err = M_step(opt,mod,dat->sample_size, opt->topN,
+		if ((err = M_step(opt, mod, dat->sample_size, opt->topN,
 					opt->K, opt->K_UMI)))
 			return err;
 

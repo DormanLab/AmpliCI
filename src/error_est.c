@@ -4,8 +4,6 @@
  *
  * Naive error estimation algorithm for AmpliCI
  *
- * TODO
- * - put the thresholds for detecting UMI collision under user control
  */
 
 #include <limits.h>
@@ -591,7 +589,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 {
 	int err = NO_ERROR;
 
-	/*  read the partition file, start from 0 */
+	/*  read the UMI partition file, start from 0 */
 	if ((err = read_partition_file(opt->partition_file, ini->cluster_id,
 							dat->sample_size)))
 		return err;
@@ -605,26 +603,20 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 	unsigned int K_partitions = max + 1;  // new K, number of UMI clusters
 
 	/* find the most abundant sequence for each partition */
-	hash **hash_list = NULL;
-	hash_list = malloc(K_partitions * sizeof(*hash_list));
+	hash **hash_list = calloc(K_partitions, sizeof(*hash_list));
+
 	if (!hash_list)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 						"Err_cnt.hash_list");
 
-	/* use existing array to store number of haplotypes in each UMI subset */
-	ini->cluster_size = malloc(K_partitions * sizeof(*ini->cluster_size));
+	/* store number of haplotypes in each UMI subset */
+	ini->cluster_size = calloc(K_partitions, sizeof(*ini->cluster_size));
 
 	if (!ini->cluster_size)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 						"initializer:cluster_size");
 
-	for (unsigned int k = 0; k < K_partitions; k++) {
-		hash_list[k] = NULL;
-		ini->cluster_size[k] = 0;
-	}
-
-	// check bugs in hash (currently not find any bugs )
-	// unsigned int slen;
+	/* hash sequences per cluster */
 	for (size_t i = 0; i < dat->sample_size; ++i) {
 		add_sequence(&hash_list[ini->cluster_id[i]],
 				dat->dmat[i], dat->lengths[i], i, &err);
@@ -632,15 +624,14 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 			return err;
 	}
 
-	// sort by abundance within each partition
+	/* sort by abundance within each partition */
 	for (unsigned int k = 0; k < K_partitions; k++)
 		sort_by_count(&hash_list[k]);
 
-	// simple idea to detect collision in each UMI clusters
-	// consider every member with abundance at least half of most
-	// abundant and at least 2 to be a true molecule
-	// [TODO] Put these choices under user control!
-	// remember need to update both ini->cluster_id, ini->seeds
+	// Simple idea ala UMITools to detect collision in each UMI clusters:
+	// Consider every member with abundance >=2 and at least half of
+	// most abundant member to be a true molecule.
+	// Remember need to update both ini->cluster_id, ini->seeds
 
 	// determine a new K
 
@@ -677,13 +668,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 		}
 	}
 
-	//unsigned int sum_subK;
-	//for (unsigned int k =0 ; k < K_partitions; k++){
-	//	sum_subK +=  ini->cluster_size[k];
-	//}
-	//fprintf(stderr, "sum_subK : %d\n", sum_subK);
-
-	/* some clusters have no sufficiently replicate haplotype to be considered candidate */
+	/* some clusters have no sufficiently replicated haplotype to be considered candidate */
 	unsigned int num_null = 0;
 	for (unsigned int k = 0; k < K_partitions; ++k)
 		if (ini->cluster_size[k] == 0)
@@ -826,31 +811,6 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 	//for(unsigned int i = 0; i < dat->sample_size; i++){
 	//	fprintf(stderr, "%d",ini->cluster_id[i]);
 	//}
-
-
-	/*
-	for (unsigned int k = 0; k < K_partitions; k++){
-		unsigned int max_abun = 0;
-		hash *s = NULL;
-		unsigned int idx = 0;
-		// fprintf(stderr, "count : %d\n", hash_list[k]->count);
-		for (s = hash_list[k]; s != NULL; s = s->hh.next) {
-			//if(k==3)
-			//	fprintf(stderr, "s->count : %d for the %d th \n", s->count, k);
-			if(s->count > max_abun){
-				//if(s->count > 20) fprintf(stderr, "s->count > 20\n");
-				max_abun = s->count;
-				idx = s->idx;
-				//memcpy(ini->seeds[k], s->sequence,
-				//	dat->max_read_length * sizeof **ini->seeds);
-			}
-		}
-		memcpy(ini->seeds[k], dat->dmat[idx],
-				dat->max_read_length * sizeof **ini->seeds);
-		ini->seed_lengths[k] = dat->lengths[idx];
-		if(hash_list[k])
-			delete_all(&hash_list[k]);
-	} */
 
 
 	/* count error types with given assignment */
