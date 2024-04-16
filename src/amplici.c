@@ -2252,7 +2252,7 @@ int m_JC69(unsigned char * hap, unsigned char * anc, double *dist,
 	/* estimate the expected number of changes per site of all haplotypes */
 	for (unsigned int k = 0; k < K; k++) {		
 		double tmp = (double) hamming_char_dis( (char *) &hap[k*len+start],
-					(char *) anc, (size_t) len-start) / (len-start);
+					(char *) &anc[start], (size_t) len-start) / (len-start);
 		/* Previous there is a bug for the estimated distance out of range */
 		if(tmp >= 0.75)
 			dist[k] = INFINITY;
