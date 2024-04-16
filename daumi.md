@@ -128,7 +128,7 @@ We provide more details and demonstrate each of these steps below.
 	1.  Cluster umi-tagged sequences to get initial haplotype set ([seqkit](https://github.com/shenwei356/seqkit) required for truncation and deduplication):
 
 		```sh
-		./run_AmpliCI cluster --fastq FILENAME.fq --outfile FILENAME --profile FILENAME.trim.err --trim UMI_LENGTH
+		./run_AmpliCI cluster --fastq FILENAME.fq --outfile FILENAME --profile FILENAME.trim.err --trim UMI_LENGTH --nJC69
 		cat FILENAME.fa | seqkit subseq -r START_IDX:END_IDX | seqkit rmdup -s | seqkit seq -w 0 > FILENAME.trim.fa
 		```
 
@@ -139,11 +139,12 @@ We provide more details and demonstrate each of these steps below.
 		`START_IDX` and `END_IDX` are start and end position of the sampled biological sequences, 1-based and inclusive.
 		In other wrods, the UMI length is `START_IDX - 1` and the biological sequence (candidate haplotype) length is `END_IDX - START_IDX + 1`.
 		The final output of this step is the candidate haplotype file `FILENAME.trim.fa`. All other intermediate files from this step can be discarded.
+		Note: Compared to the published paper, we now recommend to add additional option --nJC69, which slightly increases the precision of the result.
 
 		An example (total read length 250nt with UMI length 9nt):
 
 		```sh
-		./run_AmpliCI cluster --fastq ../test/sim2.fq --outfile ../test/sim2 --profile ../test/sim2.trim.err --trim 9
+		./run_AmpliCI cluster --fastq ../test/sim2.fq --outfile ../test/sim2 --profile ../test/sim2.trim.err --trim 9 --nJC69
 		cat ../test/sim2.fa | seqkit subseq -r 10:250 | seqkit rmdup -s | seqkit seq -w 0 > ../test/sim2.trim.fa
 		```
 
@@ -159,7 +160,7 @@ We provide more details and demonstrate each of these steps below.
 	An example:
 
 	```sh
-	./run_AmpliCI daumi --fastq ../test/sim2.fq --umifile ../test/sim2.umi.fa -haplotype ../test/sim2.merge.trim_dedup.fa -umilen 9 --outfile ../test/sim2 --profile ../test/sim2.trim.err -rho 46
+	./run_AmpliCI daumi --fastq ../test/sim2.fq --umifile ../test/sim2.umi.fa -haplotype ../test/sim2.trim.fa -umilen 9 --outfile ../test/sim2 --profile ../test/sim2.trim.err -rho 46
 	```
 
 You can run the whole pipeline on this example (from the ```src``` directory):
