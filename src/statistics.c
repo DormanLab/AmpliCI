@@ -35,7 +35,7 @@ double dpoisbind(unsigned int n, unsigned int k, double *perr)
 				pnj[i] = perr[j - 1] * pnj[i - 1]
 						+ (1 - perr[j - 1]) * pnj[i];
 		}
-		pnj[0] = (1 - perr[j]) * pnj[0];
+		pnj[0] = (1 - perr[j-1]) * pnj[0];
 //		fprintf(stderr, "%e\n", pnj[k]);
 	}
 	
