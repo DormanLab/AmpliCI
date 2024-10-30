@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5.0)
 
-project(AmpliCI VERSION 2.1.099)
+project(AmpliCI VERSION 2.2)
 
 set(CMAKE_C_COMPILER gcc)
 
@@ -22,14 +22,14 @@ add_library(loess STATIC ${F_OBJ} ${C_OBJ_LOESS})
 #target_include_directories(loess PUBLIC ${LIBR_INCLUDE_DIRS})
 
 # prefer to use libgfortran installed with devel package first, otherwise use compiler default.
-find_library(GFORTRAN_LIBRARY gfortran)
-if(NOT GFORTRAN_LIBRARY)
-   message(STATUS "Using default ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}")
-else()
+#find_library(GFORTRAN_LIBRARY gfortran)
+#if(NOT GFORTRAN_LIBRARY)
+#   message(STATUS "Using default ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}")
+#else()
    ## cmake with fortran will automatically link to gfortran and quadmath. Now unset it.
-   unset(CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES)
-   target_link_libraries(loess ${GFORTRAN_LIBRARY})
-endif()
+unset(CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES)
+   #target_link_libraries(loess ${GFORTRAN_LIBRARY})
+   #endif()
 
 # C compiler options
 add_compile_options(-std=c99 -D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=500)
@@ -67,3 +67,11 @@ install(TARGETS run_AmpliCI amplici amplici_static
 	RUNTIME DESTINATION bin
 	LIBRARY DESTINATION lib
 	ARCHIVE DESTINATION lib)
+
+# Set the RPATH to the directory where the shared library is installed
+set(CMAKE_INSTALL_RPATH "@executable_path/../lib")
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+
+set_target_properties(run_AmpliCI PROPERTIES INSTALL_RPATH "@executable_path/../lib")
+set_target_properties(amplici PROPERTIES INSTALL_RPATH "@loader_path")
+
