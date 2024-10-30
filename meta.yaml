@@ -1,0 +1,46 @@
+{% set version = "v2.1" %}
+
+package:
+  name: amplici
+  version: {{ version }}
+
+source:
+  path: .
+
+build:
+  number: 0
+  # Enable CMake build system
+  script:
+    - cd src/
+    - cmake .
+    - make
+    - make install
+
+requirements:
+  build:
+    - cmake
+    - make
+    - '{{ compiler("c") }}'
+    - gfortran  # For Fortran compiler
+  host:
+    - cmake
+
+about:
+  home: https://github.com/DormanLab/AmpliCI
+  license: BSD 3-Clause 
+  license_family: BSD  
+  summary: "AmpliCI: Cluster amplicon sequences in a fastq file with or without UMIs."
+
+test:
+  commands:
+    - run_AmpliCI -h
+
+extra:
+  additional-platforms:
+    - linux-aarch64
+    - osx-arm64
+  recipe-maintainers:
+    - xiyupeng
+  identifiers:
+    - biotools:amplici
+    - doi:10.1093/bioinformatics/btaa648
