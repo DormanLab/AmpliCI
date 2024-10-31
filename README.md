@@ -27,7 +27,7 @@ The development version of DAUMI is at this [page](https://github.com/xiyupeng/A
 
 # Prerequisites <a name = "prerequisites" />
 
-- AmpliCI requires [cmake](https://cmake.org) (3.3.0 or higher version) and [gcc](https://gcc.gnu.org) (5.4.0 or higher version).
+- AmpliCI requires [cmake](https://cmake.org) (3.5.0 or higher version) and [gcc](https://gcc.gnu.org) (5.4.0 or higher version).
 
 
 # Installation <a name = "installation" />
