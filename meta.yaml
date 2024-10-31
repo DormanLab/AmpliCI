@@ -1,4 +1,4 @@
-{% set version = "v2.1" %}
+{% set version = "v2.2" %}
 
 package:
   name: amplici
@@ -20,16 +20,18 @@ requirements:
   build:
     - cmake
     - make
-    - '{{ compiler("c") }}'
-    - '{{ compiler('cxx') }}'
-    - gfortran  # For Fortran compiler
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+    - {{ compiler('fortran') }}
   host:
     - cmake
+    - zlib
 
 about:
   home: https://github.com/DormanLab/AmpliCI
   license: BSD 3-Clause 
-  license_family: BSD  
+  license_family: BSD
+  license_file: LICENSE
   summary: "AmpliCI: Cluster amplicon sequences in a fastq file with or without UMIs."
 
 test:
