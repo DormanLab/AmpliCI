@@ -12,7 +12,7 @@ build:
   # Enable CMake build system
   script:
     - cd src/
-    - cmake .
+    - cmake -DCMAKE_INSTALL_PREFIX=$PREFIX .
     - make
     - make install
 
@@ -21,6 +21,7 @@ requirements:
     - cmake
     - make
     - '{{ compiler("c") }}'
+    - '{{ compiler('cxx') }}'
     - gfortran  # For Fortran compiler
   host:
     - cmake
