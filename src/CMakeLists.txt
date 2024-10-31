@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5.0)
 
 project(AmpliCI VERSION 2.2)
 
-set(CMAKE_C_COMPILER gcc)
+#set(CMAKE_C_COMPILER gcc)
 
 # run cmake -S . -B debug -DCMAKE_BUILD_TYPE=Debug && cmake --build debug to compile debugging version
 #set(CMAKE_BUILD_TYPE release)
@@ -12,7 +12,7 @@ include(FindPackageHandleStandardArgs)
 
 # loess source code is in Fortran
 enable_language(Fortran)
-set(CMAKE_FORTRAN_COMPILER gfortran)
+#set(CMAKE_FORTRAN_COMPILER gfortran)
 
 ## loess library
 set(F_OBJ ./libblas_lite.f ./linpack_lite.f ./loessf.f)
