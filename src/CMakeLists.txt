@@ -75,6 +75,7 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 set_target_properties(run_AmpliCI PROPERTIES INSTALL_RPATH "@executable_path/../lib")
 set_target_properties(amplici PROPERTIES INSTALL_RPATH "@loader_path")
 
-if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-    set(CMAKE_INSTALL_PREFIX $ENV{PREFIX})
-endif()
+# require PREFIX input 
+#if(NOT DEFINED CMAKE_INSTALL_PREFIX)
+#    set(CMAKE_INSTALL_PREFIX $ENV{PREFIX})
+#endif()
