@@ -1,12 +1,29 @@
 AmpliCI
 =======
 
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/amplici/badges/license.svg)](https://anaconda.org/bioconda/amplici)
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/amplici/badges/platforms.svg)](https://anaconda.org/bioconda/amplici)
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/amplici/badges/latest_release_date.svg)](https://anaconda.org/bioconda/amplici)
+
 AmpliCI, Amplicon Clustering Inference, denoises Illumina amplicon data by approximate model-based clustering.
 
 AmpliCI v2.0 now incorporates our new Unique Molecular Identifier (UMI)-aware software DAUMI to denoise UMI-tagged Illumina amplicon sequences.
 This README focuses on installation of AmpliCI and how to use it to estimate haplotypes and abundance for amplicons without UMIs.
 See the [DAUMI instructions](https://github.com/DormanLab/AmpliCI/blob/master/daumi.md) for information on how to estimate haplotypes and abundance for amplicons with UMIs.
 The development version of DAUMI is at this [page](https://github.com/xiyupeng/AmpliCI-UMI).
+
+# NEWS
+
+AmpliCI now is available on Bioconda. You can install AmpliCI with `conda install`.
+
+```sh
+conda install bioconda::amplici
+```
+Then you can run AmpliCI under your current conda environment.
+
+```sh
+run_AmpliCI -h 
+```
 
 # Table of Contents
 1. [Prerequisites](#prerequisites)
@@ -32,7 +49,7 @@ The development version of DAUMI is at this [page](https://github.com/xiyupeng/A
 
 # Installation <a name = "installation" />
 
-AmpliCI has been tested under Linux and MacOS.
+AmpliCI has been tested under Linux and MacOS. 
 
 1. Clone the repository.
     ```sh
