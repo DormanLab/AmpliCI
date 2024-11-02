@@ -1,9 +1,10 @@
 AmpliCI
 =======
 
-[![Anaconda-Server Badge](https://anaconda.org/bioconda/amplici/badges/license.svg)](https://anaconda.org/bioconda/amplici)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/amplici/badges/platforms.svg)](https://anaconda.org/bioconda/amplici)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/amplici/badges/latest_release_date.svg)](https://anaconda.org/bioconda/amplici)
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/amplici/badges/version.svg)](https://anaconda.org/bioconda/amplici)
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/amplici/badges/license.svg)](https://anaconda.org/bioconda/amplici)
 
 AmpliCI, Amplicon Clustering Inference, denoises Illumina amplicon data by approximate model-based clustering.
 
