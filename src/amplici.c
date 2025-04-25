@@ -1,20 +1,20 @@
 /**
  * @file amplici.c
  * @author Xiyu Peng
- * 
+ *
  * AmpliCI:  Method to identify true sequences (haplotypes) in a sample of
  *           Illumina amplicon data (from FASTQ file).
- * 
- * [TODO] 
+ *
+ * [TODO]
  * 1. check reads with unequal lengths and report error
  *    Note the data structure actually supports reads with unequal length
  *    but ampliCI model does not.
  * 2. format your code nicely!  Inspiration?:
  *    https://www.kernel.org/doc/html/v4.10/process/coding-style.html
- * 3. Assigning reads to haplotypes (given or estimated) and output the abundance table 
- * 4. Correct the comments and output in the code. We actually filter on maximum 
- * 		conditional log likelihood (maximum posterior assignment probability), 
- * 		not the reads log likelihood.  
+ * 3. Assigning reads to haplotypes (given or estimated) and output the abundance table
+ * 4. Correct the comments and output in the code. We actually filter on maximum
+ * 		conditional log likelihood (maximum posterior assignment probability),
+ * 		not the reads log likelihood.
  * 5. use number of observed quality scores, not maxQ- minQ
  */
 
@@ -65,7 +65,7 @@ int ExpTrans_nwalign(data *dat, options *opt, initializer *ini, unsigned char **
 
 /**
  * Cluster amplicon sequences.
- * 
+ *
  * @param ini	pointer to initializer object
  * @param dat	pointer data object
  * @param opt	pointer to options object
@@ -81,12 +81,12 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 	int use_size = 0;	/* output cluster sizes for abundance */
 
 	/* K to be determined in the function below, opt->K will be changed */
-	if ((err = haplotype_selection(opt, dat, mod, ini, opt->K_max))) 
+	if ((err = haplotype_selection(opt, dat, mod, ini, opt->K_max)))
 		return err;
 
 	if ((err = realloc_run_info(ri, dat->sample_size, opt->K + 1, 0, 1)))
 		return err;
-	
+
 	/* assign cluster based on ll */
 	assign_clusters(mod->eik, opt->K, dat->sample_size, ri->optimal_cluster_size,
 			ri->optimal_cluster_id, 1);
@@ -102,7 +102,7 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 
 	char *outfile_hap = NULL;
 	char *outfile = NULL;
-	
+
 	if (opt->outfile_base || opt->outfile_info) {
 		FILE *fp = NULL;
 
@@ -112,7 +112,7 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 			if (!outfile)
 				return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 								"output file");
-   			strcpy(outfile, opt->outfile_base);
+			strcpy(outfile, opt->outfile_base);
 			strcat(outfile, ".out");
 			opt->outfile_info = outfile;
 		}
@@ -129,7 +129,7 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 								opt->K, 2, 1);
 		fprintf(fp, "cluster sizes: ");
 		fprint_uints(fp, ri->optimal_cluster_size, opt->K, 3, 1);
-		
+
 		fprintf(fp,"pi: ");
 		for(unsigned int k = 0; k < opt->K; ++k)
 			mod->pi[k] = exp(mod->pi[k]);
@@ -140,12 +140,12 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 									3, 1);
 
 		//[TODO] output ini->seeds directly
-		fprint_fasta(fp, ini->seeds[0], opt->K, 
+		fprint_fasta(fp, ini->seeds[0], opt->K,
 					 dat->max_read_length, ini->seed_lengths, "H");
-		
+
 		fprintf(fp,"ee: ");   // mean expected number of errors
 		fprint_doubles(fp, ini->H_ee, opt->K ,3,1);
-		
+
 		fprintf(fp, "uniq seq id: ");
 		fprint_uints(fp, ini->H, opt->K, 3, 1);
 
@@ -204,7 +204,7 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 			if (!outfile_hap)
 				return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 								"output file");
- 
+
 			strcpy(outfile_hap, opt->outfile_base);
 			strcat(outfile_hap, ".fa");
 			opt->outfile_fasta = outfile_hap;
@@ -214,7 +214,7 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 		if (!fp2)
 			return mmessage(ERROR_MSG, FILE_OPEN_ERROR,
 							opt->outfile_fasta);
-		
+
 		/* [TODO] rewrote the two function below to allow variable length */
 		if (use_size)
 			fprint_haplotypes_size(fp2, ini->seeds, opt->K,
@@ -223,7 +223,7 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 								ini->H_ee);
 		else
 			fprint_haplotypes_abun(fp2,ini->seeds, opt->K,
-				ini->seed_lengths, opt->p_threshold, "H", 
+				ini->seed_lengths, opt->p_threshold, "H",
 					ini->H_pvalue, ini->H_abun, ini->H_ee);
 
 		fclose(fp2);
@@ -232,15 +232,15 @@ int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *r
 					"file: %s \n", opt->outfile_fasta);
 
 	}
-	
+
 	if(outfile_hap) free(outfile_hap);
 
 	return err;
 }/* ampliCI */
 
 /**
- * Select no more than K_max real haplotype sequences 
- * 
+ * Select no more than K_max real haplotype sequences
+ *
  * @param ini	initializer object
  * @param dat	data object
  * @param opt	options object
@@ -258,7 +258,7 @@ int haplotype_selection(options * opt, data * dat, model *mod, initializer *ini,
 	/* ------------------------------------------------------------------ */
 	/* Variable Declaration */
 
-	double low_bound; 
+	double low_bound;
 	int false_positive;
 
 	double *error_profile = NULL;
@@ -270,11 +270,11 @@ int haplotype_selection(options * opt, data * dat, model *mod, initializer *ini,
 	if (opt->low_bound > 1) {
 		low_bound = opt->low_bound;
 	} else {
-		low_bound = 2.0;   // avoid singletons 
+		low_bound = 2.0;   // avoid singletons
 		mmessage(WARNING_MSG, INVALID_USER_INPUT, "User low bound on "
 			"abundance set <= 1: resetting to %f.\n", low_bound);
 		if (opt->contamination_threshold != 1) {
-			opt->contamination_threshold = 1; 
+			opt->contamination_threshold = 1;
 			mmessage(WARNING_MSG, INVALID_USER_INPUT,
 					"resetting contamination threshold %u.",
 						opt->contamination_threshold);
@@ -282,25 +282,25 @@ int haplotype_selection(options * opt, data * dat, model *mod, initializer *ini,
 	}
 
 	/* malloc space only when we check false positive */
-	unsigned int *array_fp = NULL; 
-	double *fp_abun = NULL;  // just for test 
-	double *fp_trans = NULL;  // store the trans prob 
+	unsigned int *array_fp = NULL;
+	double *fp_abun = NULL;  // just for test
+	double *fp_trans = NULL;  // store the trans prob
 
 	unsigned int select = 0;  // num of hap selected
-	unsigned int num_fp = 0;  // num of false positive removed 
-	unsigned int ord;  // index of current select haplotypes 
+	unsigned int num_fp = 0;  // num of false positive removed
+	unsigned int ord;  // index of current select haplotypes
 
-	unsigned int K_space = opt->K;       // current space for K clusters 
-	unsigned int ini_K = opt->K;        // record the initial K space 
+	unsigned int K_space = opt->K;       // current space for K clusters
+	unsigned int ini_K = opt->K;        // record the initial K space
 	unsigned int n_candidate = dat->hash_length;
 
 	/* store result from nw alignment between each unique sequences and newly identified sequence */
 	unsigned char *** nw_result = NULL;
 	size_t *nw_alen = NULL;
 
-	/* Determine number of candidates here, just based on the observed abundance 
+	/* Determine number of candidates here, just based on the observed abundance
 	* we will only consider seqs with abundance < low bound */
-	
+
 	//double adj_low_bound = low_bound - 0.001;   // try to solve a BUG here
 	for (unsigned int i =0; i< dat->hash_length; i++){
 		if (low_bound - ini->uniq_seq_count[i] >
@@ -319,12 +319,12 @@ int haplotype_selection(options * opt, data * dat, model *mod, initializer *ini,
 		opt->p_threshold = opt->alpha / n_candidate;
 	else
 		opt->p_threshold = opt->alpha;
-	
+
 	/* Space mallocation */
 	if (((err= amplici_malloc(opt, dat, ini, &array_fp, &fp_abun, &fp_trans,
 				&nw_result, &nw_alen, K_space, n_candidate))))
 		return err;
-	
+
 	/* --------------------------------------------------------------------------- */
 	/* Initialization: choose the most abundant unique sequences */
 
@@ -341,7 +341,7 @@ int haplotype_selection(options * opt, data * dat, model *mod, initializer *ini,
 
 	/* select the first haplotype with the highest abundance */
 	update_seeds(dat, ini, select, ord);
-	
+
 	debug_msg(DEBUG_I, fxn_debug, "Selecting %d with estimated true"
 				" abundance %.3f\n", ord, ini->H_abun[select]);
 
@@ -366,14 +366,14 @@ int haplotype_selection(options * opt, data * dat, model *mod, initializer *ini,
 	/* Initialize aic and bic */
 	mod->aic = INFINITY;
 	mod->bic = INFINITY;
-	
+
 	/* seems to work now */
 	evaluate_haplotype(opt, dat, mod, ini, 1, low_bound, error_profile,
 					0, n_candidate, &false_positive, 1);
 
 	/* ------------------------------------------------------------- */
 	/* choose other haplotypes */
-	
+
 	while (K_max > 1) {
 
 		false_positive = 0;
@@ -404,7 +404,7 @@ int haplotype_selection(options * opt, data * dat, model *mod, initializer *ini,
 		}
 		#endif
 
-		/* update relative true abundance and 
+		/* update relative true abundance and
 		 * choose a haplotype with the highest relative true abundance
 		 */
 		double max = 0.;
@@ -431,7 +431,7 @@ int haplotype_selection(options * opt, data * dat, model *mod, initializer *ini,
 					ini->abun_true[i]);
 			}
 		}
-		
+
 		for (unsigned int i =0; i < n_candidate; i++)
 			if (ini->abun_true[i] > max) {
 				ord = i;
@@ -443,10 +443,10 @@ int haplotype_selection(options * opt, data * dat, model *mod, initializer *ini,
 
 		/* select the haplotype temporarily */
 		update_seeds(dat, ini, select, ord);
-	
+
 		debug_msg(DEBUG_I, fxn_debug, "Selecting %d with estimated true"
 				" abundance %.3f\n", ord, ini->H_abun[select]);
-			
+
 		/* Transition prob without alignment free strategy */
 		if (opt->nw_align == ALIGNMENT_UNIQ_SEQ)
 			ExpTrans_nwalign(dat, opt, ini, nw_result, nw_alen,
@@ -457,13 +457,13 @@ int haplotype_selection(options * opt, data * dat, model *mod, initializer *ini,
 		/* computed in evaluate_haplotype() for opt->nw_align ==
 		 * ALIGNMENT_HAPLOTYPES
 		 */
-		
 
-		/* evaluate the newly selected haplotype 
+
+		/* evaluate the newly selected haplotype
 		 * check if it is a false positive
 		 */
 		if (opt->check_false_positive) {
-			if ((err = evaluate_haplotype(opt, dat, mod, ini, 
+			if ((err = evaluate_haplotype(opt, dat, mod, ini,
 				select + 1, low_bound, error_profile, ord,
 					n_candidate, &false_positive, 0)))
 				return err;
@@ -486,7 +486,7 @@ int haplotype_selection(options * opt, data * dat, model *mod, initializer *ini,
 				#endif
 
 				num_fp ++;
-				ini->abun_true[ord] = 1.0;  // To avoid being selected again 
+				ini->abun_true[ord] = 1.0;  // To avoid being selected again
 
 				debug_msg(DEBUG_I, fxn_debug, "remove %d since "
 						"it is a false positive\n", ord);
@@ -533,13 +533,13 @@ int haplotype_selection(options * opt, data * dat, model *mod, initializer *ini,
 
 /**
  * Free space if we store arrays for false positives or use ALIGNMENT_UNIQ_SEQ
- * 
+ *
  * @param array_fp  sequences of false positives
  * @param fp_abun 	estiamted abundance of false positives
  * @param fp_trans  transition prob of false positive
  * @param nw_result alignment result
  * @param nw_alen 	alignment length
- * @param nw_size   num. of alignment result 
+ * @param nw_size   num. of alignment result
  *
  **/
 void amplici_free(unsigned int *array_fp, double *fp_abun, double *fp_trans,
@@ -552,12 +552,12 @@ void amplici_free(unsigned int *array_fp, double *fp_abun, double *fp_trans,
 		free(nw_result);
 	}
 	if(nw_alen)free(nw_alen);
-	
+
 }/* amplici_free */
 
 /**
  * Free space used for NW alignments.
- * 
+ *
  * @param nw_result	the memory with alignments
  * @param space		number of alignments
  *
@@ -589,7 +589,7 @@ void free_nw_result(unsigned char ***nw_result, unsigned int space)
  * [KSD] clear why the results are stored in the initializer.  In fact, it is
  * [KSD] not clear why there is an initializer object at all.  Put in the data
  * [KSD] object?
- * 
+ *
  * @param opt		pointer to options object
  * @param dat		pointer to data object
  * @param ini		pointer to initializer object
@@ -597,7 +597,7 @@ void free_nw_result(unsigned char ***nw_result, unsigned int space)
  * @param nw_alen	length of nw alignemnt (to be set)
  * @param size		num of unique sequences
  * @param select	current selected haplotype
- * 
+ *
  * @return err		error status
  **/
 int nwalign_matrix(options *opt, data *dat, initializer *ini,
@@ -608,8 +608,8 @@ int nwalign_matrix(options *opt, data *dat, initializer *ini,
 	int err = NO_ERROR;
 	//unsigned int size;
 	size = dat->hash_length;
-	int ends_free = 1;  // should be ends_free alignment. No panalty for gaps in the end 
-	
+	int ends_free = 1;  // should be ends_free alignment. No panalty for gaps in the end
+
 	unsigned char *ref_seq = ini->seeds[select];
 	unsigned int ref_len = ini->seed_lengths[select];
 
@@ -624,8 +624,8 @@ int nwalign_matrix(options *opt, data *dat, initializer *ini,
 			(size_t) ref_len,
 			(size_t) dat->lengths[ini->uniq_seq_idx[i]],
 			opt->score, opt->gap_p, opt->band, ends_free, NULL,
-								&err, &alen);
-		
+							&err, &alen, NULL);
+
 		#if DEBUG
 		fprintf(stderr, "alignment");
 		for (size_t j = 0; j < alen; ++j) {
@@ -638,12 +638,12 @@ int nwalign_matrix(options *opt, data *dat, initializer *ini,
 				? '-' : xy_to_char[(int) aln[1][j]]);
 			}
 		#endif
-		
+
 		nw_result[i] = aln;
 		nw_alen[i] = alen;
 
 		/* calculate number of indels and mismatch based on alignment */
-		ana_alignment(aln, alen, rlen, &ini->nw_indels[select*size+i], 
+		ana_alignment(aln, alen, rlen, &ini->nw_indels[select*size+i],
 					&ini->nw_mismatch[select*size+i], opt->ends_free,opt->info);
 	}
 
@@ -651,26 +651,26 @@ int nwalign_matrix(options *opt, data *dat, initializer *ini,
 }/* nwalign_matrix */
 
 /**
- * malloc additional space specific for amplici 
- * 
+ * malloc additional space specific for amplici
+ *
  * @param opt   	pointer to options object
  * @param dat 		pointer to data object
  * @param ini   		pointer to initializer object
  * @param array_fp  	sequences of false positives
  * @param fp_abun 		estiamted abundance of false positives
  * @param fp_trans  	transition prob of false positive
- * @param nw_result 	nw alignment result 
+ * @param nw_result 	nw alignment result
  * @param nw_alen   	length of nw alignemnt
  * @param K_space   	space for K clusters
  * @param n_candidate   total number of candidates
- * 
+ *
  * @return err      error status
  **/
 int amplici_malloc(options *opt, data *dat, initializer *ini,
 	unsigned int **array_fp, double **fp_abun, double **fp_trans,
 	unsigned char ****nw_result, size_t **nw_alen, unsigned int K_space,
 							unsigned n_candidate)
-{	
+
 	UNUSED(array_fp);
 	UNUSED(fp_abun);
 	UNUSED(fp_trans);
@@ -681,11 +681,11 @@ int amplici_malloc(options *opt, data *dat, initializer *ini,
 	if (!ini->abun_true)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "amplici.abun_true");
 
-	/* haplotypes idx in unique sequence table 
+	/* haplotypes idx in unique sequence table
 	 * need reallocation when K increases
 	 */
-   	if (!ini->H)
-   		ini->H = malloc(K_space * sizeof * ini->H);
+	if (!ini->H)
+		ini->H = malloc(K_space * sizeof * ini->H);
 	if (!ini->H)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "amplici.H");
 
@@ -700,7 +700,7 @@ int amplici_malloc(options *opt, data *dat, initializer *ini,
 		ini->H_ee = malloc(K_space * sizeof * ini->H_ee);
 	if (!ini->H_ee)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "amplici.H_ee");
-	
+
 	/* p-value of haplotypes */
 	if (!ini->H_pvalue)
 		ini->H_pvalue = malloc(K_space * sizeof *ini->H_pvalue);
@@ -711,7 +711,7 @@ int amplici_malloc(options *opt, data *dat, initializer *ini,
 #ifdef STORE_FP
 	if (opt->check_false_positive) {
 		//if (!*array_fp)
-    		*array_fp = malloc(K_space * sizeof **array_fp);
+		*array_fp = malloc(K_space * sizeof **array_fp);
 		//if (!*fp_abun)
 		*fp_abun = malloc(K_space * sizeof **fp_abun);
 		//if (!*fp_trans)
@@ -721,8 +721,8 @@ int amplici_malloc(options *opt, data *dat, initializer *ini,
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "amplici.fp");
 	}
 #endif
-	
-	/* malloc transition matrix between reads and haplotypes (log value) 
+
+	/* malloc transition matrix between reads and haplotypes (log value)
 	 * need reallocation when K increases
 	 */
 	if (!ini->e_trans)
@@ -732,7 +732,7 @@ int amplici_malloc(options *opt, data *dat, initializer *ini,
 
 	/* self transition matrix */
 	if (!ini->self_trans)
-   		ini->self_trans = malloc(dat->sample_size * sizeof * ini->self_trans);
+		ini->self_trans = malloc(dat->sample_size * sizeof * ini->self_trans);
 	if (!ini->self_trans)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "amplici.self_trans");
 
@@ -765,7 +765,7 @@ int amplici_malloc(options *opt, data *dat, initializer *ini,
 
 /**
  * realloc space when num of clusters or num of false positives increases
- * 
+ *
  * @param opt			pointer to options object
  * @param mod			pointer to model object
  * @param ini 			pointer to initializer object
@@ -775,13 +775,13 @@ int amplici_malloc(options *opt, data *dat, initializer *ini,
  * @param preK			current space for preK clusters
  * @param K			realloc space for K clusters
  * @param pre_nfp		current space for pre_nfp false positives
- * @param nfp			realloc space for nfp false positives 
+ * @param nfp			realloc space for nfp false positives
  * @param sample_size		number of total reads
  * @param hash_length		total number of candidates
  * @param max_read_length	length of reads
- * 
+ *
  * @return			error status
- * 
+ *
  * need to realloc space for pi, haplotype, distance, eik in model object
  * seeds, seed_idx, seed_lengths in initializer object
  * */
@@ -790,7 +790,7 @@ int amplici_realloc(options *opt, initializer *ini, model *mod,
 	unsigned int preK, unsigned int K, unsigned int pre_nfp,
 	unsigned int nfp, size_t sample_size, unsigned int hash_length,
 	unsigned int max_read_length)
-{	
+{
 	int err = NO_ERROR;
 
 
@@ -828,7 +828,7 @@ int amplici_realloc(options *opt, initializer *ini, model *mod,
 		double *H_abun = realloc(ini->H_abun, K * sizeof * ini->H_abun);
 		double *H_ee = realloc(ini->H_ee, K * sizeof * ini->H_ee);
 		double *H_pvalue = realloc(ini->H_pvalue,K * sizeof * ini->H_pvalue);
-		
+
 		if (!H || !H_abun || !H_ee || !H_pvalue) {
 			if (H) free(H);
 			if (H_abun) free(H_abun);
@@ -868,14 +868,14 @@ int amplici_realloc(options *opt, initializer *ini, model *mod,
 		/* haplotype, pi, eik */
 		double *pi = realloc(mod->pi, K * sizeof *mod->pi);
 		//unsigned char *haplotypes = realloc(mod->haplotypes,
-		//	max_read_length * K * sizeof *mod->haplotypes);  
+		//	max_read_length * K * sizeof *mod->haplotypes);
 		double *eik = realloc(mod->eik,
 					sample_size * K * sizeof *mod->eik);
 		double *distance = realloc(mod->distance,
 						K * sizeof *mod->distance);
 		double *JC_ll_K = realloc(mod->JC_ll_K,
 						K * sizeof *mod->JC_ll_K);
- 		unsigned int *cluster_size = realloc(ini->cluster_size,
+		unsigned int *cluster_size = realloc(ini->cluster_size,
 						K * sizeof *ini->cluster_size);
 
 		if (!pi || !eik || !distance || !cluster_size
@@ -900,10 +900,10 @@ int amplici_realloc(options *opt, initializer *ini, model *mod,
 			return err;
 
 		/* seeds, seeds_length, seed_idx */
-		//size_t *seed_idx = realloc(ini->seed_idx, K * sizeof *ini->seed_idx);   
-		/* 
+		//size_t *seed_idx = realloc(ini->seed_idx, K * sizeof *ini->seed_idx);
+		/*
 		unsigned int *seed_lengths = realloc(ini->seed_lengths, K * sizeof *ini->seed_lengths);
-		data_t **seeds = realloc(ini->seeds, K * sizeof *ini->seeds); 
+		data_t **seeds = realloc(ini->seeds, K * sizeof *ini->seeds);
 
 		if ( !seeds || !seed_lengths) {
 			//if (seed_idx) free(seed_idx);
@@ -913,7 +913,7 @@ int amplici_realloc(options *opt, initializer *ini, model *mod,
 							"amplici.realloc.seed");
 		}
 		// ini->seed_idx = seed_idx;
-		ini->seed_lengths = seed_lengths;   // Uninitialized 
+		ini->seed_lengths = seed_lengths;   // Uninitialized
 		ini->seeds = seeds;
 
 		data_t *dptr = realloc(ini->seeds[0], max_read_length * K * sizeof **ini->seeds);
@@ -930,7 +930,7 @@ int amplici_realloc(options *opt, initializer *ini, model *mod,
 		/*
 		for (unsigned int k = preK; k < K; k++) {
 			seeds[k] = NULL;
-			seeds[k] = calloc(max_read_length, sizeof **ini->seeds);    
+			seeds[k] = calloc(max_read_length, sizeof **ini->seeds);
 			if (!seeds[k]) {
 				//free(seed_idx);
 				free(seeds);
@@ -959,8 +959,8 @@ int amplici_realloc(options *opt, initializer *ini, model *mod,
  * @param abun_true	estimated true abundances of all uniq seq
  * @param e_trans	log probability of misread to each read from existing
  *			haplotypes
- * @param idx		idx of the unique seq in dmat 
- * @param i		idx of current unique sequence 
+ * @param idx		idx of the unique seq in dmat
+ * @param i		idx of current unique sequence
  * @param select	total number of selected haplotypes
  * @param count_i	observed abundance of unique sequence
  * @param conve		convergence or not when updating abundance
@@ -978,7 +978,7 @@ int expected_TrueAbundance(options *opt, data *dat, double *H_abun,
 
 	double delta;
 	unsigned int iter = 0;
-	
+
 	/* find the read idx in the sample set of this unique sequence */
 	//hash *unit = NULL;
 	unsigned char *seq = dat->dmat[idx[i]];
@@ -999,9 +999,9 @@ int expected_TrueAbundance(options *opt, data *dat, double *H_abun,
 			delta = (abun_true[i] - true_abun_i) / abun_true[i];
 			//delta = abun_true[i]-true_abun_i;
 			/* updated abundance should be smaller than current abundance */
-			
+
 			// previous if((delta < 0) || (true_abun_i < 0))
-			// have fixed the bug in numerical calculations. 
+			// have fixed the bug in numerical calculations.
 			abun_true[i] = true_abun_i;
 
 			if (fabs(delta) < opt->epsilon
@@ -1039,7 +1039,7 @@ int expected_TrueAbundance(options *opt, data *dat, double *H_abun,
  * a unique sequence.
  *
  * @param sample_size	number of total reads
- * @param idx_array  	idx of all reads of the uniq seq in dmat 
+ * @param idx_array  	idx of all reads of the uniq seq in dmat
  * @param e_trans	log probability of misread to each read from existing
  *			haplotypes
  * @param self_trans	log probability of misread to each read from itself
@@ -1047,7 +1047,7 @@ int expected_TrueAbundance(options *opt, data *dat, double *H_abun,
  * @param select	total number of selected haplotypes
  * @param obs_abun	observed abundance of unique sequence
  * @param true_abun	estimated expected true abundance of unique sequence, x
- * 
+ *
  * @return		new estimated expected true abundance, f(x)
  */
 double iterate_expected_true_abundance(unsigned int sample_size, size_t *idx_array,
@@ -1066,14 +1066,14 @@ double iterate_expected_true_abundance(unsigned int sample_size, size_t *idx_arr
 		true_abun_new -= sum_pro_H / (sum_pro_H
 			+ exp(self_trans[idx_array[r]]) * true_abun);
 	}
-	
+
 	return true_abun_new;
 } /* iterate_expected_true_abundance */
 
 /**
  * Compute transition probability between all reads and current haplotype
  * based on nw alignment result.
- * 
+ *
  * @param dat			pointer to data object
  * @param opt			pointer to options object
  * @param ini 			pointer to initializer object
@@ -1084,7 +1084,7 @@ double iterate_expected_true_abundance(unsigned int sample_size, size_t *idx_arr
  * @param error_encoding	nucleotide encoding of error profile
  * @param H_id			idx of the current haplotype candidate
  * @param adj			Pr(#{indels} < read_length)
- * 
+ *
  * @return err			error status
  **/
 int ExpTrans_nwalign(data *dat, options *opt, initializer *ini,
@@ -1101,17 +1101,17 @@ int ExpTrans_nwalign(data *dat, options *opt, initializer *ini,
 
 	unsigned int n = dat->sample_size;
 	double *e_trans = ini->e_trans;
-	
+
 	if (!e_trans)
 		return mmessage(ERROR_MSG, INTERNAL_ERROR,
 						"cal_e_trans_nw.e_trans");
 
 	for (unsigned int r = 0; r < n; r++) {
 
-		unsigned int id = ini->reads_uniq_id[r];   // id in unique sequenes table 
+		unsigned int id = ini->reads_uniq_id[r];   // id in unique sequenes table
 		unsigned int idx = n * select + r;
 
-		/* transition prob between same sequences with different 
+		/* transition prob between same sequences with different
 		 * quality score; no need for alignment in this case
 		 */
 		if (id == H_id) {
@@ -1138,8 +1138,8 @@ int ExpTrans_nwalign(data *dat, options *opt, initializer *ini,
 }/* ExpTrans_nwalign */
 
 /**
- * Self transition probability 
- * 
+ * Self transition probability
+ *
  * @param opt			pointer to options object
  * @param dat			pointer to data object
  * @param self_trans		self transition prob array
@@ -1157,21 +1157,21 @@ int Expected_SelfTrans(options *opt, data *dat, double *self_trans,
 	/* [TODO] parallelize */
 	//#pragma omp parallel for
 	for (unsigned int r = 0; r < dat->sample_size; r++) {
-		self_trans[r] = 0;		
-			
+		self_trans[r] = 0;
+
 		if (opt->indel_model == INDEL_PER_READ
 					&& opt->nw_align == ALIGNMENT_UNIQ_SEQ)
 			self_trans[r] += dpois(0, opt->indel_error
 						* dat->lengths[r], 1) - adj;
 
 		for (unsigned int j = 0; j < dat->lengths[r]; j++) {
-			
+
 			/* to accelerate? */
 //			if( self_trans[r] < log_epsilon ) {
 //				self_trans[r] = log_epsilon;
 //				break;
 //			}
-		
+
 			if (error_profile) {
 				if (err_encoding == STD_ENCODING)
 					self_trans[r] +=
@@ -1179,13 +1179,13 @@ int Expected_SelfTrans(options *opt, data *dat, double *self_trans,
 						dat->n_quality, dat->dmat[r][j],
 						dat->dmat[r][j], dat->qmat[r][j]);
 				else if (err_encoding == XY_ENCODING)
-					self_trans[r] += 
+					self_trans[r] +=
 						error_profile[(NUM_NUCLEOTIDES
 						* dat->dmat[r][j] + dat->dmat[r][j])
 						* dat->n_quality+dat->qmat[r][j]];
 			} else {
-				//double ep = adj * error_prob(dat->fdata, dat->qmat[r][j]);	
-				double ep = dat->error_prob[dat->qmat[r][j]];					
+				//double ep = adj * error_prob(dat->fdata, dat->qmat[r][j]);
+				double ep = dat->error_prob[dat->qmat[r][j]];
 				self_trans[r] += log(1 - ep);
 			}
 		}
@@ -1195,7 +1195,7 @@ int Expected_SelfTrans(options *opt, data *dat, double *self_trans,
 
 /**
  * Transition probability without nw alignment.
- * 
+ *
  * @param opt   		pointer to options object
  * @param dat 			pointer to data object
  * @param ini   		pointer to initializer object
@@ -1203,7 +1203,7 @@ int Expected_SelfTrans(options *opt, data *dat, double *self_trans,
  * @param H_id 			idx of the current haplotype candidate
  * @param error_profile  	input error profile
  * @param error_encoding 	nucleotide encodings of error profile
- * 
+ *
  * @return err      		error status
  **/
 int ExpTrans_nogap(data *dat, options *opt, initializer *ini, unsigned int H_id,
@@ -1217,18 +1217,18 @@ int ExpTrans_nogap(data *dat, options *opt, initializer *ini, unsigned int H_id,
 	unsigned int n = dat->sample_size;
 	unsigned int idx;
 	double l1third =  log(1./3);
-				
+
 	for (unsigned int r = 0; r < dat->sample_size; r++) {
-		unsigned int id = ini->reads_uniq_id[r]; 
+		unsigned int id = ini->reads_uniq_id[r];
 		idx = n * select + r;
 
 		if (id == H_id) {
-			ini->e_trans[idx] = ini->self_trans[r]; 
+			ini->e_trans[idx] = ini->self_trans[r];
 		} else {
 
-			ini->e_trans[idx] = 0.; 
+			ini->e_trans[idx] = 0.;
 			for (unsigned int j = 0; j < dat->lengths[r]; j++) {
-			
+
 				/* to accelerate? */
 //				if (ini->e_trans[idx] < log_epsilon) {
 //					ini->e_trans[idx] = log_epsilon;
@@ -1244,15 +1244,15 @@ int ExpTrans_nogap(data *dat, options *opt, initializer *ini, unsigned int H_id,
 							dat->dmat[r][j],
 							dat->qmat[r][j]);
 					else if (err_encoding == XY_ENCODING)
-						ini->e_trans[idx] += 
+						ini->e_trans[idx] +=
 							error_profile[(NUM_NUCLEOTIDES
 							* seq[j] + dat->dmat[r][j])
 							* dat->n_quality
 								+ dat->qmat[r][j]];
 				} else {
 					//double ep = adj * error_prob(dat->fdata, dat->qmat[r][j]);
-					double ep = dat->error_prob[dat->qmat[r][j]];	
-					if (dat->dmat[r][j] == seq[j])			
+					double ep = dat->error_prob[dat->qmat[r][j]];
+					if (dat->dmat[r][j] == seq[j])
 						ini->e_trans[idx] += log(1 - ep);
 					else
 						ini->e_trans[idx] += log(ep)
@@ -1266,32 +1266,32 @@ int ExpTrans_nogap(data *dat, options *opt, initializer *ini, unsigned int H_id,
 
 
 /**
- * Transition probability (logged) between one read and current haplotype 
+ * Transition probability (logged) between one read and current haplotype
  * based on nw alignment result.
- * 
+ *
  * @param opt			pointer to options object
  * @param aln			nw alignment result
  * @param alen 			alignment length
  * @param mismatch		num of mismatches ([KSD] Why mismatch?)
- * @param ngap 			num of gaps 
+ * @param ngap 			num of gaps
  * @param error_profile		input error profile
  * @param error_encoding	nucleotide encodings of error profile
  * @param rqmat			read quality score sequence
  * @param adj			Pr(#{indels} <= read_length)
- * @param rlen			read length 
+ * @param rlen			read length
  * @param n_quality		the number of possible quality scores
  * @param error_prob	error prob indicated by quality score
  * @param ends_free     count the indel at the beginning of the alignment ?
  * 						Yes[0], No[1]
- * 
+ *
  * @return e_trans		log transition prob
  **/
 double trans_nw(options *opt, unsigned char **aln, size_t alen,
 	unsigned int mismatch, unsigned int ngap, double *error_profile,
-	int err_encoding, unsigned char *rqmat, unsigned char n_quality, 
+	int err_encoding, unsigned char *rqmat, unsigned char n_quality,
 	double adj, unsigned int rlen, double *error_prob, int ends_free)
 {
-		
+
 	int fxn_debug = ABSOLUTE_SILENCE;
 	double log_epsilon = opt->epsilon_aln;
 	double e_trans = 0;
@@ -1306,17 +1306,17 @@ double trans_nw(options *opt, unsigned char **aln, size_t alen,
 
 	double l1third = log(1./3);
 
-	unsigned int nins = 0; 
+	unsigned int nins = 0;
 	unsigned int ndel = 0;
 	unsigned int nindel = 0;
 	unsigned int nmatch = 0;
 	unsigned int nmismat = 0;
-	
+
 	if (aln) {
 		for (size_t j = 0; j < alen; j++) {
-		
+
 // commented Nov 25
-//			if (e_trans < log_epsilon) {   // for acceleration 
+//			if (e_trans < log_epsilon) {   // for acceleration
 //				e_trans = log_epsilon;
 //				break;
 //			}
@@ -1400,11 +1400,11 @@ double trans_nw(options *opt, unsigned char **aln, size_t alen,
 						NUM_NUCLEOTIDES
 						* aln[0][j] + aln[1][j])
 						* n_quality + rqmat[j2]];
-			
+
 				if (aln[0][j] == aln[1][j])
 					nmatch++;
 				else
-					nmismat++; 
+					nmismat++;
 			} else {
 				double ep = error_prob[rqmat[j2]];
 
@@ -1447,7 +1447,7 @@ double trans_nw(options *opt, unsigned char **aln, size_t alen,
  * - If \par options::nw_align == ALIGNMENT_HAPLOTYPES, then align the candidate
  *   to existing haplotypes and
  *   Check false positives or compute model log likelihoood and bic (final)
- * 
+ *
  * @param opt		pointer to options object
  * @param dat		pointer to data object
  * @param mod		pointer to model object
@@ -1459,30 +1459,33 @@ double trans_nw(options *opt, unsigned char **aln, size_t alen,
  * @param n_candidates	number of total candidates
  * @param fp		false positive or not (return)
  * @param final		final step ?
- * 
+ *
  * @return		error status
- * 
- * * [TODO] it is too complex. Simplify it 
+ *
+ * * [TODO] it is too complex. Simplify it
  **/
 int evaluate_haplotype(options *opt, data *dat, model *mod, initializer *ini,
 	unsigned int K, double low_bound, double *error_profile,
 	unsigned int ord, unsigned int n_candidates, int *fp, int final)
 {
 	UNUSED(n_candidates);
-		
+
 	int fxn_debug = opt->info;
 	int err = NO_ERROR;
-	double new_bic = INFINITY, pre_bic = mod->bic; 
+	double new_bic = INFINITY, pre_bic = mod->bic;
 	double new_aic = INFINITY, pre_aic = mod->aic;
 	double JC_ll = 0;
 	int false_positive;
 	int diagnose = 0;	/* turn on diagnostic mode */
 	unsigned int curr_K = K - 1;
-	unsigned int n_param =  K * dat->max_read_length + curr_K // haplotypes and pi 
-		+ (opt->use_error_profile?dat->n_quality*12:0);    // Previous is dat->n_quality * 16 
+	unsigned int n_param =  K * dat->max_read_length + curr_K // haplotypes and pi
+		+ (opt->use_error_profile?dat->n_quality*12:0);    // Previous is dat->n_quality * 16
 
 	mod->n_param = n_param;
-	*fp = 1;
+	if (opt->screen_information)
+		*fp = 1;
+	else
+		*fp = 0;
 
 	if (!final) {
 
@@ -1500,30 +1503,33 @@ int evaluate_haplotype(options *opt, data *dat, model *mod, initializer *ini,
 				return NO_ERROR;  // *fp = 1
 		}
 
-		/* contamination diagnostic */		
-		unsigned int rlen = ini->seed_lengths[curr_K];
-		unsigned char *rseq = ini->seeds[curr_K];
-		size_t *idx_array = NULL;
-		unsigned int count = ini->uniq_seq_count[ini->H[curr_K]];
+		/* contamination diagnostic */
+		if (opt->run_diagnostic_test) {
 
-		if ((err = find_index(dat->seq_count, rseq, rlen, &idx_array)))
-			return err;
+			unsigned int rlen = ini->seed_lengths[curr_K];
+			unsigned char *rseq = ini->seeds[curr_K];
+			size_t *idx_array = NULL;
+			unsigned int count = ini->uniq_seq_count[ini->H[curr_K]];
 
-		if ((err = abun_pvalue(opt, ini, idx_array, ini->e_trans,
-				count, curr_K, opt->contamination_threshold, &ini->H_pvalue[curr_K],
-							dat->sample_size, 0)))
-			return err;
-		
-		/* control the type I error here */
-		double adjp = opt->p_threshold;
+			if ((err = find_index(dat->seq_count, rseq, rlen, &idx_array)))
+				return err;
 
-		if (ini->H_pvalue[curr_K] > adjp) {
+			if ((err = abun_pvalue(opt, ini, idx_array, ini->e_trans,
+					count, curr_K, opt->contamination_threshold, &ini->H_pvalue[curr_K],
+								dat->sample_size, 0)))
+				return err;
 
-			debug_msg(DEBUG_I, fxn_debug, "remove false positive "
-				"with Diagnostic Probability %8.2e with threshold %8.2e \n",
-						ini->H_pvalue[curr_K], adjp);
-			if (!diagnose)
-				return NO_ERROR; // *fp = 1
+			/* control the type I error here */
+			double adjp = opt->p_threshold;
+
+			if (ini->H_pvalue[curr_K] > adjp) {
+
+				debug_msg(DEBUG_I, fxn_debug, "remove false positive "
+					"with Diagnostic Probability %8.2e with threshold %8.2e \n",
+							ini->H_pvalue[curr_K], adjp);
+				if (!diagnose)
+					return NO_ERROR; // *fp = 1
+			}
 		}
 
 		if ((err = mean_exp_errors(dat, ini->uniq_seq_idx[ord],
@@ -1545,6 +1551,7 @@ int evaluate_haplotype(options *opt, data *dat, model *mod, initializer *ini,
 	/* [XP] Other settings of options::nw_align are handled elsewhere;
 	 * [XP] need more thought.
 	 */
+
 	/* Transition prob with alignment free strategy */
 	if (opt->nw_align == ALIGNMENT_HAPLOTYPES && !final)
 		ExpTrans_nogap(dat, opt, ini, ord, curr_K, error_profile,
@@ -1584,8 +1591,10 @@ int evaluate_haplotype(options *opt, data *dat, model *mod, initializer *ini,
 							mod->ll, mod->JC_ll);
 
 	/* better bic means the chosen seed is not a false positive */
+
 	if (!diagnose && (opt->use_aic ? new_aic : new_bic) < (opt->use_aic ? pre_aic : pre_bic)) {
-		*fp = 0;
+		if (opt->screen_information)
+			*fp = 0;
 		mod->bic = new_bic;
 		mod->aic = new_aic;
 	} else if (diagnose && (opt->use_aic ? new_aic : new_bic) < (opt->use_aic ? pre_aic : pre_bic)) {
@@ -1601,7 +1610,7 @@ int evaluate_haplotype(options *opt, data *dat, model *mod, initializer *ini,
 	//	debug_msg(DEBUG_I, fxn_debug, "Final bic: %f\n", new_bic);
 	//	debug_msg(DEBUG_I, fxn_debug, "Final aic: %f\n", new_aic);
 	//}
-	
+
 
 	return err;
 }/* evaluate_haplotype */
@@ -1612,15 +1621,15 @@ int evaluate_haplotype(options *opt, data *dat, model *mod, initializer *ini,
  *     each of K current haplotypes if \par reassign, or
  * (2) normalization of current estimated scaled true abundances if not
  *     \par reassign.
- * 
+ *
  * @param ini		pointer to initializer object
  * @param pi		cluster relative abundance (to be computed)
  * @param sample_size	total num of reads
  * @param K		current number of clusters
  * @param reassign	use hard-clustering by transition probability
- * 
+ *
  * @return		error status
- * 
+ *
  **/
 int Est_pi(initializer *ini, double *pi, size_t sample_size,
 					unsigned int K, int reassign)
@@ -1656,7 +1665,7 @@ int Est_pi(initializer *ini, double *pi, size_t sample_size,
 			abun_sum += ini->H_abun[k];
 
 		for (unsigned int k = 0; k < K; k++){
-			pi[k] = ini->H_abun[k] / abun_sum;	
+			pi[k] = ini->H_abun[k] / abun_sum;
 			pi[k] = log(pi[k]);
 		}
 	}
@@ -1666,14 +1675,14 @@ int Est_pi(initializer *ini, double *pi, size_t sample_size,
 
 /**
  * update seeds table in initializer when select a new haplotype
- * 
+ *
  * @param ini   			pointer to initializer object
  * @param dat   			pointer to data object
  * @param select            num of preselected haplotypes
- * @param ord 				idx of the new haplotype 
- * 
+ * @param ord 				idx of the new haplotype
+ *
  * @return err    			error status
- * 
+ *
  **/
 int update_seeds(data *dat, initializer *ini, unsigned int select, unsigned int ord){
 
@@ -1693,7 +1702,7 @@ int update_seeds(data *dat, initializer *ini, unsigned int select, unsigned int 
  * Specifically, align the candidate haplotype to all previous haplotypes and
  * reestimate the scaled true abundance.  If it drops below the threshold,
  * the candidate haplotype is considered a "false positive".
- * 
+ *
  * @param opt		pointer to options object
  * @param dat		pointer to data object
  * @param mod		pointer to model object
@@ -1702,10 +1711,10 @@ int update_seeds(data *dat, initializer *ini, unsigned int select, unsigned int 
  * @param error_profile	input error profile
  * @param select	number of haplotypes, excluding candidate
  * @param fp		detect as false positive (computed)
- * 
+ *
  * @return err		error status
- * 
- * * [TODO] it is too complex. Simplify it 
+ *
+ * * [TODO] it is too complex. Simplify it
  **/
 int check_fp_with_indels(options *opt, data *dat, model *mod, initializer *ini,
 	unsigned int select, double low_bound, double *error_profile, int *fp)
@@ -1738,17 +1747,21 @@ int check_fp_with_indels(options *opt, data *dat, model *mod, initializer *ini,
 	/* haplotype candidate */
 	unsigned int rlen = ini->seed_lengths[select];
 	unsigned char *rseq = ini->seeds[select];
+	double mscore = 0;
+	size_t mlen = 0;
+	unsigned int mindel = 0, mmm = 0, mk = 0;
 
 	/* align candidate haplotype to each existing haplotype */
 	/* [KSD] duplicative code with nwalign_matrix() */
 	for (unsigned int k = 0; k < select; k++) {
+		double ascore = 0;
 		size_t alen;
 		unsigned int ref_len = ini->seed_lengths[k];
 		unsigned char *ref_seq = ini->seeds[k];
 
 		unsigned char **aln = nwalign(ref_seq, rseq, (size_t) ref_len,
 			(size_t) rlen, opt->score, opt->gap_p, opt->band,
-						ends_free, NULL, &err, &alen);
+				ends_free, NULL, &err, &alen, &ascore);
 
 
 		#if DEBUG
@@ -1769,12 +1782,20 @@ int check_fp_with_indels(options *opt, data *dat, model *mod, initializer *ini,
 		nw_alen[k] = alen;
 
 		/* calculate number of indels and mismatch based on alignment */
-		ana_alignment(aln, alen, rlen, &nw_indels[k], 
+		ana_alignment(aln, alen, rlen, &nw_indels[k],
 					&nw_mismatch[k], opt->ends_free,opt->info);
 
+		if (ascore > mscore) {
+			mk = k;
+			mscore = ascore;
+			mlen = alen;
+			mindel = nw_indels[k];
+			mmm = nw_mismatch[k];
+		}
 		/* diagnostic output: */
 		//debug_msg(DEBUG_I, DEBUG_I, "haplotype %u alignment length %zu; #indels %u; #mismatches %u\n", k, alen, nw_indels[k], nw_mismatch[k]);
 	}
+	debug_msg(DEBUG_I, DEBUG_I, "haplotype %u alignment score=%f alen=%zu id=%u mm=%u\n", mk, mscore, mlen, mindel, mmm);
 
 	/*------------------------------------------------------------------- */
 	/* recalculate transition prob for each read with same sequence as
@@ -1800,7 +1821,7 @@ int check_fp_with_indels(options *opt, data *dat, model *mod, initializer *ini,
 			e_trans[k*count + r] = trans_nw(opt, nw_result[k],
 				nw_alen[k], nw_mismatch[k], nw_indels[k],
 				error_profile, mod->err_encoding,
-				dat->qmat[idx_array[r]], dat->n_quality, 
+				dat->qmat[idx_array[r]], dat->n_quality,
 				mod->adj_trunpois, rlen, dat->error_prob,opt->ends_free);
 			tmp += e_trans[k*count + r];
 			#if DEBUG
@@ -1854,7 +1875,7 @@ int check_fp_with_indels(options *opt, data *dat, model *mod, initializer *ini,
 			break;
 
 		true_abun = true_abun_new;
-		iter ++;	
+		iter ++;
 
 		if (iter > opt->n_iter_amplici)
 			return mmessage(WARNING_MSG, INTERNAL_ERROR,
@@ -1897,7 +1918,7 @@ EXIT_CHECK_FP_WITH_INDELS:
  * number of reads of every candidate.  If the number of observed reads is
  * considerably higher than this threshold and not explained by misreads from
  * the current haplotype set, then we believe the candidate haplotype is real.
- * 
+ *
  * @param opt		pointer to options object
  * @param ini		pointer to initializer object
  * @param idx_array	indices of reads matching candidate haplotype
@@ -1910,9 +1931,9 @@ EXIT_CHECK_FP_WITH_INDELS:
  * @param sample_size	total number of reads
  * @param partial	is e_trans for all data or just the reads matching
  *			candidate haplotype
- * 
+ *
  * @return err 		error status
- * 
+ *
  **/
 int abun_pvalue(options *opt, initializer *ini, size_t *idx_array,
 	double *e_trans, unsigned int count, unsigned int select,
@@ -1939,7 +1960,7 @@ int abun_pvalue(options *opt, initializer *ini, size_t *idx_array,
 
 		double self_ts = ini->self_trans[idx_array[r]];
 
-		/* modify self trans rate if we consider indels (no longer use) */ 
+		/* modify self trans rate if we consider indels (no longer use) */
 		//if (opt->indel_model == INDEL_PER_READ)
 		//	self_ts += dpois(0, opt->indel_error * rlen, 1);
 
@@ -1966,8 +1987,8 @@ int abun_pvalue(options *opt, initializer *ini, size_t *idx_array,
 
 	debug_msg(DEBUG_II, fxn_debug, "variance under null: %f \n", true_abun_var);
 	debug_msg(DEBUG_II, fxn_debug, "N_H->sm under null: %f \n", abun_null);
-	
-	int bound = count - (threshold+1); 
+
+	int bound = count - (threshold+1);
 	debug_msg(DEBUG_I, fxn_debug, "bound=%i;\n", bound);
 	debug_msg(DEBUG_I, fxn_debug, "count=%i;\n", count);
 
@@ -1995,11 +2016,11 @@ int abun_pvalue(options *opt, initializer *ini, size_t *idx_array,
 		if (fabs(phi_x - 0.) < DBL_EPSILON)
 			*p = pnorm(x,0,1,1,0);
 		else
-			*p = pnorm(x,0,1,1,0) + phi_x*gamma*(1.0-x*x)/6; 
-		*p = 1.0 - *p; // 1- F(x) 
+			*p = pnorm(x,0,1,1,0) + phi_x*gamma*(1.0-x*x)/6;
+		*p = 1.0 - *p; // 1- F(x)
 		if(*p < 0) // avoid bug
 			*p = 0.;
-		 //refined normal approximation 
+		 //refined normal approximation
 		 ***/
 		 *p = pnorm(bound, abun_null, sigma, 0, 0); // normal approximation
 		//*p = ppois(bound,abun_null,0,0); //poisson approximation
@@ -2022,18 +2043,18 @@ int abun_pvalue(options *opt, initializer *ini, size_t *idx_array,
  * transition probabilities from each existing haplotype.  Also
  * computes posterior probabilities of assignment for each read
  * using a underflow-safe calculation.
- * 
+ *
  * @param mod		pointer to model object
  * @param sample_size	total number of reads
- * @param e_trans	transition probability matrix	
+ * @param e_trans	transition probability matrix
  * @param K		number of haplotypes
- * 
+ *
  * @return ll		model log likelihood
  **/
 double Simple_Estep(model *mod, size_t sample_size, double *e_trans,
 							unsigned int K)
 {
-	
+
 	double ll = 0;
 	double max, sum;
 	unsigned int idx;
@@ -2058,7 +2079,7 @@ double Simple_Estep(model *mod, size_t sample_size, double *e_trans,
 		/* actually these posterior probabilities are not used */
 		for (unsigned int k = 0; k < K; ++k)
 			mod->eik[k * sample_size + i] /= sum;
-			
+
 	}
 
 	return ll;
@@ -2067,30 +2088,31 @@ double Simple_Estep(model *mod, size_t sample_size, double *e_trans,
 /* print reads assignment */
 void fprint_assignment(FILE *fp, unsigned int *v, size_t n, unsigned int max, int width, int newline){
 	size_t i;
-	for (i = 0; i < n; ++i){
-		if(v[i]< max){
+	for (i = 0; i < n; ++i) {
+		if (v[i]< max) {
 			if (width)
 				fprintf(fp, " %*u", width, v[i]);
 			else
 				fprintf(fp, " %u", v[i]);
-		}else
+		} else {
 			fprintf(fp, " NA");
-			
+		}
+
 	}
 	if (newline) fprintf(fp, "\n");
 } /* fprint_assignment */
 
 /**
  * Expected number of errors for one read.
- * 
+ *
  * @param qual		quality score seq
  * @param length	length of the seq
  * @param error_prob	error prob indicated by quality score
- * 
+ *
  **/
 double exp_errors(unsigned char *qual, unsigned int length, double *error_prob)
 {
-		
+
 	double E_err = 0.;
 
 	for (unsigned int j = 0; j < length; j++)
@@ -2101,7 +2123,7 @@ double exp_errors(unsigned char *qual, unsigned int length, double *error_prob)
 
 /**
  * Compute mean expected number of errors for each uniq seq.  [KSD] Why?
- * 
+ *
  * @param dat		pointer to data object
  * @param idx		idx of the uniq seq in dmat
  * @param count_i	observed abundance of the uniq seq
@@ -2136,7 +2158,7 @@ int mean_exp_errors(data *dat, unsigned int idx, unsigned int count_i,
 
 
 /* output the format fasta file for UCHIME (use size) */
-void fprint_haplotypes_size(FILE *fp, data_t **data, size_t n, unsigned int* len, double pthres, 
+void fprint_haplotypes_size(FILE *fp, data_t **data, size_t n, unsigned int* len, double pthres,
 			char const * const prefix, double *pvalue, unsigned int *size, double *ee) {
 	for (size_t i = 0; i < n; ++i) {
 		if(pvalue && pvalue[i]>=pthres)
@@ -2153,7 +2175,7 @@ void fprint_haplotypes_size(FILE *fp, data_t **data, size_t n, unsigned int* len
 } /* fprint_haplotypes_size */
 
 /* output the format fasta file for UCHIME (use relative true abundance */
-void fprint_haplotypes_abun(FILE *fp, data_t **data, size_t n, unsigned int* len, double pthres, char const * const prefix, 
+void fprint_haplotypes_abun(FILE *fp, data_t **data, size_t n, unsigned int* len, double pthres, char const * const prefix,
 							double *pvalue, double *abun, double *ee) {
 	for (size_t i = 0; i < n; ++i) {
 		if(pvalue && pvalue[i]>=pthres)
@@ -2173,7 +2195,7 @@ void fprint_haplotypes_abun(FILE *fp, data_t **data, size_t n, unsigned int* len
  * Assign reads to clusters while filtering on log likelihood or posterior
  * probability.  If a read is filtered out, it gets assigned to cluster with
  * index K, aka NA.
- * 
+ *
  * @param K		number of clusters
  * @param ll_cutoff	cutoff of log likelihood to assign read
  * @param eik		maximum posterior assignment probability (log)
@@ -2182,13 +2204,13 @@ void fprint_haplotypes_abun(FILE *fp, data_t **data, size_t n, unsigned int* len
  * @param e_trans	transition prob matrix
  * @param sample_size	total number fo reads
  * @param ri		pointer to run_info object
- * 
+ *
  * @return err		err status
  **/
 int likelihood_filter(unsigned int K, double ll_cutoff, double *eik, double *pi,
 	double *e_trans, size_t sample_size, run_info *ri)
 {
-	unsigned int bound = K + 1; 
+	unsigned int bound = K + 1;
 
 	for (unsigned int k = 0; k < bound; k++)
 		ri->optimal_cluster_size[k] = 0;
@@ -2201,7 +2223,7 @@ int likelihood_filter(unsigned int K, double ll_cutoff, double *eik, double *pi,
 			ri->optimal_cluster_ll[i] = pi[ri->optimal_cluster_id[i]]
 				+ e_trans[ri->optimal_cluster_id[i] * sample_size + i];
 
-		//ri->optimal_cluster_ll[i] = eik[ri->optimal_cluster_id[i] * sample_size + i];  
+		//ri->optimal_cluster_ll[i] = eik[ri->optimal_cluster_id[i] * sample_size + i];
 
 		if (ri->optimal_cluster_ll[i] < ll_cutoff)
 			ri->optimal_cluster_id[i] = K;         // treat those outliers as a new cluster
@@ -2213,8 +2235,8 @@ int likelihood_filter(unsigned int K, double ll_cutoff, double *eik, double *pi,
 }/* likelihood_filter */
 
 /**
- * get MMEs of all parameters in the JC69 model. 
- * 
+ * get MMEs of all parameters in the JC69 model.
+ *
  * @param hap	pointer to haplotypes
  * @param anc	ancestor haplotype, to be calculated (tbc)
  * @param dist	expected no. changes/site b/w ancestor & haplotype, tbc
@@ -2225,7 +2247,7 @@ int likelihood_filter(unsigned int K, double ll_cutoff, double *eik, double *pi,
 int m_JC69(unsigned char * hap, unsigned char * anc, double *dist,
 	unsigned int K, unsigned int len, int start)
 {
-	
+
 	int err = NO_ERROR;
 	unsigned int count[NUM_NUCLEOTIDES];
 	unsigned int max_count;
@@ -2241,7 +2263,7 @@ int m_JC69(unsigned char * hap, unsigned char * anc, double *dist,
 		for (unsigned char n = 0; n < NUM_NUCLEOTIDES; ++n){
 			if (count[n] > max_count) {
 				max_count = count[n];
-				anc[j] = n; 
+				anc[j] = n;
 			}
 		}
 	}
@@ -2250,7 +2272,7 @@ int m_JC69(unsigned char * hap, unsigned char * anc, double *dist,
 
 
 	/* estimate the expected number of changes per site of all haplotypes */
-	for (unsigned int k = 0; k < K; k++) {		
+	for (unsigned int k = 0; k < K; k++) {
 		double tmp = (double) hamming_char_dis( (char *) &hap[k*len+start],
 					(char *) &anc[start], (size_t) len-start) / (len-start);
 		/* Previous there is a bug for the estimated distance out of range */
@@ -2266,7 +2288,7 @@ int m_JC69(unsigned char * hap, unsigned char * anc, double *dist,
 
 /**
  * Calculate the log likelihood of all K haplotypes under JC69 model.
- * 
+ *
  * @param hap   haplotype sequences
  * @param anc   ancestor sequence
  * @param dis	expected no. changes/site for each haplotype
@@ -2316,7 +2338,7 @@ int modified_ic(unsigned char *hap, unsigned char *est_anc, double *distance,
 	int param_change = 0;
 	// int start = 9;  // ignore the first 9 nucleotides
 
-	
+
 	m_JC69(hap, est_anc, distance, K, max_read_length,start);
 	*JC_ll = e_JC69(hap, est_anc, distance, K, max_read_length,start);
 
@@ -2330,8 +2352,8 @@ int modified_ic(unsigned char *hap, unsigned char *est_anc, double *distance,
 }/* modified_ic */
 
 /**
- * Reads assignment with given haplotype set 
- * 
+ * Reads assignment with given haplotype set
+ *
  * @param ini	pointer to initializer object
  * @param dat	pointer data object
  * @param opt	pointer to options object
@@ -2353,12 +2375,12 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 		debug_msg(DEBUG_II, fxn_debug, "Use error profile. \n");
 	}
 
-	if((err = trans_expectation(opt, dat, ini, error_profile, 
+	if((err = trans_expectation(opt, dat, ini, error_profile,
 					mod->adj_trunpois, mod->eik,0)))
 		return err;
 	/* Keep codes below for debug purpose  */
 	/*
-	
+
 	for(unsigned int u = 0; u <dat->hash_length; ++u ){
 		unsigned char *read = dat->dmat[ini->uniq_seq_idx[u]];
 		unsigned int rlen = dat->lengths[ini->uniq_seq_idx[u]];
@@ -2370,13 +2392,13 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 			return mmessage(ERROR_MSG, INTERNAL_ERROR,
 					"Cannot find in the hash table !");
 
-		//  align to haplotypes  
+		//  align to haplotypes
 		for (unsigned int h = 0; h < opt->K; ++h){
 
 			unsigned char *hap_seq = ini->seeds[h];
 
 			if(opt->nw_align == NO_ALIGNMENT){
-				
+
 				for(unsigned int r = 0; r < count; ++r){
 					double eik = 0.;
 					size_t id = idx_array[r];
@@ -2396,14 +2418,14 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 								+ dat->qmat[id][j]];
 						} else {
 							//double ep = adj * error_prob(dat->fdata, dat->qmat[r][j]);
-							double ep = dat->error_prob[dat->qmat[id][j]];	
-							if (dat->dmat[id][j] == hap_seq[j] )			
+							double ep = dat->error_prob[dat->qmat[id][j]];
+							if (dat->dmat[id][j] == hap_seq[j])
 								eik += log(1 - ep);
 							else
 								eik += log(ep) + l1third;
 						}
 					}
-					mod->eik[h*dat->sample_size+ id] = eik;		
+					mod->eik[h*dat->sample_size+ id] = eik;
 				}
 
 			}else{
@@ -2415,10 +2437,10 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 				(size_t) ini->seed_lengths[h],
 				(size_t) rlen,
 				opt->score, opt->gap_p, opt->band, 1, NULL,
-									&err, &alen);
+								&err, &alen, NULL);
 
-				// count for number of indels 
-				ana_alignment(aln, alen, rlen, &nindels, 
+				// count for number of indels
+				ana_alignment(aln, alen, rlen, &nindels,
 						&nmismatch, opt->info);
 
 				for(unsigned int r = 0; r<count;++r){
@@ -2427,12 +2449,12 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 						alen, nmismatch, nindels, error_profile, mod->err_encoding,
 						dat->qmat[idx_array[r]], dat->n_quality, mod->adj_trunpois,
 										rlen, dat->error_prob);
-					
+
 					debug_msg(DEBUG_III, fxn_debug, "num of indels: %i; num of "
 							"mismatch: %i\n", nindels, nmismatch);
 
 				}
-				// free 
+				// free
 				if(aln){
 					free(aln[0]);
 					free(aln[1]);
@@ -2448,7 +2470,7 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 		FILE *fp = fopen(opt->trans_matrix, "w");
 		if (!fp)
 			return mmessage(ERROR_MSG, FILE_OPEN_ERROR, opt->trans_matrix);
-		//fprint_vectorized_matrix(fp,mod->eik,dat->sample_size,opt->K,0);  not work 
+		//fprint_vectorized_matrix(fp,mod->eik,dat->sample_size,opt->K,0);  not work
 		for (size_t i = 0; i < dat->sample_size; ++i) {
 		    fprintf(fp, "%3lu", i);
 			for (unsigned int j = 0; j < opt->K; ++j) {
@@ -2465,10 +2487,10 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 	for (unsigned int k = 0; k < opt->K; ++k) {
 		mod->pi[k] = (double) ri->optimal_cluster_size[k] / dat->sample_size;
 		if (!mod->pi[k])
-			mod->pi[k] = 1.0 / dat->sample_size;  // possible if given haplotypes 
+			mod->pi[k] = 1.0 / dat->sample_size;  // possible if given haplotypes
 		mod->pi[k] = log(mod->pi[k]);
 	}
-	
+
 	/* update mod->eik with new estimated mod->pi */
 	for (unsigned int r = 0; r<dat->sample_size; ++r)
 		for (unsigned int k = 0; k < opt->K; ++k)
@@ -2488,7 +2510,7 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 	opt->outfile_info = opt->outfile_base;
 
 	fp = fopen(opt->outfile_info, "w");
-    if (!fp)
+	if (!fp)
 		return mmessage(ERROR_MSG, FILE_OPEN_ERROR, opt->outfile_info);
 
 	fprintf(fp, "assignments: ");
@@ -2498,7 +2520,7 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 	fprint_uints(fp, ri->optimal_cluster_size, opt->K, 3, 1);
 
 	fclose(fp);
-		
+
 	mmessage(INFO_MSG, NO_ERROR, "Output the assignment"
 				"file: %s \n", opt->outfile_info);
 
@@ -2506,7 +2528,7 @@ int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, ru
 } /* reads_assignment */
 
 /* calculate transition probability between reads and haplotypes */
-int trans_expectation(options *opt, data *dat,initializer*ini, double *error_profile, 
+int trans_expectation(options *opt, data *dat,initializer*ini, double *error_profile,
 					double adj_trunpois, double *trans_prob, int ends_free){
 
 	int err = NO_ERROR;
@@ -2533,7 +2555,7 @@ int trans_expectation(options *opt, data *dat,initializer*ini, double *error_pro
 			unsigned char *hap_seq = ini->seeds[h];
 
 			if(opt->nw_align == NO_ALIGNMENT){
-				
+
 				for(unsigned int r = 0; r < count; ++r){
 					double eik = 0.;
 					size_t id = idx_array[r];
@@ -2553,14 +2575,14 @@ int trans_expectation(options *opt, data *dat,initializer*ini, double *error_pro
 								+ dat->qmat[id][j]];
 						} else {
 							//double ep = adj * error_prob(dat->fdata, dat->qmat[r][j]);
-							double ep = dat->error_prob[dat->qmat[id][j]];	
-							if (dat->dmat[id][j] == hap_seq[j] )			
+							double ep = dat->error_prob[dat->qmat[id][j]];
+							if (dat->dmat[id][j] == hap_seq[j] )
 								eik += log(1 - ep);
 							else
 								eik += log(ep) + l1third;
 						}
 					}
-					trans_prob[h*dat->sample_size+ id] = eik;		
+					trans_prob[h*dat->sample_size+ id] = eik;
 				}
 
 			}else{
@@ -2572,11 +2594,11 @@ int trans_expectation(options *opt, data *dat,initializer*ini, double *error_pro
 				(size_t) ini->seed_lengths[h],
 				(size_t) rlen,
 				opt->score, opt->gap_p, opt->band, 1, NULL,
-									&err, &alen);
+								&err, &alen, NULL);
 
 				/* count for number of indels */
-				ana_alignment(aln, alen, rlen, &nindels, 
-						&nmismatch, opt->ends_free,opt->info); // need further check 
+				ana_alignment(aln, alen, rlen, &nindels,
+						&nmismatch, opt->ends_free,opt->info); // need further check
 
 				for(unsigned int r = 0; r<count;++r){
 
@@ -2599,19 +2621,19 @@ int trans_expectation(options *opt, data *dat,initializer*ini, double *error_pro
 						dat->qmat[idx_array[r]], dat->n_quality, adj_trunpois,
 										rlen, dat->error_prob,ends_free);
 					/*
-					if(idx_array[r] ==0 && h == 2 ){
-						 for (size_t j = 0; j < alen; ++j){
-                        	fprintf(stderr, " %8.2e\n", error_profile[(
-							NUM_NUCLEOTIDES
-							* aln[0][j] + aln[1][j])
-							* dat->n_quality +dat->qmat[idx_array[r]][j]]);
+					if(idx_array[r] ==0 && h == 2) {
+						for (size_t j = 0; j < alen; ++j) {
+							fprintf(stderr, " %8.2e\n", error_profile[(
+								NUM_NUCLEOTIDES
+								* aln[0][j] + aln[1][j])
+								* dat->n_quality +dat->qmat[idx_array[r]][j]]);
 							fprintf(stderr, " %c\n", dat->qmat[idx_array[r]][j]+dat->fdata->min_quality);
-                    	}
-					 fprintf(stderr, "\n");	
-					fprintf(stderr, " %8.2e\n", trans_prob[h*dat->sample_size+ idx_array[r]]);
+						}
+						fprintf(stderr, "\n");
+						fprintf(stderr, " %8.2e\n", trans_prob[h*dat->sample_size+ idx_array[r]]);
 					}
 					*/
-					
+
 					//debug_msg(DEBUG_III, fxn_debug, "num of indels: %i; num of "
 					//		"mismatch: %i\n", nindels, nmismatch);
 
