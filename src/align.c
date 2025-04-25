@@ -18,11 +18,12 @@
  * @param ends_free	ends-free alignment
  * @param perr	error probability in read (second sequence)
  * @param alen	pointer to alignment length
+ * @param asc	alignment score
  * @return	alignment
  */
 unsigned char **nwalign(unsigned char const * const s1, unsigned char const * const s2,
 	size_t len1, size_t len2, int score[4][4], int gap_p, int band,
-	int ends_free, double const *perr, int *err, size_t *alen) {
+	int ends_free, double const *perr, int *err, size_t *alen, double *asc) {
 	static size_t nnw = 0;
 	size_t i, j;
 	int l, r;   // BUG here
@@ -186,6 +187,9 @@ unsigned char **nwalign(unsigned char const * const s1, unsigned char const * co
 		al[0][i] = al0[len_al-i-1];
 		al[1][i] = al1[len_al-i-1];
 	}
+
+	if (asc)
+		*asc = d[len1*ncol + len2];
 
 	// Free allocated memory
 	free(d);
