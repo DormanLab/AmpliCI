@@ -60,6 +60,8 @@ int make_options(options **opt) {
 	op->JC69_model = 1;
 	op->convergence_amplici = 1;
 	op->check_false_positive = 1;
+	op->run_diagnostic_test = 1;
+	op->screen_information = 1;
 	op->use_aic = 0;
 	op->nw_align = ALIGNMENT_HAPLOTYPES ; //ALIGNMENT_UNIQ_SEQ; //ALIGNMENT_HAPLOTYPES; // NO_ALIGNMENT
 	op->indel_model = INDEL_PER_READ;  // consider a indel model
@@ -154,27 +156,27 @@ int parse_options(options *opt, int argc, const char **argv)
 			cmd = argv[i];
 			if (!strcmp(cmd, "cluster")) {
 				user_cmd = cmd;
-				mmessage(INFO_MSG, NO_ERROR,
+				info_msg(MINIMAL, opt->info,
 							"Command: cluster\n");
 			} else if (!strcmp(cmd, "error")) {
 				user_cmd = cmd;
 				opt->error_estimation = 1;
-				mmessage(INFO_MSG, NO_ERROR,
+				info_msg(MINIMAL, opt->info,
 							"Command: error\n");
 			} else if (!strcmp(cmd, "assignment")) {
 				user_cmd = cmd;
 				opt->run_amplici = 0; 
-				mmessage(INFO_MSG, NO_ERROR,
+				info_msg(MINIMAL, opt->info,
 						"Command: assignment\n");
 			} else if (!strcmp(cmd, "cluster_wumi") || !strcmp(cmd, "daumi") ){
 				user_cmd = cmd;
 				opt->run_amplici = 0; 
-				mmessage(INFO_MSG, NO_ERROR,
+				info_msg(MINIMAL, opt->info,
 						"Command: cluster_wumi (daumi)\n");
 			} else if (!strcmp(cmd, "histogram")) {
 				user_cmd = cmd;
 				opt->histogram = 1;
-				mmessage(INFO_MSG, NO_ERROR,
+				info_msg(MINIMAL, opt->info,
 						"Command: histogram\n");
 			} else {
 				mmessage(ERROR_MSG, INVALID_CMDLINE,
@@ -186,12 +188,15 @@ int parse_options(options *opt, int argc, const char **argv)
 		n = strlen(argv[i]);
 		if (n < 2)
 			usage_error(argv, i, (void *)opt);
+
 		j = 0;
 		while ((a = argv[i][++j]) == '-' && j < (int) n);
 		switch(a) {
 		case 'a':
 			if (!strncmp(&argv[i][j], "ali", 3)) {
 				opt->nw_align = ALIGNMENT_UNIQ_SEQ;
+				info_msg(MINIMAL, opt->info,
+					"Align all reads to haplotypes.\n");
 				break;
 			}
 			if (i == argc - 1) {
@@ -201,13 +206,13 @@ int parse_options(options *opt, int argc, const char **argv)
 				if (!strcmp(cmd, "cluster")) {
 					opt->low_bound = read_cmdline_double(
 						argc, argv, ++i, (void *)opt);
-					mmessage(INFO_MSG, NO_ERROR,
+					info_msg(MINIMAL, opt->info,
 						"Lower bound: %f.\n",
 						opt->low_bound);
 				} else if (!strcmp(cmd, "error")) {
 					opt->seed_min_observed_abundance = 
 						strtoul(argv[++i], NULL, 0);
-					mmessage(INFO_MSG, NO_ERROR,
+					info_msg(MINIMAL, opt->info,
 						"Minimum abundance: %u.\n",
 						opt->seed_min_observed_abundance);
 				} else {
@@ -217,6 +222,11 @@ int parse_options(options *opt, int argc, const char **argv)
 			} else {
 				opt->alpha = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
+				info_msg(MINIMAL, opt->info,
+					"Significance level (%s): %f.\n",
+					opt->alpha, opt->per_candidate
+						? "Bonferonni correction"
+							: "no Bonferroni");
 			}
 			break;
 		case 'c':
@@ -225,32 +235,46 @@ int parse_options(options *opt, int argc, const char **argv)
 				goto CMDLINE_ERROR;
 			} else {
 				if (argv[i + 1][0] >= 48
-						&& argv[i + 1][0] <= 57)
+						&& argv[i + 1][0] <= 57) {
 					opt->contamination_threshold
 						= read_uint(argc, argv, ++i,
 								(void *)opt);
+					info_msg(MINIMAL, opt->info,
+						"Contamination threshold: %u.\n",
+						opt->contamination_threshold);
+				}
 				opt->associate_zc = 0;
 			}
 			break;
 		case 'z':
 			opt->nw_align = ALIGNMENT_UNIQ_SEQ;
+			info_msg(MINIMAL, opt->info,
+					"Align all reads to haplotypes.\n");
 			break;
 		case 'v':
 			if (i + 1 < argc && argv[i+1][0] != '-') {
 				opt->info = strtoul(argv[++i], NULL, 0);
-			} else {
+				if (opt->info > NUM_VERBOSITY_LEVELS)
+					opt->info = DEBUG_OVERRIDE;
+			} else if (opt->info < DEBUG_OVERRIDE) {
 				++opt->info;
 			}
-			mmessage(INFO_MSG, NO_ERROR, "Verbosity set to %d.\n",
-								opt->info);
+			info_msg(MINIMAL, opt->info, "Verbosity level: "
+				"%s.\n", verbosity_level_name[opt->info]);
 			break;
 		case 'n':
 			if (!strcmp(&argv[i][j], "nJC69")) {
 				opt->JC69_model = 0;
-			}else if (!strncmp(&argv[i][j], "ncol", 4)){
+				info_msg(MINIMAL, opt->info, "Do not use JC69 "
+						"hierarchical model.\n");
+			} else if (!strncmp(&argv[i][j], "ncol", 4)) {
 				opt->umicollision = 0;
-			}else{
+				info_msg(MINIMAL, opt->info, "Do not consider "
+							"UMI collision.\n");
+			} else {
 				opt->nw_align = NO_ALIGNMENT;
+				info_msg(MINIMAL, opt->info, "Do not do any "
+							"alignments.\n");
 			}
 			break;
 		case 'k':
@@ -259,9 +283,13 @@ int parse_options(options *opt, int argc, const char **argv)
 				goto CMDLINE_ERROR;
 			} else if (!strcmp(&argv[i][j], "kmax")) {
 				if (argv[i + 1][0] >= 48
-						&& argv[i + 1][0] <= 57)
+						&& argv[i + 1][0] <= 57) {
 					opt->K_max = read_uint(argc,
 						argv, ++i, (void *)opt);
+					info_msg(MINIMAL, opt->info, "Maximum "
+						"number of haplotypes: %u\n",
+								opt->K_max);
+				}
 			} else if (argv[i+1][0] >= 48
 					&& argv[i+1][0] <= 57) {
 					opt->K = read_uint(argc, argv, ++i,
@@ -269,6 +297,8 @@ int parse_options(options *opt, int argc, const char **argv)
 					opt->estimate_K = 0;  // if K is provided, not estimate K anymore, 
 					opt->K_fix_err = 1;   // fix the maximum number of clusters, K to estimated error profile.
 				//	opt->run_amplici = 0;  // not run_amplici to select K
+					info_msg(MINIMAL, opt->info, "Assume "
+							"%u haplotypes\n", opt->K);
 			} 
 			if (errno)
 				goto CMDLINE_ERROR;
@@ -277,9 +307,11 @@ int parse_options(options *opt, int argc, const char **argv)
 			if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
-			}else{
+			} else {
 				opt->rho = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
+				info_msg(MINIMAL, opt->info, "Rho parameter: "
+							"%f\n", opt->rho);
 			}
 			break;
 		case 'l':
@@ -289,10 +321,14 @@ int parse_options(options *opt, int argc, const char **argv)
 			} else if (!strcmp(&argv[i][j], "lb")) {
 				opt->low_bound = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
+				info_msg(MINIMAL, opt->info, "Lower bound: "
+							"%f\n", opt->low_bound);
 			} else if (!strcmp(&argv[i][j], "ll")
 					|| !strncmp(&argv[i][j], "log", 3)) {
 				opt->ll_cutoff = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
+				info_msg(MINIMAL, opt->info, "Log likelihood "
+					"threshold: %f\n", opt->ll_cutoff);
 			} 
 			break;
 		case 'e':
@@ -302,7 +338,7 @@ int parse_options(options *opt, int argc, const char **argv)
 				opt->error_estimation = 1;
 			} else if(!strncmp(&argv[i][j], "ex", 2)) {
 				opt->exclude_low_abundance_seeds = 1;
-				mmessage(INFO_MSG, NO_ERROR, "Excluding low "
+				info_msg(MINIMAL, opt->info, "Excluding low "
 					"abundance seeds (set --abundance).\n");
 			} else {
 				opt->error_estimation = 1;
@@ -315,6 +351,15 @@ int parse_options(options *opt, int argc, const char **argv)
 			} else if (!strncmp(&argv[i][j], "dia", 3)) {
 				opt->alpha = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
+				if (opt->alpha == 1) {
+					opt->run_diagnostic_test = 0;
+					info_msg(MINIMAL, opt->info, "Turning "
+						"off diagnostic test.\n");
+				} else {
+					info_msg(MINIMAL, opt->info,
+						"Diagnostic threshold: %f\n",
+								opt->alpha);
+				}
 			} else if (!strncmp(&argv[i][j], "del", 3)) {
 				if (opt->indel_error_set) {
 					err = mmessage(INFO_MSG,
@@ -324,10 +369,17 @@ int parse_options(options *opt, int argc, const char **argv)
 				}
 				opt->deletion_error = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
+				info_msg(MINIMAL, opt->info, "Deletion error: "
+						"%f\n", opt->deletion_error);
 			}
 			break;
 		case 'i':
-			if (i == argc - 1) {
+			if (!strncmp(&argv[i][j], "inf", 3)) {
+				opt->screen_information = 0;
+				++i;
+				info_msg(MINIMAL, opt->info, "Do not screen AIC"
+								"or BIC.\n");
+			} else if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
 			} else if (!strcmp(argv[i+1], "amplici")) {
@@ -339,6 +391,8 @@ int parse_options(options *opt, int argc, const char **argv)
 				opt->indel_error_set = 1;
 				opt->insertion_error = opt->deletion_error
 							= opt->indel_error / 2;
+				info_msg(MINIMAL, opt->info, "Indel error: "
+						"%f\n", opt->indel_error);
 			} else if (!strncmp(&argv[i][j], "ins", 3)) {
 				if (opt->indel_error_set) {
 					err = mmessage(INFO_MSG,
@@ -348,9 +402,11 @@ int parse_options(options *opt, int argc, const char **argv)
 				}
 				opt->insertion_error = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
+				info_msg(MINIMAL, opt->info, "Insertion error: "
+						"%f\n", opt->insertion_error);
 			} else {	/* deprecated: use --haplotype */
 				opt->initialization_file = argv[++i];
-				mmessage(INFO_MSG, NO_ERROR, "Haplotype set: "
+				info_msg(MINIMAL, opt->info, "Haplotype set: "
 					"%s\n", opt->initialization_file);
 				opt->run_amplici = 0; 
 			}
@@ -366,21 +422,25 @@ int parse_options(options *opt, int argc, const char **argv)
 				opt->JC69_model = 0;
 				// opt->use_aic = 1;
 				// opt->per_candidate = 0;
-				mmessage(INFO_MSG, NO_ERROR, "Cluster UMIs .... \n");
+				info_msg(MINIMAL, opt->info, "Cluster UMIs .... \n");
 			} else if (!strcmp(&argv[i][j], "useAIC")){
 				opt->use_aic = 1;
-				mmessage(INFO_MSG, NO_ERROR, "Use AIC instead of BIC .... \n");
+				info_msg(MINIMAL, opt->info, "Use AIC instead "
+							"of BIC .... \n");
 			} else if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
 			} else if (!strncmp(&argv[i][j], "umilen", 6)){
 				if (argv[i + 1][0] >= 48
-						&& argv[i + 1][0] <= 57)
+						&& argv[i + 1][0] <= 57) {
 					opt->UMI_length =  read_uint(argc, argv, ++i,
 						(void *)opt);
+					info_msg(MINIMAL, opt->info, "UMI "
+						"length: %u\n", opt->UMI_length);
+				}
 			} else {
 				opt->initialization_UMI = argv[++i];
-				mmessage(INFO_MSG, NO_ERROR, "UMI set: "
+				info_msg(MINIMAL, opt->info, "UMI set: "
 					"%s\n", opt->initialization_UMI);
 			}
 			if (errno)
@@ -394,6 +454,8 @@ int parse_options(options *opt, int argc, const char **argv)
 					&& argv[i+1][0] <= 57) {
 				opt->UMI_length =  read_uint(argc, argv, ++i,
 						(void *)opt);
+				info_msg(MINIMAL, opt->info, "UMI length: %u\n",
+							opt->UMI_length);
 			}
 			if (errno)
 				goto CMDLINE_ERROR;
@@ -402,11 +464,20 @@ int parse_options(options *opt, int argc, const char **argv)
 			if (!strcmp(&argv[i][j], "filter")) {
 				opt->filter_reads = 1;
 				i++;
-			}else if (i == argc - 1){
+				info_msg(MINIMAL, opt->info, "Filter reads.\n");
+			} else if (!strcmp(&argv[i][j], "false_positive")
+				|| !strcmp(&argv[i][j], "fp")) {
+				opt->check_false_positive = 0;
+				info_msg(MINIMAL, opt->info, "Do not check for "
+					" false positives.\n");
+				i++;
+			} else if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
-			}else{
+			} else {
 				opt->fastq_file = argv[++i];
+				info_msg(MINIMAL, opt->info, "FASTQ file: %s\n",
+							opt->fastq_file);
 			}
 			break;
 		case 'm':	/* hidden option: --most */
@@ -424,6 +495,8 @@ int parse_options(options *opt, int argc, const char **argv)
 			if (!strcmp(&argv[i][j], "omega")) {
 				opt->omega = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
+				info_msg(MINIMAL, opt->info, "Omega parameter: "
+							"%f\n", opt->omega);
 				break; 
 			} 
 
@@ -453,10 +526,22 @@ int parse_options(options *opt, int argc, const char **argv)
 				opt->outfile_fasta = argv[++i];
 				opt->outfile_info = argv[++i];
 			}
+			if (opt->outfile_base)
+				info_msg(MINIMAL, opt->info, "Output base "
+					"name: %s.\n", opt->outfile_base);
+			if (opt->outfile_fasta)
+				info_msg(MINIMAL, opt->info, "Output FASTA: "
+						"%s.\n", opt->outfile_fasta);
+			if (opt->outfile_info)
+				info_msg(MINIMAL, opt->info, "Output info: "
+						"%s.\n", opt->outfile_info);
 			break;
 		case 'p':
 			if (!strncmp(&argv[i][j], "per", 3)) {
-				opt->per_candidate = 1;
+				opt->per_candidate = 0;
+				info_msg(MINIMAL, opt->info, "Significance "
+					"level NOT per candidate (no "
+						"Bonferonni correction).\n");
 				break;
 			}
 			if (i == argc - 1) {
@@ -465,20 +550,23 @@ int parse_options(options *opt, int argc, const char **argv)
 			}
 			if (!strcmp(&argv[i][j], "partition")){
 				opt->partition_file = argv[++i];
-				mmessage(INFO_MSG, NO_ERROR, "Partition file: "
-					"%s\n", opt->partition_file);
+				info_msg(MINIMAL, opt->info, "Partition file: "
+						"%s\n", opt->partition_file);
 			}else if (!strcmp(&argv[i][j], "pdiag")) {
 				opt->alpha = read_cmdline_double(argc,
 					argv, ++i, (void *)opt);
 				opt->per_candidate = 0;
+				info_msg(MINIMAL, opt->info, "Significance "
+					"level (no Boferonni): %f\n", opt->alpha);
 			} else {
 				opt->error_profile_name = argv[++i];
-				mmessage(INFO_MSG, NO_ERROR, "Error profile: "
+				info_msg(MINIMAL, opt->info, "Error profile: "
 					"%s\n", opt->error_profile_name);
 			}
 			break;
 		case 'w':
 			opt->use_curses = 1;
+			info_msg(MINIMAL, opt->info, "Using curses\n");
 			break;
 		case 's':
 			if (i + 3 >= argc) {
@@ -500,7 +588,7 @@ int parse_options(options *opt, int argc, const char **argv)
 				= opt->score[2][3] = opt->score[3][2] = as;
 			as = read_int(argc, argv, ++i, (void *)opt);
 			opt->gap_p = as;
-			mmessage(INFO_MSG, NO_ERROR, "Alignment parameters: "
+			info_msg(MINIMAL, opt->info, "Alignment parameters: "
 				"match = %d, transition = %d, transversion = %d"
 				", gap = %d\n", opt->score[0][0],
 				opt->score[0][3], opt->score[0][1], opt->gap_p);
@@ -515,23 +603,26 @@ int parse_options(options *opt, int argc, const char **argv)
 						&& argv[i + 1][0] <= 57)
 					opt->ignor_nc = read_uint(argc,
 						argv, ++i, (void *)opt);
-				mmessage(INFO_MSG, NO_ERROR, "ignore first "
-					"%i nucleotides in JC69 model\n", opt->ignor_nc);
-			}else if (!strcmp(&argv[i][j], "topT")) {
+				info_msg(MINIMAL, opt->info, "ignore first %i "
+						"nucleotides in JC69 model\n",
+								opt->ignor_nc);
+			} else if (!strcmp(&argv[i][j], "topT")) {
 				if (argv[i + 1][0] >= 48
 						&& argv[i + 1][0] <= 57)
 					opt->topN = read_uint(argc,
 						argv, ++i, (void *)opt);
-				if(opt->topN < 1){
+				if (opt->topN < 1) {
 					err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
 						"topN is set below 1 \n");
 					goto CMDLINE_ERROR;
 				}
+				info_msg(MINIMAL, opt->info, "Keep top %u "
+					"candidates only (truncated EM)\n",
+								opt->topN);
 			} else {
 				opt->trans_matrix = argv[++i];
-				mmessage(INFO_MSG, NO_ERROR, "Output "
-						"transition matrix: %s\n",
-							opt->trans_matrix);
+				info_msg(MINIMAL, opt->info, "Output transition"
+					" matrix: %s\n", opt->trans_matrix);
 			}
 			break;
 		case 'h':
@@ -541,7 +632,7 @@ int parse_options(options *opt, int argc, const char **argv)
 					goto CMDLINE_ERROR;
 				}
 				opt->initialization_file = argv[++i];
-				mmessage(INFO_MSG, NO_ERROR, "Haplotype set: "
+				info_msg(MINIMAL, opt->info, "Haplotype set: "
 					"%s\n", opt->initialization_file);
 				opt->run_amplici = 0; 
 			} else {
@@ -834,10 +925,13 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--diagnostic, -a <ddbl>\n\t\t"
 		"Threshold for probability in diagnostic/contamination test.\n\t\t"
-		"[DEFAULT: %f].\n", opt->alpha);
+		"Set to 1 for no diagnostic test [DEFAULT: %f].\n", opt->alpha);
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--error, -e\n\t\t"
 		"Estimate the error profile.\n");
+	if (!strcmp(command, "cluster"))
+		fprintf(fp, "\t--false_positive, -fp\n\t\t"
+		"Screen for false positives.  [DEFAULT: %s]\n", opt->check_false_positive?"Yes":"No");
 	if (!strcmp(command,"error"))
 		fprintf(fp, "\t--partition <pstr>\n\t\t"
 		"Partition file used for error profile.  [DEFAULT: none] \n");
@@ -881,6 +975,10 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 		"Sequencing indel rate.  Cannot also use options --insertion or\n\t\t"
 		"--deletion.  [DEFAULT: %f]\n", opt->indel_error);
 	if (!strcmp(command, "cluster"))
+		fprintf(fp, "\t--information\n\t\t"
+		"Screen candidates with AIC or BIC (see --aic).  [DEFAULT: %s]\n",
+		opt->screen_information ? "Yes" : "No");
+	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--insertion <insdbl>\n\t\t"
 		"Sequencing insertion error rate (see also --deletion or\n\t\t"
 		"--indel).  [DEFAULT: %f]\n", opt->insertion_error);
@@ -919,8 +1017,8 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 		"Assume NO UMI collision, that same UMI CANNOT be attached\n\t\t"
 		"to two different original haplotypes.  [DEFAULT: %s]\n", opt->umicollision ? "collision" : "no collision");
 	if (!strcmp(command, "cluster"))
-		fprintf(fp, "\t--per_candidate, --pdiag <pdbl>\n\t\t"
-		"Adjust diagnostic threshold (--diagnostic) to %f\n\t\t"
+		fprintf(fp, "\t--per_candidate | --pdiag <pdbl>\n\t\t"
+		"Do NOT adjust diagnostic threshold (--diagnostic) to %f\n\t\t"
 		"/ number_candidates.  [DEFAULT: %s]\n", opt->alpha, opt->per_candidate ? "yes" : "no");
 	if (!strcmp(command, "cluster") || !strcmp(command, "cluster_wumi") || !strcmp(command, "assignment") || !strcmp(command, "daumi"))
 		fprintf(fp, "\t--profile, -p <estr>\n\t\t"

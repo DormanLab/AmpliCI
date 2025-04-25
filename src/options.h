@@ -60,6 +60,8 @@ struct _options {
 
 	/* model */
 	int convergence_amplici;  /*<! convergence or not when updating abundance */
+	int run_diagnostic_test;  /*<! if we run diagnostic test */
+	int screen_information;  /*<! if we screen information (aic or bic) */
 	int check_false_positive;  /*<! if we check false positive */
 	int use_aic;  /*<! use aic to do model selection */
 	int JC69_model;  /*<! use approx. JC69 hierarchical model */
