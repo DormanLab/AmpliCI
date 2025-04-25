@@ -1142,7 +1142,7 @@ int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI,
 			unsigned char **aln = nwalign(hap_seq, read,
 				(size_t) opt->UMI_length, (size_t) rlen,
 				opt->score, opt->gap_p, opt->band, 1, NULL,
-								&err, &alen);
+							&err, &alen, NULL);
 
 			/* count for number of indels */
 			ana_alignment(aln, alen, rlen, &nindels,

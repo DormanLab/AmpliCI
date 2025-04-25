@@ -55,10 +55,12 @@ enum {	ABSOLUTE_SILENCE,	/*!< only output through files */
 	DEBUG_I,		/*!< debugging output */
 	DEBUG_II,		/*!< debugging output */
 	DEBUG_III,		/*!< debugging output */
-	DEBUG_OVERRIDE		/*!< ignores global level */
+	DEBUG_OVERRIDE,		/*!< ignores global level */
+	NUM_VERBOSITY_LEVELS
 };
 
 extern int global_debug_level;
+extern char const *verbosity_level_name[NUM_VERBOSITY_LEVELS];
 
 #define CHECK_TIME(start_time, time_lim, file_name, fxn_name) {                \
 	errno = NO_ERROR;                                                      \
@@ -120,11 +122,17 @@ extern int global_debug_level;
 	fprintf(stderr, __VA_ARGS__))
 #endif
 
+#define info_msg(msg_level, fxn_level, ...)                                    \
+	debug_msg((msg_level), (fxn_level), ##__VA_ARGS__)
+#define info_msg_cont(msg_level, fxn_level, ...)                               \
+	debug_msg_cont((msg_level), (fxn_level), ##__VA_ARGS__)
+#define info_call(condition, level, fxn_call)                                  \
+	debug_call((condition), (level), (fxn_call))
 /**
  * Conditionally print a formatted message to stderr.
  */
-#define debug_msg(level, fxn_debug_level, ...) do {                                  \
-		if ((level) <= (fxn_debug_level) || (level) <= global_debug_level)              \
+#define debug_msg(level, fxn_debug_level, ...) do {                            \
+	if ((level) <= (fxn_debug_level) || (level) <= global_debug_level)     \
 		message(stderr, __FILE__, __func__, __LINE__, level >= DEBUG_I \
 		? DEBUG_MSG : INFO_MSG, NO_ERROR, __VA_ARGS__);                \
 } while (0)
@@ -132,10 +140,18 @@ extern int global_debug_level;
 /**
  * Conditionally print a continuing message to stderr.
  */
-#define debug_msg_cont(level, fxn_debug_level, ...) do {                             \
-	if ((level) <= (fxn_debug_level) || (level) <= global_debug_level)        \
+#define debug_msg_cont(level, fxn_debug_level, ...) do {                       \
+	if ((level) <= (fxn_debug_level) || (level) <= global_debug_level)     \
 		fprintf(stderr, __VA_ARGS__);                                  \
 } while(0)
+
+/**
+ * Conditionally call a function.
+ */
+#define debug_call(condition, level, fxn_call) do {                            \
+	if ((condition) || ((level) && (level) <= global_debug_level))         \
+		(fxn_call);                                                    \
+} while (0)
 
 /**
  * Conditionally print a formatted message to stderr or curses window.
@@ -178,13 +194,5 @@ int message(FILE *, const char *, const char *, int, int, int, const char *, ...
 #ifdef USE_CURSES 
 int wmessage(WINDOW *, const char *, const char *, int, int, int, const char *, ...);
 #endif 
-
-/**
- * Conditionally call a function.
- */
-#define debug_call(condition, level, fxn_call) do {                            \
-	if ((condition) || ((level) && (level) <= global_debug_level))         \
-		(fxn_call);                                                    \
-} while (0)
 
 #endif
