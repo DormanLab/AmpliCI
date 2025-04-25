@@ -1078,7 +1078,7 @@ int pw_align_reads(fastq_data *fqd, char const * const rfile) {
 		size_t alen;
 		unsigned char **aln = nwalign(fqd->reference_seq, rptr, len,
 			read_length(fqd, i), score, -1, -1, 1, perr, &err,
-			&alen);
+			&alen, NULL);
 		fprintf(stderr, "Read %u alignment length %lu\n", i, alen);
 		size_t ngap1 = 0, ngap2 = 0;
 		for (size_t j = 0; j < alen; ++j) {
