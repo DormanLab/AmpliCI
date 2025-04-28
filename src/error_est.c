@@ -146,7 +146,7 @@ int error_count_generator(options *opt, data *dat, model *mod,
 {
 
 	int err = NO_ERROR;
-	int fxn_debug = ABSOLUTE_SILENCE;
+	int fxn_debug = DEBUG_I;//ABSOLUTE_SILENCE;//
 	int fix_K = opt->K_fix_err;
 	unsigned int K_max;
 	unsigned int nrow = NUM_NUCLEOTIDES * NUM_NUCLEOTIDES;
@@ -195,6 +195,8 @@ int error_count_generator(options *opt, data *dat, model *mod,
 			for (unsigned int q = 0; q < mod->n_quality; ++q)
 				err_cnt_cur[i*mod->n_quality + q] = 0;
 
+		debug_msg(fxn_debug, fxn_debug, "K_max: %u\n", K_max);
+
 		/* select up to K_max haplotypes */
 		if ((err = haplotype_selection(opt, dat, mod, ini, K_max)))
 			return err;
@@ -211,17 +213,25 @@ int error_count_generator(options *opt, data *dat, model *mod,
 
 		/* count number of reads that have maximum posterior probability of assignment > cutoff */
 		unsigned int count = 0;
+		double avg_ll = 0, min_ll = 0, max_ll = -INFINITY;
 		for (unsigned int i = 0 ; i < dat->sample_size; i++){
 			ri->optimal_cluster_ll[i] =
 				mod->pi[ri->optimal_cluster_id[i]]
 					+ ini->e_trans[ri->optimal_cluster_id[i]
 							* dat->sample_size + i];
+			if (ri->optimal_cluster_ll[i] > max_ll)
+				max_ll = ri->optimal_cluster_ll[i];
+			if (ri->optimal_cluster_ll[i] < min_ll)
+				min_ll = ri->optimal_cluster_ll[i];
+			avg_ll += ri->optimal_cluster_ll[i];
 			if (ri->optimal_cluster_ll[i] > opt->ll_cutoff)
 				++count;
 		}
 
-		mmessage(INFO_MSG, NO_ERROR, "number of reads that have "
-						"ll> ll_cutoff:%i \n", count);
+		mmessage(INFO_MSG, NO_ERROR, "%i of %i (%.2f%%) reads have ll>"
+			"ll_cutoff (%f): %i (%f<= avg=%f <=%f)\n", count,
+			dat->sample_size, 100.0 * count / dat->sample_size,
+			opt->ll_cutoff, count, min_ll, avg_ll/dat->sample_size, max_ll);
 
 		/* use estimated errors for next haplotype addition */
 		/* [TODO] It is arbitrary to set the cutoff is 0.5 */
@@ -261,12 +271,15 @@ int error_count_generator(options *opt, data *dat, model *mod,
 		double min_cos_dist = cos_dist(err_cnt_prev, err_cnt_cur, nrow,
 								mod->n_quality);
 
+		debug_msg(fxn_debug, fxn_debug, "K=%u cos distance: %f\n",
+						opt->K, exp(min_cos_dist));
+
 		/* cosine distance close enough to 1 terminates the loop */
 		if (min_cos_dist > opt->min_cosdist) {
 
 			mmessage(INFO_MSG, NO_ERROR, "Convergence at K = %i "
-				"with minimum distance %3.8f\n", opt->K,
-							exp(min_cos_dist));
+				"with minimum cos distance %3.8f (<%3.8)\n",
+				opt->K, exp(min_cos_dist), exp(opt->min_cosdist));
 
 			break;
 		}
