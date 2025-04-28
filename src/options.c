@@ -33,7 +33,7 @@ int make_options(options **opt) {
 
 	op = *opt;
 
-	op->info = SILENT; //DEBUG_III;//DEBUG_I;  // control DEBUG message 
+	op->info = SILENT; //DEBUG_III;//DEBUG_I;  // control DEBUG message
 	op->use_curses = 0;
 	op->wp = NULL;
 	op->active_fp = NULL;
@@ -49,7 +49,7 @@ int make_options(options **opt) {
 	op->trans_matrix = NULL;
 	op->partition_file = NULL;
 
-	op->run_amplici =ALGORITHM_AMPLICI; 
+	op->run_amplici =ALGORITHM_AMPLICI;
 	op->histogram = 0;
 	op->low_bound = 2.0;
 	op->contamination_threshold = 1;
@@ -66,15 +66,15 @@ int make_options(options **opt) {
 	op->nw_align = ALIGNMENT_HAPLOTYPES ; //ALIGNMENT_UNIQ_SEQ; //ALIGNMENT_HAPLOTYPES; // NO_ALIGNMENT
 	op->indel_model = INDEL_PER_READ;  // consider a indel model
 	op->ignor_nc = 0;
-	
-	
+
+
 	/* K  number of clusters */
 	op->K_max = 10000;
 	op->K = 0;	/* invalid value */
 	op->estimate_K =1;
 	op->K_space=100;
-	op->K_fix_err = 0;   
-	op->filter_reads = 0; 
+	op->K_fix_err = 0;
+	op->filter_reads = 0;
 
 
 	/* error profile estimation */
@@ -82,18 +82,18 @@ int make_options(options **opt) {
 	op->seed_min_observed_abundance = 2;  // set lower for low deduplicated sample
 	op->exclude_low_abundance_seeds = 0;
 	op->min_cosdist = log(0.999);
-	op->use_error_profile = 0;	
+	op->use_error_profile = 0;
 	op->err_encoding = XY_ENCODING;   // Indicate that how error encoded in error profiles STD_ENCODING or XY_ENCODING
-	op->error_profile_name = NULL; 
-	
-	
-	/* error */ 
-	op->insertion_error = 0.00004;   
-	op->deletion_error = 0.00002;	
-	op->indel_error = op->insertion_error + op->deletion_error;   // per site per read 
+	op->error_profile_name = NULL;
+
+
+	/* error */
+	op->insertion_error = 0.00004;
+	op->deletion_error = 0.00002;
+	op->indel_error = op->insertion_error + op->deletion_error;   // per site per read
 	op->indel_error_set = 0;
-	
-	
+
+
 	/* running criterion */
 	op->n_iter_amplici = 1000;
 	op->ll_cutoff = -100.0;
@@ -109,10 +109,15 @@ int make_options(options **opt) {
 	op->score[1][0] = -3; op->score[1][1] = 2; op->score[1][2] = -2;op->score[1][3] = -3;
 	op->score[2][0] = -3; op->score[2][1] = -2; op->score[2][2] = 2;op->score[2][3] = -3;
 	op->score[3][0] = -2; op->score[3][1] = -3; op->score[3][2] = -3;op->score[3][3] = 2;
-	op->gap_p = -5;
-	op->band =  20;  // maybe need to be changed ? change from 10 to 20
+	op->gap_p = -5;		/* default gap penalty for all alignments */
+	op->band =  20;		/* default band for all alignments */ // maybe need to be changed ? change from 10 to 20
 	op->ends_free = 0;  //default 0
-	op->max_offset = 2;
+	op->test_homology = 1;	/* do not assume NW alignment confers homology */
+	op->indel_pval = 1e-7;	/* threshold for Pr(X>=x) under Bin(n,p) model,
+				 * where x is observed number of indels, n is
+				 * haplotype length, and p is options::indel_error
+				 */
+	op->max_offset = 0;	/* default maximum offset for UMI clustering (not used -- hard-coded in amplici.c) */
 
 
 	/* UMI information */
@@ -123,7 +128,7 @@ int make_options(options **opt) {
 	op->trans_penalty = MPLE;
 	op->rho = 1.01;
 	op->omega = 1e-20;
-	op->threshold_UMI = 1;    // allowed minimal UMI abundance 
+	op->threshold_UMI = 1;    // allowed minimal UMI abundance
 	op->threshold_hap = 0;    // allowed minimal deduplicated abundance of haplotypes
 	op->umicollision = 1;   // consider UMI collision by default
 
@@ -144,6 +149,7 @@ void free_options(options *opt)
  */
 int parse_options(options *opt, int argc, const char **argv)
 {
+	int fxn_debug = ABSOLUTE_SILENCE;//DEBUG_I;//
 	int i, j, n;
 	int err = NO_ERROR;
 	char const *cmd = "cluster";	/* default command */
@@ -162,15 +168,15 @@ int parse_options(options *opt, int argc, const char **argv)
 				user_cmd = cmd;
 				opt->error_estimation = 1;
 				info_msg(MINIMAL, opt->info,
-							"Command: error\n");
+							"Command: error*\n");
 			} else if (!strcmp(cmd, "assignment")) {
 				user_cmd = cmd;
-				opt->run_amplici = 0; 
+				opt->run_amplici = 0;
 				info_msg(MINIMAL, opt->info,
 						"Command: assignment\n");
-			} else if (!strcmp(cmd, "cluster_wumi") || !strcmp(cmd, "daumi") ){
+			} else if (!strcmp(cmd, "cluster_wumi") || !strcmp(cmd, "daumi")) {
 				user_cmd = cmd;
-				opt->run_amplici = 0; 
+				opt->run_amplici = 0;
 				info_msg(MINIMAL, opt->info,
 						"Command: cluster_wumi (daumi)\n");
 			} else if (!strcmp(cmd, "histogram")) {
@@ -191,6 +197,9 @@ int parse_options(options *opt, int argc, const char **argv)
 
 		j = 0;
 		while ((a = argv[i][++j]) == '-' && j < (int) n);
+
+		debug_msg(DEBUG_I, fxn_debug, "Parsing %s\n", &argv[i][j]);
+
 		switch(a) {
 		case 'a':
 			if (!strncmp(&argv[i][j], "ali", 3)) {
@@ -210,7 +219,7 @@ int parse_options(options *opt, int argc, const char **argv)
 						"Lower bound: %f.\n",
 						opt->low_bound);
 				} else if (!strcmp(cmd, "error")) {
-					opt->seed_min_observed_abundance = 
+					opt->seed_min_observed_abundance =
 						strtoul(argv[++i], NULL, 0);
 					info_msg(MINIMAL, opt->info,
 						"Minimum abundance: %u.\n",
@@ -233,7 +242,7 @@ int parse_options(options *opt, int argc, const char **argv)
 			if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
-			} else {
+			} else if (!strncmp(&argv[i][j], "con", 3)) {
 				if (argv[i + 1][0] >= 48
 						&& argv[i + 1][0] <= 57) {
 					opt->contamination_threshold
@@ -244,6 +253,11 @@ int parse_options(options *opt, int argc, const char **argv)
 						opt->contamination_threshold);
 				}
 				opt->associate_zc = 0;
+			} else if (!strncmp(&argv[i][j], "cos", 3)) {
+				opt->min_cosdist = log(atof(argv[++i]));
+				info_msg(MINIMAL, opt->info, "Minimum cos "
+					"distance for error convergence: %f\n",
+						exp(opt->min_cosdist));
 			}
 			break;
 		case 'z':
@@ -294,12 +308,12 @@ int parse_options(options *opt, int argc, const char **argv)
 					&& argv[i+1][0] <= 57) {
 					opt->K = read_uint(argc, argv, ++i,
 						(void *)opt);
-					opt->estimate_K = 0;  // if K is provided, not estimate K anymore, 
+					opt->estimate_K = 0;  // if K is provided, not estimate K anymore,
 					opt->K_fix_err = 1;   // fix the maximum number of clusters, K to estimated error profile.
 				//	opt->run_amplici = 0;  // not run_amplici to select K
 					info_msg(MINIMAL, opt->info, "Assume "
 							"%u haplotypes\n", opt->K);
-			} 
+			}
 			if (errno)
 				goto CMDLINE_ERROR;
 			break;
@@ -329,14 +343,22 @@ int parse_options(options *opt, int argc, const char **argv)
 					argv, ++i, (void *)opt);
 				info_msg(MINIMAL, opt->info, "Log likelihood "
 					"threshold: %f\n", opt->ll_cutoff);
-			} 
+			}
 			break;
 		case 'e':
+			/* --semiglobal, --ends-free */
+			if (!strncmp(&argv[i][j], "ends", 4)) {
+				opt->ends_free = !opt->ends_free;
+				info_msg(MINIMAL, opt->info, "%s semiglobal "
+					"(ends-free) alignment.\n",
+					opt->ends_free?"Using":"Not using");
+				break;
+			}
 		/* KSD: Overriding XP, but making back compatible. */
 			if (i + 1 < argc && !strcmp(argv[i + 1], "error")) {
 				i++;
 				opt->error_estimation = 1;
-			} else if(!strncmp(&argv[i][j], "ex", 2)) {
+			} else if (!strncmp(&argv[i][j], "ex", 2)) {
 				opt->exclude_low_abundance_seeds = 1;
 				info_msg(MINIMAL, opt->info, "Excluding low "
 					"abundance seeds (set --abundance).\n");
@@ -376,9 +398,8 @@ int parse_options(options *opt, int argc, const char **argv)
 		case 'i':
 			if (!strncmp(&argv[i][j], "inf", 3)) {
 				opt->screen_information = 0;
-				++i;
 				info_msg(MINIMAL, opt->info, "Do not screen AIC"
-								"or BIC.\n");
+								" or BIC.\n");
 			} else if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
@@ -408,29 +429,29 @@ int parse_options(options *opt, int argc, const char **argv)
 				opt->initialization_file = argv[++i];
 				info_msg(MINIMAL, opt->info, "Haplotype set: "
 					"%s\n", opt->initialization_file);
-				opt->run_amplici = 0; 
+				opt->run_amplici = 0;
 			}
 			if (errno)
 				goto CMDLINE_ERROR;
 			break;
 		case 'u':
 			if (!strcmp(&argv[i][j], "umi")) {  /* Parameter set sepcific for clustering UMIs --umi */
-				opt->gap_p = -20;
-				opt->band = opt->max_offset;   // need further investigation. 
-				//opt->ends_free = 0;   // not counting the offset the begining 
+				opt->gap_p = -20;		/* default gap penalty for UMI clustering */
+				opt->band = opt->max_offset;	/* default band for UMI clustering (overwritten in amplici.c for UMI clustering) */ // need further investigation.
+				//opt->ends_free = 0;   // not counting the offset the begining
 				// opt->nw_align = NO_ALIGNMENT;
-				opt->JC69_model = 0;
+				opt->JC69_model = 0;		/* default NO JC69 for UMI clustering */
 				// opt->use_aic = 1;
 				// opt->per_candidate = 0;
 				info_msg(MINIMAL, opt->info, "Cluster UMIs .... \n");
-			} else if (!strcmp(&argv[i][j], "useAIC")){
+			} else if (!strcmp(&argv[i][j], "useAIC")) {
 				opt->use_aic = 1;
 				info_msg(MINIMAL, opt->info, "Use AIC instead "
-							"of BIC .... \n");
+							"of BIC. \n");
 			} else if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
-			} else if (!strncmp(&argv[i][j], "umilen", 6)){
+			} else if (!strncmp(&argv[i][j], "umilen", 6)) {
 				if (argv[i + 1][0] >= 48
 						&& argv[i + 1][0] <= 57) {
 					opt->UMI_length =  read_uint(argc, argv, ++i,
@@ -497,8 +518,8 @@ int parse_options(options *opt, int argc, const char **argv)
 					argv, ++i, (void *)opt);
 				info_msg(MINIMAL, opt->info, "Omega parameter: "
 							"%f\n", opt->omega);
-				break; 
-			} 
+				break;
+			}
 
 			/* single option argument */
 			if (i + 1 == argc - 1 || argv[i + 2][0] == '-') {
@@ -548,7 +569,7 @@ int parse_options(options *opt, int argc, const char **argv)
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
 			}
-			if (!strcmp(&argv[i][j], "partition")){
+			if (!strcmp(&argv[i][j], "partition")) {
 				opt->partition_file = argv[++i];
 				info_msg(MINIMAL, opt->info, "Partition file: "
 						"%s\n", opt->partition_file);
@@ -569,6 +590,14 @@ int parse_options(options *opt, int argc, const char **argv)
 			info_msg(MINIMAL, opt->info, "Using curses\n");
 			break;
 		case 's':
+			/* --semiglobal, --ends-free */
+			if (!strncmp(&argv[i][j], "semi", 4)) {
+				opt->ends_free = !opt->ends_free;
+				info_msg(MINIMAL, opt->info, "%s semiglobal "
+					"(ends-free) alignment.\n",
+					opt->ends_free?"Using":"Not using");
+				break;
+			}
 			if (i + 3 >= argc) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
@@ -634,7 +663,7 @@ int parse_options(options *opt, int argc, const char **argv)
 				opt->initialization_file = argv[++i];
 				info_msg(MINIMAL, opt->info, "Haplotype set: "
 					"%s\n", opt->initialization_file);
-				opt->run_amplici = 0; 
+				opt->run_amplici = 0;
 			} else {
 				fprint_usage(stderr, argv[0], user_cmd, opt);
 				free_options(opt);
@@ -667,7 +696,7 @@ int parse_options(options *opt, int argc, const char **argv)
 	if (opt->initialization_file && !opt->outfile_base)
 		opt->outfile_base = opt->outfile_fasta;
 
-	//if(opt->initialization_file && opt->estimate_K)
+	//if (opt->initialization_file && opt->estimate_K)
 	//	err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
 	//		"Please provide number of haplotypes (K) in your haplotype set (-k)\n");
 
@@ -677,7 +706,7 @@ int parse_options(options *opt, int argc, const char **argv)
 		opt->K = opt->K_space;
 	else
 		opt->K_max = opt->K;
-	
+
 
 	if (opt->error_profile_name)
 		opt->use_error_profile = 1;
@@ -691,7 +720,7 @@ int parse_options(options *opt, int argc, const char **argv)
 	if (opt->associate_zc) /* no input for contamination threshold. Use the default */
 		opt->contamination_threshold = (unsigned int) opt->low_bound - 1;
 
-	if(opt->contamination_threshold > opt->low_bound){
+	if (opt->contamination_threshold > opt->low_bound) {
 		err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
 			"Contamination threshold should be set below low_bound \n");
 	}
@@ -868,7 +897,7 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 	"bound on log likelihood to exclude poorly explained reads. You may use\n\t"
 	"--nNW to avoid time-consuming sequence alignment.\n");
 
-	} else if (!strcmp(command, "cluster_wumi") || !strcmp(command, "daumi")){
+	} else if (!strcmp(command, "cluster_wumi") || !strcmp(command, "daumi")) {
 /******************************************************************************/
 		fprintf(fp, "\nNAME\n\t\t%s-%s -- Cluster reads tagged with UMIs\n", &exe_name[start], command);
 		fprintf(fp, "\nSYNOPSIS\n\t%s %s [OPTIONS] -f FILE --hap FILE -u FILE --umilen UINT \\\n\t\t"
@@ -896,7 +925,7 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 	"when there is a long right tail, but it is the format expected by\n\t"
 	"bp_pmf_mix.)\n");
 	}
-		
+
 	/* KSD: Maybe we should make AmpliCI-cons the default. */
 	if (strlen(command) > 0)
 		fprintf(fp, "\n\nOPTIONS\n");
@@ -911,18 +940,22 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 		fprintf(fp, "\t--abundance <adbl>\n\t\t"
 		"Lower bound on observed abundance for inclusion of seeded\n\t\t"
 		"cluster during error estimation.  [DEFAULT: %u]\n", opt->seed_min_observed_abundance);
-	if (!strcmp(command, "cluster"))
+	if (!strcmp(command, "cluster") || !strcmp(command, "error"))
 		fprintf(fp, "\t--align, -z\n\t\t"
 		"Align all reads to haplotypes (slow).  [DEFAULT: no]\n");	 /* KSD:  --align | -a */
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--contaminants, -c <ctuint>\n\t\t"
 		"Baseline count abundance of contaminating or noise sequences.\n\t\t"
 		"[DEFAULT: %i]\n", opt->contamination_threshold);
+	if (!strcmp(command, "error"))
+		fprintf(fp, "\t--cosine_distance <cosdbl>\n\t\t"
+		"Minimum cosine distance to consider error estimation converged.\n\t\t"
+		"[DEFAULT: %f]\n", exp(opt->min_cosdist));
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--deletion <deldbl>\n\t\t"
 		"Sequencing deletion error rate (see also --insertion or\n\t\t"
 		"--indel).  [DEFAULT: %f]\n", opt->deletion_error);
-	if (!strcmp(command, "cluster"))
+	if (!strcmp(command, "cluster") || !strcmp(command, "error"))
 		fprintf(fp, "\t--diagnostic, -a <ddbl>\n\t\t"
 		"Threshold for probability in diagnostic/contamination test.\n\t\t"
 		"Set to 1 for no diagnostic test [DEFAULT: %f].\n", opt->alpha);
@@ -936,12 +969,12 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 		fprintf(fp, "\t--partition <pstr>\n\t\t"
 		"Partition file used for error profile.  [DEFAULT: none] \n");
 /******************************************************************************/
-	if (!strcmp(command, "cluster")){
+	if (!strcmp(command, "cluster")) {
 		//fprintf(fp, "\t--n  \n\t\t Disnable sequence alignment during clustering. Use it when there are no indel errors.  [DEFAULT: no]\n");
 		fprintf(fp, "\t--nNW\n\t\t"
 		"Do NOT use Needleman-Wunsch alignment of candidate haplotypes\n\t\t"
 		"to haplotype set to detect indel errors.  [DEFAULT: %s]\n", opt->nw_align  ? "use" : "don't use");
-    }	else if(!strcmp(command, "assignment")){
+	} else if (!strcmp(command, "assignment")) {
 		fprintf(fp, "\t--nNW\n\t\t"
 		"No Needleman-Wunsch alignment to assign reads.  [DEFAULT: %s]\n", opt->nw_align  ? "use" : "don't use");
 	}
@@ -1027,6 +1060,12 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--scores <match> <mismatch> [<transversion_mismatch>] <gap>\n\t\t"
 		"Scores of the Needleman-Wunsch aligner.  [DEFAULT: %d %d %d %d]\n", opt->score[0][0], opt->score[0][3], opt->score[0][1], opt->gap_p);
+	if (!strcmp(command, "cluster") || !strcmp(command, "error"))
+		fprintf(fp, "\t--semiglobal, --ends-free\n\t\t"
+		"Use semiglobal alignments (end gaps do not count).  [DEFAULT: %s]\n\t\t\t"
+			"Semiglobal alignments appropriate for homologous\n\t\t\t"
+			"sequences with minor (1-2bp) trimming errors.\n",
+		opt->ends_free?"yes":"no");
 	fprintf(fp, "\t--verbose INT\n\t\tVerbosity level; set to 8+ for debugging.  [DEFAULT: %d]\n", opt->info);
 	fprintf(fp, "\t--help, -h\n\t\tThis help.\n");
 //	fprintf(fp, "\t-k <kuint>\n\t\tNumber of haplotypes in the haplotype set (used with -i <hstr>).  [DEFAULT: %i]\n", opt->K);	/* KSD: get rid of this option */
