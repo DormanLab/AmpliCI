@@ -19,7 +19,7 @@
  * @param seq		sequence to add
  * @param length	length of sequence
  * @param idx		index of the sequence in data struct
- * 
+ *
  * @return		The first observation time
  */
 int add_sequence(hash **seq_count, unsigned char *seq, unsigned int length,
@@ -40,7 +40,7 @@ int add_sequence(hash **seq_count, unsigned char *seq, unsigned int length,
 
 		new->sequence = seq;
 		new->count = 1;
-		new->idx = idx;	
+		new->idx = idx;
 		new->idx_array = NULL;
 		HASH_ADD_KEYPTR(hh, *seq_count, new->sequence,
 						length * sizeof *seq, new);
@@ -60,7 +60,7 @@ int add_sequence(hash **seq_count, unsigned char *seq, unsigned int length,
  * @param seq		sequence to add
  * @param length	length of sequence
  * @param idx		index of the sequence in data struct
- * 
+ *
  * @return		error status
  */
 int add_seq_idx(hash *seq_count, unsigned char *seq, unsigned int length,
@@ -80,9 +80,9 @@ int add_seq_idx(hash *seq_count, unsigned char *seq, unsigned int length,
 		if (!unit->idx_array)
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 							"hash::idx_array");
-		
-		unit->idx_array[0] = idx;		
-		unit->count = 1; 
+
+		unit->idx_array[0] = idx;
+		unit->count = 1;
 	} else {
 		unit->idx_array[unit->count] = idx;
 		unit->count++;
@@ -127,10 +127,10 @@ unsigned int count_sequences(hash *seq_count, unsigned int k) {
 
 /**
  * compare the counts from two hash structs for sorting
- * 
+ *
  * @param a hash table
  * @param b hash table
- * 
+ *
  * @ return an int as the result of comparison
  * */
 int count_sort(hash *a, hash *b)
@@ -140,9 +140,9 @@ int count_sort(hash *a, hash *b)
 
 /**
  * sort the hash tables based on the count
- * 
+ *
  * @param seq_count pointer to hash table
- * 
+ *
  * */
 void sort_by_count(hash **seq_count)
 {
@@ -154,16 +154,16 @@ void sort_by_count(hash **seq_count)
  * Fill an array with the index of first observed instance of each unique
  * sequence in hash table.
  * And also fill an array with index of each reads in unique sequence table.
- * 
- * 
+ *
+ *
  * @param seq_count hash table
  * @param index     pointer to uniq_seq_idx array
  * @param uniq_id   pointer to reads_uniq_id array
  * @param length    length of uniq_seq_isx array
  * @param sample_size length of reads_uniq_id array
- * 
+ *
  * @return		error status
- * 
+ *
  * */
 int store_index(hash *seq_count, unsigned int* uniq_id, size_t *index, unsigned int length, size_t sample_size){
 	hash *s;
@@ -191,11 +191,11 @@ int store_index(hash *seq_count, unsigned int* uniq_id, size_t *index, unsigned 
 
 /**
  * Fill an array with count of each unique sequence in hash table.
- * 
+ *
  * @param seq_count	hash table
  * @param count		pointer to array
  * @param length	length of array
- * 
+ *
  * @return		error status
  * */
 int store_count(hash *seq_count, unsigned int *count, unsigned int length)
@@ -216,22 +216,26 @@ int store_count(hash *seq_count, unsigned int *count, unsigned int length)
 
 /**
  * Find the index array of the given sequence in hash table.
- * 
+ *
  * @param seq_count	hash table
  * @param seq		sequence
  * @param length	length of the sequence
- * @idx_array       address storing the pointer of the array
- * 
+ * @idx_array		address storing the pointer of the array
+ *
  * @return		error status
  * */
-int find_index(hash *seq_count, unsigned char *seq, unsigned int length, size_t** idx_array){
-	
+int find_index(hash *seq_count, unsigned char *seq, unsigned int length,
+							size_t **idx_array)
+{
+
 	hash *unit = NULL;
 
-	HASH_FIND(hh, seq_count, seq, length * sizeof *seq, unit);
+	HASH_FIND(hh, seq_count, seq, length * sizeof(*seq), unit);
+
 	if (!unit)
-		return mmessage(ERROR_MSG, INTERNAL_ERROR, "Do not find the sequence in hash table");
-	
+		return mmessage(ERROR_MSG, INTERNAL_ERROR,
+				"Did not find the sequence in hash table");
+
 	*idx_array = unit->idx_array;
 
 	return NO_ERROR;
