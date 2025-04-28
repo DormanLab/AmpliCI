@@ -15,7 +15,7 @@ int global_debug_level = SILENT;	/* allow warnings */
 char const *verbosity_level_name[NUM_VERBOSITY_LEVELS] = {
 	"absolute silence", "silent", "quiet", "minimal", "restrained",
 	"talkative", "verbose", "light debugging", "moderate debugging",
-	"heavy debugging", "maximal"
+	"heavy debugging", "extreme debugging", "maximal"
 };
 
 int vmessage(FILE *fp, const char *file_name, const char *fxn_name, int line,

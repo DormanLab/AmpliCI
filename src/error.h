@@ -4,10 +4,14 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <errno.h>
-#ifdef USE_CURSES 
+#include <string.h>
+#ifdef USE_CURSES
 #include <curses.h>
 #endif
 #include "error.h"
+
+/* source file without path */
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 
 /** Types of messages.
  */
@@ -45,7 +49,8 @@ enum {	NO_ERROR,		/*!< no error */
 
 /** Level of verbosity.
  */
-enum {	ABSOLUTE_SILENCE,	/*!< only output through files */
+enum {
+	ABSOLUTE_SILENCE,	/*!< only output through files */
 	SILENT,			/*!< no verbosity; final output only */
 	QUIET,			/*!< try to be quiet */
 	MINIMAL,		/*!< minimal verbosity */
@@ -55,6 +60,7 @@ enum {	ABSOLUTE_SILENCE,	/*!< only output through files */
 	DEBUG_I,		/*!< debugging output */
 	DEBUG_II,		/*!< debugging output */
 	DEBUG_III,		/*!< debugging output */
+	DEBUG_IV,		/*!< debugging output */
 	DEBUG_OVERRIDE,		/*!< ignores global level */
 	NUM_VERBOSITY_LEVELS
 };
@@ -91,25 +97,25 @@ extern char const *verbosity_level_name[NUM_VERBOSITY_LEVELS];
 /**
  * Print a formatted message to stderr.
  */
-#define mmessage(type, err, ...) message(stderr, __FILE__, __func__,  __LINE__, (type), (err),  __VA_ARGS__)
+#define mmessage(type, err, ...) message(stderr, __FILENAME__, __func__,  __LINE__, (type), (err),  __VA_ARGS__)
 /**
  * Print a formatted message to curses window.
  */
-#ifdef USE_CURSES 
-#define mwmessage(wp, type, err, ...) wmessage((wp), __FILE__, __func__,  __LINE__, (type), (err),  __VA_ARGS__)
+#ifdef USE_CURSES
+#define mwmessage(wp, type, err, ...) wmessage((wp), __FILENAME__, __func__,  __LINE__, (type), (err),  __VA_ARGS__)
 #endif
 /**
  * Print a formatted message to either stderr or curses window.
  */
 #ifdef USE_CURSES
 #define AMPICLI_MESSAGE(wp, type, err, ...) (                                  \
-	(wp) ? wmessage((wp), __FILE__, __func__, __LINE__, (type), (err),     \
+	(wp) ? wmessage((wp), __FILENAME__, __func__, __LINE__, (type), (err), \
 		__VA_ARGS__) :                                                 \
-	message(stderr, __FILE__, __func__, __LINE__, (type), (err),           \
+	message(stderr, __FILENAME__, __func__, __LINE__, (type), (err),       \
 		__VA_ARGS__))
 #else
 #define AMPLICI_MESSAGE(wp, type, err, ...) (                                  \
-	message(stderr, __FILE__, __func__, __LINE__, (type), (err),           \
+	message(stderr, __FILENAME__, __func__, __LINE__, (type), (err),       \
 		__VA_ARGS__))
 #endif
 
@@ -133,8 +139,8 @@ extern char const *verbosity_level_name[NUM_VERBOSITY_LEVELS];
  */
 #define debug_msg(level, fxn_debug_level, ...) do {                            \
 	if ((level) <= (fxn_debug_level) || (level) <= global_debug_level)     \
-		message(stderr, __FILE__, __func__, __LINE__, level >= DEBUG_I \
-		? DEBUG_MSG : INFO_MSG, NO_ERROR, __VA_ARGS__);                \
+		message(stderr, __FILENAME__, __func__, __LINE__, level        \
+		>= DEBUG_I ? DEBUG_MSG : INFO_MSG, NO_ERROR, __VA_ARGS__);     \
 } while (0)
 
 /**
@@ -160,16 +166,19 @@ extern char const *verbosity_level_name[NUM_VERBOSITY_LEVELS];
 #define cc_msg(wp, condition, lvl, msg, ...) do {                              \
 	if ((condition) || ((lvl) && (lvl) <= global_debug_level)) (           \
 		(wp)                                                           \
-		? wmessage((wp), __FILE__, __func__, __LINE__, (lvl) >= DEBUG_I\
-			? DEBUG_MSG : INFO_MSG, NO_ERROR, msg, __VA_ARGS__) :  \
-		message(stderr, __FILE__, __func__, __LINE__, (lvl)>=DEBUG_I   \
-			? DEBUG_MSG : INFO_MSG, NO_ERROR, msg, __VA_ARGS__));  \
+		? wmessage((wp), __FILENAME__, __func__, __LINE__,             \
+			(lvl) >= DEBUG_I ? DEBUG_MSG : INFO_MSG, NO_ERROR,     \
+			msg, ##__VA_ARGS__) :                                  \
+		message(stderr, __FILENAME__, __func__, __LINE__,              \
+			(lvl) >= DEBUG_I ? DEBUG_MSG : INFO_MSG, NO_ERROR,     \
+			msg, ##__VA_ARGS__));                                  \
 } while (0)
 #else
 #define cc_msg(wp, condition, lvl, msg, ...) do {                              \
 	if ((condition) || ((lvl) && (lvl) <= global_debug_level)) (           \
-		message(stderr, __FILE__, __func__, __LINE__, (lvl)>=DEBUG_I   \
-			? DEBUG_MSG : INFO_MSG, NO_ERROR, msg, __VA_ARGS__));  \
+		message(stderr, __FILENAME__, __func__, __LINE__,              \
+			(lvl) >= DEBUG_I ? DEBUG_MSG : INFO_MSG, NO_ERROR,     \
+			msg, ##__VA_ARGS__));                                  \
 } while (0)
 #endif
 
@@ -191,8 +200,8 @@ extern char const *verbosity_level_name[NUM_VERBOSITY_LEVELS];
 #endif
 
 int message(FILE *, const char *, const char *, int, int, int, const char *, ...);
-#ifdef USE_CURSES 
+#ifdef USE_CURSES
 int wmessage(WINDOW *, const char *, const char *, int, int, int, const char *, ...);
-#endif 
+#endif
 
 #endif
