@@ -18,6 +18,7 @@
 #include "model.h"
 #include "io.h"
 #include "amplici_umi.h"
+#include "fastq.h"
 #include "error.h"
 
 //#define MATHLIB_STANDALONE 1
@@ -26,17 +27,12 @@
 
 
 int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod);
-double E_step(model *mod, size_t sample_size, unsigned int topN,
-					unsigned int K, unsigned int K_UMI, int *err);
-int M_step(options* opt, model *mod,size_t sample_size, unsigned int topN,
-					unsigned int K, unsigned int K_UMI);
-int reads_assign_sparse(model *mod, run_info *ri, size_t sample_size, unsigned int topN,
-					unsigned int K, unsigned int K_UMI);
-int reads_assign_optimal(model *mod, run_info *ri, size_t sample_size, unsigned int topN,
-					unsigned int K, unsigned int K_UMI);
+double E_step(model *mod, size_t sample_size, unsigned int topN, unsigned int K, unsigned int K_UMI, int *err);
+int M_step(options* opt, model *mod,size_t sample_size, unsigned int topN, unsigned int K, unsigned int K_UMI);
+int reads_assign_sparse(model *mod, run_info *ri, size_t sample_size, unsigned int topN, unsigned int K, unsigned int K_UMI);
+int reads_assign_optimal(model *mod, run_info *ri, size_t sample_size, unsigned int topN, unsigned int K, unsigned int K_UMI);
 double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s,double rho, double omega);
-int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI, double *error_profile,
-						double *trans_prob, int ends_free);
+int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI, double *error_profile, double *trans_prob, int ends_free);
 
 
 /* main model for UMI */
@@ -372,6 +368,7 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
 
 	int err = NO_ERROR;
 	int fxn_debug = ABSOLUTE_SILENCE;
+	int band = 0, ends_free = 0;
 
 	double *error_profile = NULL;
 	if (opt->use_error_profile && mod->error_profile) {
@@ -383,8 +380,9 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
 
 
 	/* For acceleration purpose. Do not allow large gap in amplification and sequencing */
-	opt->band = 9;	// still need check
-	opt->ends_free = 1;
+	band = opt->band;
+	opt->band = 9;	// [TODO] still need check /* [KSD, BUG, TODO] Don't override intelligence of callers! */
+	//opt->ends_free = 1;	/* [KSD, BUG, TODO] Why, why, why?  Changed because does not work for nonhomologous sequences.  Trust caller! */
 
 	/* transition probability for reads */
 	if ((err = trans_expectation(opt, dat, ini, error_profile,
@@ -400,11 +398,14 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
 	 /* [TODO] Set a new model of UMI alignment, not use nw alignment */
 
 	opt->band = 0;   // for UMIs // need further investigation
+	ends_free = 1;	/* [KSD] irrelevant since band=0; might as well set to 0 */
+	/* ends-free set above!!!!! */
 	// opt->gap_p = -20;
 	// opt->ends_free = 1;
 
 	/* transition probability for UMIs */
-	if ((err = trans_expect_UMIs(opt, dat, ini->seeds_UMI, error_profile, mod->eik_umi,opt->ends_free)))
+	if ((err = trans_expect_UMIs(opt, dat, ini->seeds_UMI, error_profile,
+						mod->eik_umi, ends_free)))
 		return err;
 	/* calculate the transition probability without alignment */
 
@@ -412,6 +413,8 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
 	normalize(dat->sample_size, opt->K, mod->eik);
 	normalize(dat->sample_size, opt->K_UMI, mod->eik_umi);
 	*/
+
+	opt->band = band;
 
 	return err;
 }/* trans_hap_and_umi */
@@ -1066,6 +1069,17 @@ double mstep_pen1_lambda_support(void *fdata)
 	return max_lamb_lb;
 }
 
+/**
+ * Compute transition probabilities for UMIs.
+ *
+ * @param opt		options object
+ * @param dat		data object
+ * @param seeds_UMI	true seeds
+ * @param error_profile	error probabilities
+ * @param trans_prob	transition probabilities
+ * @param ends_free	semiglobal alignment: always 1 in calls
+ * @return		error status
+ */
 int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI,
 	double *error_profile, double *trans_prob, int ends_free)
 {
@@ -1077,6 +1091,9 @@ int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI,
 	double l1third = 1.0/3;
 
 
+	/* options::band=0 is hard-coded in call to this function,
+	 * however options::nw_align defaults to ALIGNMENT_HAPLOTYPES
+	 */
 	if (!opt->band || opt->nw_align == NO_ALIGNMENT) {
 
 		for (unsigned int r = 0; r < dat->sample_size; ++r) {
@@ -1134,37 +1151,34 @@ int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI,
 
 		for (unsigned int b = 0; b < opt->K_UMI; ++b) {
 
-			unsigned char *hap_seq = &seeds_UMI[b *opt->UMI_length];
+			unsigned char *hap_seq = &seeds_UMI[b*opt->UMI_length];
 			size_t alen = opt->UMI_length;
 			unsigned int nindels = 0;
 			unsigned int nmismatch = 0;
 
+			/* options::band=0 is forced in calls to this function, so NOT ends-free */
 			unsigned char **aln = nwalign(hap_seq, read,
 				(size_t) opt->UMI_length, (size_t) rlen,
-				opt->score, opt->gap_p, opt->band, 1, NULL,
+				opt->score, opt->gap_p, opt->band, 1, NULL,	/* WARNING: force ends-free alignment!!!! */
 							&err, &alen, NULL);
 
 			/* count for number of indels */
-			ana_alignment(aln, alen, rlen, &nindels,
+			/* options::ends_free=1 is forced in calls to this function (so end gaps not counted as indels),
+			 * however there are no end gaps because alignment was banded at 0
+			 */
+			ana_alignment(aln, alen, rlen, &nindels, NULL, NULL,
 					&nmismatch, opt->ends_free, opt->info); // need further check
 
-			for (unsigned int r = 0; r<count;++r) {
+			for (unsigned int r = 0; r < count; ++r) {
 
 				/*
-				if (idx_array[r] < 10 && b == 0 ) {
-					for (size_t j = 0; j < alen; ++j) {
-						fprintf(stderr, "%c", aln[0][j] == '-'
-							? '-' : xy_to_char[(int) aln[0][j]]);
-					}
-					fprintf(stderr, "\n");
-					for (size_t j = 0; j < alen; ++j) {
-						fprintf(stderr, "%c", aln[1][j] == '-'
-							? '-' : xy_to_char[(int) aln[1][j]]);
-					}
-					fprintf(stderr, "\n");
-				}
+				print_alignment(stderr, aln, alen);
 				*/
 
+				/* ends_free=1 in all calls to this function,
+				 * so terminal gaps not counted; however, there
+				 * are no terminal gaps because band was 0
+				 */
 				trans_prob[b * dat->sample_size + idx_array[r]] = trans_nw(opt, aln,
 					alen, nmismatch, nindels, error_profile, opt->err_encoding,
 					dat->qmatU[idx_array[r]], dat->n_quality, adj_trunpois,
@@ -1186,4 +1200,4 @@ int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI,
 	}
 
 	return err;
-}
+} /* trans_expect_UMIs */
