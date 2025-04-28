@@ -245,6 +245,7 @@ unsigned char const * display_reverse_quals(unsigned char const * const in_str, 
 int write_fastq(fastq_data *fqd, fastq_options *fqo);
 int write_fastq_marked(fastq_data *fqd, fastq_options *fqo, unsigned int *id, unsigned int selected_id);
 int write_table(fastq_data *fqd, char const *filename);
+void print_alignment(FILE *fp, unsigned char **aln, size_t alen);
 
 const char *fastq_error_message(int err_no);
 

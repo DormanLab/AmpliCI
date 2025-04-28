@@ -1171,6 +1171,24 @@ fprintf(stderr, "here!\n");
 	return dis;
 } /* read_distance_ptr */
 
+/**
+ * Print alignment to file stream.
+ *
+ * @param aln	alignment as 2 x alen character matrix
+ * @param alen	alignment length
+ */
+void print_alignment(FILE *fp, unsigned char **aln, size_t alen)
+{
+	for (size_t j = 0; j < alen; ++j)
+		fprintf(fp, "%c", aln[0][j] == '-' ? '-'
+			: xy_to_char[(int) aln[0][j]]);
+	fprintf(fp, "\n");
+	for (size_t j = 0; j < alen; ++j)
+		fprintf(fp, "%c", aln[1][j] == '-' ? '-'
+			: xy_to_char[(int) aln[1][j]]);
+	fprintf(fp, "\n");
+} /* print_alignment */
+
 int make_fastq_options(fastq_options **opt)
 {
 	fastq_options *op;
