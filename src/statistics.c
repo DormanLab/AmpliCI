@@ -1,5 +1,29 @@
 #include "statistics.h"
 #include "error.h"
+
+/* See R for a better method using dbeta() */
+double pbinom(double x, unsigned int n, double p)
+{
+	double cdf = 0;
+
+	if (x < n/2.) {
+		for (unsigned int i = 0; i <= x; ++i) {
+			cdf += exp(lgamma(n + 1.) - lgamma(i + 1.) - lgamma(n - i + 1.))
+				* pow(p, i) * pow(1 - p, n - i);
+		}
+
+	} else {
+		for (unsigned int i = x+1; i <= n; ++i) {
+			cdf += exp(lgamma(n + 1.) - lgamma(i + 1.) - lgamma(n - i + 1.))
+				* pow(p, i) * pow(1 - p, n - i);
+		}
+		cdf = 1 - cdf;
+	}
+
+	return cdf;
+
+} /* pbinom */
+
 double aic(double ll, size_t k) {
 	return (2*k - 2*ll);
 } /* aic */
@@ -61,7 +85,7 @@ double ppoisbin(int k, unsigned int n, double *perr, int upper_tail)
 	
 	if (k < 0) {
 		//mmessage(INFO_MSG, NO_ERROR, "1\n");
-		if(upper_tail)
+		if (upper_tail)
 			return 1.;
 		else
 			return 0.;
