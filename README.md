@@ -66,6 +66,13 @@ AmpliCI has been tested under Linux and MacOS.
    make
    ```
 
+Building in another directory.
+    ```cmake -S . -B debug -DCMAKE_BUILD_TYPE=Debug
+    cmake --build debug
+    debug/run_AmpliCI --help
+    ```
+
+
 # Preparing input <a name="input" />
 
 The input of AmpliCI is a FASTQ file, but there is some necessary preprocessing.
