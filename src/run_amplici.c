@@ -47,6 +47,7 @@
 
 int main(int argc, const char **argv)
 {
+	int fxn_debug = ABSOLUTE_SILENCE;
 	int err = NO_ERROR;		/* error state */
 	options *opt = NULL;		/* run options */
 	data *dat = NULL;		/* data object */
@@ -73,6 +74,8 @@ int main(int argc, const char **argv)
 
 	/* encode nucleotides in 2-bits: error raised if ambiguous bases */
 	fqo->read_encoding = XY_ENCODING;
+
+	debug_msg(fxn_debug, opt->info, "Reading FASTQ...\n");
 
 	/* read sequence data */
 	if (opt->fastq_file && (err = read_fastq(opt->fastq_file,
