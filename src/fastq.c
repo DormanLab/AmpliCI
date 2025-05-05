@@ -470,14 +470,14 @@ int fread_fastq(FILE *fp, fastq_data **in_fqd, fastq_options *fqo)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 			"fastq_data reads");
 
-	fqd->quals = malloc(n_bytes * sizeof *fqd->quals);
+	fqd->quals = malloc(n_bytes * sizeof(*fqd->quals));
 	if (fqd->quals == NULL) {
 		free(fqd->reads);
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 			"fastq_data quals");
 	}
 
-	fqd->n_lengths = malloc(fqd->n_reads * sizeof *fqd->n_lengths);
+	fqd->n_lengths = malloc(fqd->n_reads * sizeof(*fqd->n_lengths));
 	if (fqd->n_lengths == NULL) {
 		free(fqd->reads);
 		free(fqd->quals);
@@ -496,8 +496,10 @@ int fread_fastq(FILE *fp, fastq_data **in_fqd, fastq_options *fqo)
 
 		/* increment pointers for next read */
 		if (err == NO_ERROR || (err == FASTQ_EOF && n_bytes > 0)) {
-			if (!n_reads) fqd->n_max_length = n_bytes;
-			else if (n_bytes != fqd->n_min_length) elen = 0;
+			if (!n_reads)
+				fqd->n_max_length = n_bytes;
+			else if (n_bytes != fqd->n_min_length)
+				elen = 0;
 			if (n_bytes > fqd->n_max_length)
 				fqd->n_max_length = n_bytes;
 			n_reads++;
@@ -689,8 +691,10 @@ int read_read(FILE *fp, fastq_data *fqd, unsigned int *len, unsigned char *nptr,
 			*qptr = (unsigned char) c;
 			qptr++;
 			qlen++;
-			if (c < fqd->min_quality) fqd->min_quality = (unsigned char) c;
-			if (c > fqd->max_quality) fqd->max_quality = (unsigned char) c;
+			if (c < fqd->min_quality)
+				fqd->min_quality = (unsigned char) c;
+			if (c > fqd->max_quality)
+				fqd->max_quality = (unsigned char) c;
 		}
 	else
 		fforward_cnt(fp, c, '\n', qlen);

@@ -61,6 +61,7 @@
 #include <stddef.h>
 
 #include "error.h"
+#include "constants.h"
 
 /**
  * Types of nucleotide encodings.
@@ -289,8 +290,9 @@ inline int valid_nucleotide(unsigned char c) {
  * @param fqd	fastq_data object pointer
  * @return	probability
  */
-inline double error_prob(fastq_data *fqd, char q) {
-	return exp(- (q + fqd->min_quality - 33) / 10. * log(10.));
+inline double error_prob(fastq_data *fqd, char q)
+{
+	return exp(- (q + fqd->min_quality - 33) / 10. * LOG10);
 } /* error_prob */
 
 /**
