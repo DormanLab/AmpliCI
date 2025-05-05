@@ -135,7 +135,7 @@ unsigned int count_sequences(hash *seq_count, unsigned int k) {
  * */
 int count_sort(hash *a, hash *b)
 {
-	return (b->count - a->count);  // change for a order of decreasing
+	return (b->count > a->count ? 1 : b->count < a->count ? -1 : 0);  // change for a order of decreasing
 }/* count_sort */
 
 /**
@@ -156,32 +156,36 @@ void sort_by_count(hash **seq_count)
  * And also fill an array with index of each reads in unique sequence table.
  *
  *
- * @param seq_count hash table
- * @param index     pointer to uniq_seq_idx array
- * @param uniq_id   pointer to reads_uniq_id array
- * @param length    length of uniq_seq_isx array
- * @param sample_size length of reads_uniq_id array
+ * @param seq_count	hash table
+ * @param ridx_to_uidx	read index to unique index
+ * @param uidx_to_ridx	unique index to read index
+ * @param length	number of unique sequences
+ * @param sample_size	number of reads
  *
  * @return		error status
  *
  * */
-int store_index(hash *seq_count, unsigned int* uniq_id, size_t *index, unsigned int length, size_t sample_size){
+int store_index(hash *seq_count, unsigned int *ridx_to_uidx,
+		size_t *uidx_to_ridx, unsigned int length, size_t sample_size)
+{
 	hash *s;
 	unsigned int i = 0;
-	unsigned int idx;
 
 	for (s = seq_count; s != NULL; s = s->hh.next) {
 		if (i == length)
 			return mmessage(ERROR_MSG, INTERNAL_ERROR,
 						"exceed the length");
-		index[i] = s->idx;   // store idx of uniq seq in dmat
+		uidx_to_ridx[i] = s->idx;   // store idx of uniq seq in dmat
 
 		/* store idx of read in uniq seq array */
 		for (unsigned j = 0; j < s->count; j++){
-			idx = s->idx_array[j];
-			if(idx >= sample_size)
-				return mmessage(ERROR_MSG,INTERNAL_ERROR,"exceed the sample_size");
-			uniq_id[idx] = i;
+			/* ridxs for this useq */
+			size_t idx = s->idx_array[j];
+
+			if (idx >= sample_size)
+				return mmessage(ERROR_MSG, INTERNAL_ERROR,
+						"exceed the sample_size");
+			ridx_to_uidx[idx] = i;
 		}
 
 		i++;
