@@ -75,7 +75,9 @@ int main(int argc, const char **argv)
 	/* encode nucleotides in 2-bits: error raised if ambiguous bases */
 	fqo->read_encoding = XY_ENCODING;
 
+#ifdef DEBUG_AMPLICI
 	debug_msg(fxn_debug, opt->info, "Reading FASTQ...\n");
+#endif
 
 	/* read sequence data */
 	if (opt->fastq_file && (err = read_fastq(opt->fastq_file,
@@ -85,6 +87,10 @@ int main(int argc, const char **argv)
 	/* with data now loaded, can polish off data object */
 	if ((err = sync_state(dat, opt)))
 		goto CLEAR_AND_EXIT;
+
+#ifdef DEBUG_AMPLICI
+	debug_msg(DEBUG_I, fxn_debug, "Data synchronized.\n");
+#endif
 
 	if (opt->histogram) {
 		write_abundance_histogram(dat, opt);
@@ -107,17 +113,23 @@ int main(int argc, const char **argv)
 		opt->K_UMI = fqdfu->n_reads;
 	}
 
-	
-
 	/* create model
 	 * [TODO] reasonable defaults, but uses data for binned quality models
 	 */
 	if ((err = make_model(&mod, dat, opt)))
 		goto CLEAR_AND_EXIT;
 
+#ifdef DEBUG_AMPLICI
+	debug_msg(DEBUG_I, fxn_debug, "Model allocated.\n");
+#endif
+
 	/* make initializer */
-	if ((err = make_initializer(&ini, dat, opt,fqdf,fqdfu)))
+	if ((err = make_initializer(&ini, dat, opt, fqdf, fqdfu)))
 		goto CLEAR_AND_EXIT;
+
+#ifdef DEBUG_AMPLICI
+	debug_msg(DEBUG_I, fxn_debug, "Initializer finalized.\n");
+#endif
 
 	/* create run_info object */
 	if ((err = make_run_info(&ri, dat, opt)))
@@ -153,7 +165,7 @@ int main(int argc, const char **argv)
 	} else if (!opt->initialization_file && opt->run_amplici) {
 
 		if (opt->partition_file) {
-			if ((err = ampliCI_wpartition(opt, dat, mod, ini, ri)))   
+			if ((err = ampliCI_wpartition(opt, dat, mod, ini, ri)))
 				return err;
 		} else {
 			if ((err = ampliCI(opt, dat, mod, ini, ri)))

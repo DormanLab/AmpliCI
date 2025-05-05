@@ -1,0 +1,15 @@
+[TODO]
+- if new hap is indel error of existing hap, combine sequence of both haps, especially if second is longer
+- read error profile before fastq file for faster error detection
+- implement R version of pbinom
+- add homology test to discard non-homology alignments
+
+[DONE]
+
+- correct alignment scoring to use Illumina error model
+	[Sat May  3 10:34:22 AM CDT 2025] options::fix_indel_model triggered by hidden command-line option --fix indel
+
+Mon Apr 28 10:26:16 AM CDT 2025
+- compile:
+cmake .	# once
+make
