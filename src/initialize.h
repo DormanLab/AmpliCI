@@ -51,9 +51,9 @@ struct _initializer {
 	unsigned int *cluster_size;	/*<! cluster sizes  */
 
 	/* sequence table with abundance (sorted) for AmpliCI */
-	size_t *uniq_seq_idx;   /*<! unique sequences index in dmat */
-	unsigned int *reads_uniq_id;  /*<! index of each read in unique sequence table */
-	unsigned int *uniq_seq_count; /*<! abundance of unique sequences */
+	size_t *uidx_to_ridx;		/*<! unique sequence index to dmat (read) index */
+	unsigned int *ridx_to_uidx;	/*<! read index to unique sequence index */
+	unsigned int *uniq_seq_count;	/*<! abundance of unique sequences */
 	double *abun_true;     /*<! estimated true abundance for each uniq seq*/
 	double *p;            /*<!  probability of being chosen as hap for each uniq seq */
 	unsigned int *H;     /*<! idx of haplotypes in uniq seq table */
