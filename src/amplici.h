@@ -1,7 +1,7 @@
 /**
  * @file amplici.h
  * @author Xiyu Peng
- * 
+ *
  * Header file for amplici.c
  */
 
@@ -30,48 +30,33 @@ enum {
 #define MAX_N_EXACT_P 100
 
 /* main function */
-int ampliCI(options * opt, data * dat, model *mod, initializer *ini,run_info *ri); 
+int ampliCI(options * opt, data * dat, model *mod, initializer *ini, run_info *ri);
 int haplotype_selection(options * opt, data * dat, model *mod, initializer *ini, unsigned int K_max);
 int reads_assignment(options * opt, data * dat, model *mod, initializer *ini, run_info *ri);
 
 /* others */
-double Simple_Estep(model *mod, size_t sample_size, double *e_trans,unsigned int K);
+double Simple_Estep(model *mod, size_t sample_size, double *e_trans, unsigned int K);
 int update_seeds(data *dat, initializer *ini, unsigned int select, unsigned int ord);
-int likelihood_filter(unsigned int K, double ll_cutoff, double *eik, double *pi, double * e_trans,
-	size_t sample_size, run_info *ri);  
-int trans_expectation(options *opt, data *dat,initializer*ini, double *error_profile, 
-					double adj_trunpois, double *trans_prob, int ends_free);
-double trans_nw(options *opt,unsigned char **align, size_t alen, unsigned int mismatch, unsigned int ngap, 
-	double *error_profile,int err_encoding, unsigned char *rqmat, unsigned char n_quality, double adj, 
-	unsigned int rlen, double *error_prob, int ends_free);
+int likelihood_filter(unsigned int K, double ll_cutoff, double *eik, double *pi, double * e_trans, size_t sample_size, run_info *ri);
+int trans_expectation(options *opt, model *mod, data *dat, initializer*ini, double *error_profile, double *trans_prob, int ends_free);
+double trans_nw(options *opt, model *mod, unsigned char **align, size_t alen, unsigned int mismatch, unsigned int ngap, double *error_profile, int err_encoding, unsigned char *rqmat, unsigned char n_quality, unsigned int rlen, double *error_prob, int ends_free);
 
 /* print */
 void fprint_assignment(FILE *fp, unsigned int *v, size_t n, unsigned int max, int width, int newline);
-void fprint_haplotypes_abun(FILE *fp, data_t **data, size_t n, unsigned int *len, double pthres, 
-	char const * const prefix, double *pvalue, double *abun,double *ee);
-void fprint_haplotypes_size(FILE *fp, data_t **data, size_t n, unsigned int *len, double pthres, 
-	char const * const prefix, double *pvalue, unsigned int *size,double *ee);
+void fprint_haplotypes_abun(FILE *fp, data_t **data, size_t n, unsigned int *len, double pthres, char const * const prefix, double *pvalue, double *abun, double *ee);
+void fprint_haplotypes_size(FILE *fp, data_t **data, size_t n, unsigned int *len, double pthres, char const * const prefix, double *pvalue, unsigned int *size, double *ee);
 
 /* nwalign */
-int nwalign_matrix(options *opt, data *dat, initializer *ini, unsigned char ***nw_result, size_t *nw_alen,
-				unsigned int size, unsigned int select);  
-void free_nw_result(unsigned char ***nw_result,unsigned int space);
+int nwalign_matrix(options *opt, data *dat, initializer *ini, unsigned char ***nw_result, size_t *nw_alen, unsigned int size, unsigned int select);
+void free_nw_result(unsigned char ***nw_result, unsigned int space);
 //void realloc_nw_result(unsigned char ***nw_result, unsigned int space);
 
 /* sequence errors */
-int mean_exp_errors(data *dat,unsigned int idx, unsigned int count_i, double *mean_exp_err);
 double exp_errors(unsigned char *qual, unsigned int length, double *error_prob);
 
 /* BIC */
-int m_JC69(unsigned char * hap, unsigned char * anc, double *dist,
-	unsigned int K, unsigned int len,int start);  
-double e_JC69(unsigned char * hap, unsigned char * anc, double *dist,
-	unsigned int K, unsigned int len, int start);   
-int modified_ic(unsigned char* hap, unsigned char *est_anc, double *distance, double best_ll, unsigned int K, 
-	double *JC_ll, double *n_aic, double *n_bic, unsigned int n_param, unsigned int max_read_length,
-	size_t sample_size, int start); 
-
-
-
+int m_JC69(unsigned char * hap, unsigned char * anc, double *dist, unsigned int K, unsigned int len, int start);
+double e_JC69(unsigned char * hap, unsigned char * anc, double *dist, unsigned int K, unsigned int len, int start);
+int modified_ic(unsigned char* hap, unsigned char *est_anc, double *distance, double best_ll, unsigned int K, double *JC_ll, double *n_aic, double *n_bic, unsigned int n_param, unsigned int max_read_length, size_t sample_size, int start);
 
 #endif
