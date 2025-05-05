@@ -22,12 +22,37 @@
 #define WEIGHTS_LOESS
 #define FILTER
 
-int err_per_nuc(unsigned int nuc, unsigned int n_quality,
-				unsigned int *count_sum, unsigned int *err_cnt,unsigned int self_lines[4],
-				double *error_prob_temp, int if_loess, double *qual, double *error_profile);
+int err_count_with_assignment(options *opt, data *dat, unsigned int *cluster_id, data_t** seeds, unsigned int*seed_lengths, unsigned int *count_mat,unsigned int K);
+int err_per_nuc(unsigned int nuc, unsigned int n_quality, unsigned int *count_sum, unsigned int *err_cnt,unsigned int self_lines[4], double *error_prob_temp, int if_loess, double *qual, double *error_profile);
 int error_count_generator(options *opt,data *dat, model *mod, initializer *ini, run_info *ri);
 int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini);
 
+/**
+ * Estimate an error model from FASTQ data.
+ *
+ * The error model is for PHRED+33 quality scores from MIN_ASCII_QUALITY_SCORE
+ * to MAX_ASCII_QUALITY_SCORE, assuming uniform error substitutions. The data
+ * may contain only a shortened range of observed quality scores from
+ * data::min_quality == fastq_data::min_quality to
+ * data::max_quality == fastq_data::max_quality
+ * The model interpolates but it does not extrapolate beyond these ranges,
+ * instead resorting to PHRED+33 error probabilities outside the observed
+ * range.  Note, data::n_quality is span of observed range.
+ *
+ * Internally, AmpliCI uses an error profile ONLY covering the observed
+ * range of quality scores in data, thus if the error profile was estimated
+ * from the same data, it discards the extrapolated error probabilities.
+ * model::error_profile is of dimension 16*data::n_quality.  Furthermore,
+ * fastq_data stores the quality scores with fastq_data::min_quality ==
+ * data::min_quality subtracted, so 0, 1, ....
+ *
+ * @param opt	options object
+ * @param dat	data object
+ * @param mod	model object
+ * @param ini	initializer object
+ * @param ri	run information object
+ * @return	error status
+ */
 int error_profile_generator(options *opt, data *dat, model *mod,
 					initializer *ini, run_info *ri)
 {
@@ -41,25 +66,18 @@ int error_profile_generator(options *opt, data *dat, model *mod,
 				- MIN_ASCII_QUALITY_SCORE + 1;
 	unsigned int self_lines[4] = {0, 5, 10, 15}; // idx of lines for A->A, T->T, G->G, C->C
 
-	double *error_profile  = NULL;  // For final output
+	double *error_profile = NULL;  // For final output
 	double *error_profile_p = NULL;  // estimated error rates
-
-/* [KSD] What is the difference between model::n_quality and err_length?
- * [KSD] The former is the realized range in the given fastq file, the latter
- * [KSD] is the theoretical range given our hard-coded assumptions about FASTQ.
- * [KSD] Why use both?
- * [XY] Allow users to better interpret the output error profile ?
- */
 
 	/* memory allocation for error profile */
 	ini->err_cnt = calloc(NUM_NUCLEOTIDES * NUM_NUCLEOTIDES
-				* mod->n_quality, sizeof *ini->err_cnt);
+				* mod->n_quality, sizeof(*ini->err_cnt));
 
 	error_profile = malloc(NUM_NUCLEOTIDES * NUM_NUCLEOTIDES
-			* err_length * sizeof *error_profile);  // Used in the final output
+			* err_length * sizeof(*error_profile));  // Used in the final output
 
 	error_profile_p = malloc(NUM_NUCLEOTIDES * NUM_NUCLEOTIDES  // only contains error rates estimated from loess fit
-			* mod->n_quality * sizeof *error_profile_p);  // Used in the estimation step
+			* mod->n_quality * sizeof(*error_profile_p));  // Used in the estimation step
 
 	if (!error_profile || !error_profile_p || !ini->err_cnt)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
@@ -80,6 +98,7 @@ int error_profile_generator(options *opt, data *dat, model *mod,
 	/* copy error_profile_p to error_profile and output */
 	double one_third = 1.0/3.0;
 
+	/* map observed error probabilities to PHRED+33 error probabilities */
 	for (unsigned int nu1 = 0; nu1 < NUM_NUCLEOTIDES; nu1++) {
 		for (unsigned int nu2 = 0; nu2 < NUM_NUCLEOTIDES; nu2++) {
 			unsigned int r = nu1 * NUM_NUCLEOTIDES + nu2;
@@ -89,13 +108,14 @@ int error_profile_generator(options *opt, data *dat, model *mod,
 				unsigned int idx = r * err_length
 					+ q - MIN_ASCII_QUALITY_SCORE;
 
+				/* q is observed in data */
 				if (q >= dat->fdata->min_quality
 					&& q <= dat->fdata->max_quality) {
 					error_profile[idx] = 1000 * exp(
 						error_profile_p[
 						r * dat->n_quality + q
 						- dat->fdata->min_quality]);
-				/* Use the literal error rate when there is no data */
+				/* Use the PHRED error rate when no data */
 				} else if (r == self_lines[nu1]) {
 					error_profile[idx] = 1000 * (1 -
 							error_prob(dat->fdata,
@@ -146,7 +166,9 @@ int error_count_generator(options *opt, data *dat, model *mod,
 {
 
 	int err = NO_ERROR;
+#ifdef DEBUG_AMPLICI
 	int fxn_debug = DEBUG_I;//ABSOLUTE_SILENCE;//
+#endif
 	int fix_K = opt->K_fix_err;
 	unsigned int K_max;
 	unsigned int nrow = NUM_NUCLEOTIDES * NUM_NUCLEOTIDES;
@@ -164,12 +186,12 @@ int error_count_generator(options *opt, data *dat, model *mod,
 	unsigned int *err_cnt_prev = NULL;
 	unsigned int *err_cnt_cur = NULL;
 
-	err_cnt_prev = calloc(nrow * mod->n_quality, sizeof *err_cnt_prev);
+	err_cnt_prev = calloc(nrow * mod->n_quality, sizeof(*err_cnt_prev));
 
 	if (!err_cnt_prev)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "error_cnt_prev");
 
-	err_cnt_cur = calloc(nrow * mod->n_quality, sizeof *err_cnt_cur);
+	err_cnt_cur = calloc(nrow * mod->n_quality, sizeof(*err_cnt_cur));
 
 	if (!err_cnt_cur) {
 		free(err_cnt_prev);
@@ -179,12 +201,16 @@ int error_count_generator(options *opt, data *dat, model *mod,
 	/* for error profile */
 	if (!mod->error_profile)
 		mod->error_profile = calloc(nrow * mod->n_quality,
-						sizeof *mod->error_profile);
+						sizeof(*mod->error_profile));
 	if (!mod->error_profile) {
 		free(err_cnt_prev);
 		free(err_cnt_cur);
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "error_profile");
 	}
+
+#ifdef DEBUG_AMPLICI
+	debug_msg(fxn_debug, 0, "finished with memory allocation\n");
+#endif
 
 	do {
 
@@ -195,7 +221,9 @@ int error_count_generator(options *opt, data *dat, model *mod,
 			for (unsigned int q = 0; q < mod->n_quality; ++q)
 				err_cnt_cur[i*mod->n_quality + q] = 0;
 
+#ifdef DEBUG_AMPLICI
 		debug_msg(fxn_debug, fxn_debug, "K_max: %u\n", K_max);
+#endif
 
 		/* select up to K_max haplotypes */
 		if ((err = haplotype_selection(opt, dat, mod, ini, K_max)))
@@ -241,7 +269,7 @@ int error_count_generator(options *opt, data *dat, model *mod,
 
 		/* likelihood filter: filtered into group options::K */
 		#ifdef FILTER
-		if(opt->filter_reads)
+		if (opt->filter_reads)
 			likelihood_filter(opt->K, opt->ll_cutoff, NULL, mod->pi, ini->e_trans,
 							dat->sample_size, ri);
 		#endif
@@ -250,7 +278,7 @@ int error_count_generator(options *opt, data *dat, model *mod,
 		 *	count all (n,m,q) combinations for true base n, read base m
 		 * and quality score q, assuming assigned haplotype is true
 		 */
-		err_count_with_assignment(dat, ri->optimal_cluster_id, ini->seeds,ini->seed_lengths, err_cnt_cur,opt->K);
+		err_count_with_assignment(opt, dat, ri->optimal_cluster_id, ini->seeds, ini->seed_lengths, err_cnt_cur, opt->K);
 		/*
 		for (size_t i = 0; i < dat->sample_size; ++i) {
 			// ignore any filtered
@@ -271,8 +299,10 @@ int error_count_generator(options *opt, data *dat, model *mod,
 		double min_cos_dist = cos_dist(err_cnt_prev, err_cnt_cur, nrow,
 								mod->n_quality);
 
+#ifdef DEBUG_AMPLICI
 		debug_msg(fxn_debug, fxn_debug, "K=%u cos distance: %f\n",
 						opt->K, exp(min_cos_dist));
+#endif
 
 		/* cosine distance close enough to 1 terminates the loop */
 		if (min_cos_dist > opt->min_cosdist) {
@@ -297,6 +327,7 @@ int error_count_generator(options *opt, data *dat, model *mod,
 	} while (!fix_K);
 
 	/* output the result we are interested */
+#ifdef DEBUG_AMPLICI
 	if (fxn_debug > DEBUG_I) {
 		FILE *fp = fopen(opt->outfile_base, "w");
 		if (!fp)
@@ -308,6 +339,7 @@ int error_count_generator(options *opt, data *dat, model *mod,
 
 		fclose(fp);
 	}
+#endif
 
 	/* copy the final err_count to ini->err_count */
 	memcpy(ini->err_cnt, err_cnt_cur, nrow * mod->n_quality
@@ -402,7 +434,8 @@ EXIT_COS_DIST:
 }/* cos_dist */
 
 /* print error profile   */
-void fprint_error_profile(FILE *fp, double *mat, unsigned int n, unsigned int l){
+void fprint_error_profile(FILE *fp, double *mat, unsigned int n, unsigned int l)
+{
 	unsigned int i, j;
 
 	for (i = 0; i < n; ++i)
@@ -413,11 +446,11 @@ void fprint_error_profile(FILE *fp, double *mat, unsigned int n, unsigned int l)
 /**
  * Predict error rates based on the observed error counts.
  *
- * @param err_cnt	     error counts
- * @param error_profile	 error profile to be computed
- * @param n_quality	     number of distinct quality scores
- * @param self_lines	 idx of lines of self-transitions, like A->A, T->T, C->C, G->G
- * @return		         error status
+ * @param err_cnt	error counts
+ * @param error_profile	error profile to be computed
+ * @param n_quality	number of distinct quality scores
+ * @param self_lines	idx of lines of self-transitions, like A->A, T->T, C->C, G->G
+ * @return		error status
  */
 int error_predict(unsigned int *err_cnt, double *error_profile,
 			unsigned int n_quality, unsigned int self_lines[4])
@@ -432,9 +465,9 @@ int error_predict(unsigned int *err_cnt, double *error_profile,
 	int if_loess = 1;
 
 	/* malloc work space */
-	error_prob_temp = malloc(n_quality * sizeof *error_prob_temp);
-	count_sum = calloc(n_quality, sizeof *count_sum);    // initial value: 0
-	qual = calloc(n_quality, sizeof *qual);
+	error_prob_temp = malloc(n_quality * sizeof(*error_prob_temp));
+	count_sum = calloc(n_quality, sizeof(*count_sum));
+	qual = malloc(n_quality * sizeof(*qual));
 
 	if (!error_prob_temp || !count_sum || !qual) {
 		err = mmessage(ERROR_MSG, MEMORY_ALLOCATION, "error_predict");
@@ -516,7 +549,6 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
 	unsigned int idx;
 	double lquarter = log(0.25);
 	double lepsilon = log(1e-7);
-	double l10 = log(10);
 
 	/* total true nucleotides nuc observed with each quality score */
 	for (unsigned int q = 0; q < n_quality; q++) {
@@ -557,7 +589,7 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
 
 		for (unsigned int q = 0; q < n_quality; ++q) {
 			idx = k * n_quality + q;
-			error_profile[idx] = pre->fit[q] * l10;  //log(error_prob)
+			error_profile[idx] = pre->fit[q] * LOG10;  //log(error_prob)
 			if (error_profile[idx] > lquarter)
 				error_profile[idx] = lquarter; //avoid bugs
 			if (error_profile[idx] < lepsilon)
@@ -600,13 +632,19 @@ int err_per_nuc(unsigned int nuc, unsigned int n_quality,
  */
 int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 {
+	int fxn_debug = DEBUG_I;//ABSOLUTE_SILENCE;//
 	int err = NO_ERROR;
+
+#ifdef DEBUG_AMPLICI
+	debug_msg(DEBUG_I, fxn_debug, "Reading partition file '%s'...\n",
+							opt->partition_file);
+#endif
 
 	/*  read the UMI partition file, start from 0 */
 	if ((err = read_partition_file(opt->partition_file, ini->cluster_id,
 							dat->sample_size)))
 		return err;
-
+	
 	unsigned int max = 0;
 
 	for (unsigned int i = 0; i < dat->sample_size; i++)
@@ -614,6 +652,10 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 			max = ini->cluster_id[i];
 
 	unsigned int K_partitions = max + 1;  // new K, number of UMI clusters
+
+#ifdef DEBUG_AMPLICI
+	debug_msg(DEBUG_I, fxn_debug, "Size of partition: %u\n", max);
+#endif
 
 	/* find the most abundant sequence for each partition */
 	hash **hash_list = calloc(K_partitions, sizeof(*hash_list));
@@ -638,12 +680,19 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 	}
 
 	/* sort by abundance within each partition */
-	for (unsigned int k = 0; k < K_partitions; k++)
+	for (unsigned int k = 0; k < K_partitions; k++) {
 		sort_by_count(&hash_list[k]);
+#ifdef DEBUG_AMPLICI
+		debug_msg(DEBUG_V, fxn_debug, "Max duplication in partition %u:"
+						" %u\n", k, hash_list[k]->count);
+#endif
+	}
+
 
 	// Simple idea ala UMITools to detect collision in each UMI clusters:
-	// Consider every member with abundance >=2 and at least half of
-	// most abundant member to be a true molecule.
+	// Consider each member with abundance >=
+	// 	options::seed_min_observed_abundance and at least half of most
+	// abundant member to be a true molecule.
 	// Remember need to update both ini->cluster_id, ini->seeds
 
 	// determine a new K
@@ -651,6 +700,8 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 	unsigned int K_seeds = 0;
 
 	for (unsigned int k = 0; k < K_partitions; ++k) {
+
+		/* skip empty partitions: maybe some additional clustering */
 		if (!hash_list[k])
 			continue;
 
@@ -658,10 +709,18 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 		unsigned int thres = (max_abun + 1) / 2;
 
 		for (hash *s = hash_list[k]; s != NULL; s = s->hh.next) {
+
+			/* sequence observed enough absolute & relative times */
 			if (s->count >= thres && s->count
 					>= opt->seed_min_observed_abundance) {
 				++K_seeds;
 				++ini->cluster_size[k];
+
+#ifdef DEBUG_AMPLICI
+				debug_msg(DEBUG_V, fxn_debug, "Keep subset in "
+					"%u: a=%u K=%u Kk=%u\n", k, s->count,
+						K_seeds, ini->cluster_size[k]);
+#endif
 
 				// if we just need the most abundant sequence for each UMI cluster
 				if (!opt->umicollision)
@@ -681,13 +740,18 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 		}
 	}
 
-	/* some clusters have no sufficiently replicated haplotype to be considered candidate */
+	/* null clusters have no sufficiently replicated member */
 	unsigned int num_null = 0;
 	for (unsigned int k = 0; k < K_partitions; ++k)
-		if (ini->cluster_size[k] == 0)
+		if (ini->cluster_size[k] == 0)	/* none survived in cluster k */
 			num_null++;
 
 	K_seeds += (opt->exclude_low_abundance_seeds ? 0 : num_null);
+
+#ifdef DEBUG_AMPLICI
+	debug_msg(DEBUG_I, fxn_debug, "%s %u null clusters leaving %u seeds\n", 
+		opt->exclude_low_abundance_seeds ? "Exclude" : "Keep", num_null, K_seeds);
+#endif
 
 	if (!K_seeds)
 		return mmessage(ERROR_MSG, NO_DATA, "No subset of UMI partition"
@@ -696,6 +760,9 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 			opt->seed_min_observed_abundance);
 
 	/* realloc space for seeds */
+#ifdef DEBUG_AMPLICI
+	debug_msg(DEBUG_I, fxn_debug, "Reallocating if options::K=%u != K_seeds=%u\n", opt->K, K_seeds);
+#endif
 	if (K_seeds != opt->K)
 		if ((err = realloc_seeds(ini, dat->max_read_length,
 							opt->K, K_seeds)))
@@ -705,16 +772,17 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 
 	unsigned int current_k = 0;
 	unsigned int kept_reads = 0;
-	unsigned int extra_k = 0;
+	//unsigned int extra_k = 0;
 	unsigned int *new_cluster_id = NULL;
+	unsigned int *map_cluster_id = NULL;
 
-	if (opt->exclude_low_abundance_seeds) {
-		new_cluster_id = malloc(dat->sample_size
-						* sizeof(*new_cluster_id));
-		if (!new_cluster_id)
-			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
-							"new_cluster_id");
-	}
+	new_cluster_id = malloc(dat->sample_size * sizeof(*new_cluster_id));
+	if (!new_cluster_id)
+		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "new_cluster_id");
+
+	map_cluster_id = malloc(K_partitions * sizeof(*map_cluster_id));
+	if (!map_cluster_id)
+		return(mmessage(ERROR_MSG, MEMORY_ALLOCATION, "map_cluster_id"));
 
 	for (unsigned int k = 0; k < K_partitions; k++) {
 
@@ -724,63 +792,101 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 		hash *s = hash_list[k];
 		unsigned int subK = ini->cluster_size[k];
 
-		// no collision or zero cluster
+		/* no collision or null cluster */
 		if (subK == 1 || (subK == 0
 				&& !opt->exclude_low_abundance_seeds)) {
 
+#ifdef DEBUG_AMPLICI
+			debug_msg(DEBUG_V, fxn_debug, "Cluster %u -> %u\n", k,
+								current_k);
+			debug_call(DEBUG_V <= fxn_debug, fxn_debug,
+				write_sequence(stderr, s->sequence,
+							dat->lengths[s->idx]));
+#endif
+
 			memcpy(ini->seeds[current_k], s->sequence,
-				dat->lengths[s->idx] * sizeof **ini->seeds);	
+				dat->lengths[s->idx] * sizeof(**ini->seeds));
 			ini->seed_lengths[current_k] = dat->lengths[s->idx];
+
 			/* some clusters are dropped */
-			if (opt->exclude_low_abundance_seeds)
+			//if (opt->exclude_low_abundance_seeds) {
+				map_cluster_id[k] = current_k;
+				/*
 				for (unsigned int i = 0; i < dat->sample_size;
 									++i)
 					if (ini->cluster_id[i] == k)
 						new_cluster_id[i] = current_k;
+				 */
+			//}
 			++current_k;
 
 		/* exclude clusters without obvious centers */
 		} else if (subK == 0 && opt->exclude_low_abundance_seeds) {
+
+#ifdef DEBUG_AMPLICI
+			debug_msg(DEBUG_V, fxn_debug, "Cluster %u discarded\n", k);
+#endif
+			map_cluster_id[k] = K_seeds;
+			/*
 			for (unsigned int i = 0; i < dat->sample_size; ++i)
 				if (ini->cluster_id[i] == k)
 					new_cluster_id[i] = K_seeds;
+			 */
 		} else {  // collision
+			/* map within subset cluster to new cluster index */
 			unsigned int lidx[subK];
 
-			// copy seeds information
+#ifdef DEBUG_AMPLICI
+			debug_msg(DEBUG_I, fxn_debug, "Cluster %u/%u split "
+				"among %u-%u\n", k, K_partitions, current_k,
+							current_k + subK);
+#endif
+
+			/* create new seeds */
 			for (unsigned int sk = 0; sk < subK; ++sk) {
 				//fprintf(stderr, "count: %d\n",s->count);
 
-				if (sk == 0) {
+#ifdef DEBUG_AMPLICI
+				debug_msg(DEBUG_V, fxn_debug, "Cluster %u -> "
+							"%u\n", k, current_k);
+				debug_call(DEBUG_V <= fxn_debug, fxn_debug,
+					write_sequence(stderr, s->sequence,
+							dat->lengths[s->idx]));
+#endif
+
+				//if (sk == 0) {
 					memcpy(ini->seeds[current_k],
-								s->sequence,
-							dat->lengths[s->idx] 	
+						s->sequence, dat->lengths[s->idx] 	
 							* sizeof(**ini->seeds));
 					ini->seed_lengths[current_k]
 							= dat->lengths[s->idx];
-					lidx[sk] = current_k;
-					++current_k;
-				} else {
+					lidx[sk] = current_k++;
+				//} else {
+					/* 
 					unsigned int lk =
 						opt->exclude_low_abundance_seeds
 						? current_k++
 						: K_partitions + extra_k++;
 					//fprintf(stderr, "%d, %d\n",pos,K_seeds);
-					memcpy(ini->seeds[lk], s->sequence,
-							dat->lengths[s->idx]  	
+					memcpy(ini->seeds[current_k],
+						s->sequence, dat->lengths[s->idx]
 							* sizeof(**ini->seeds));
 					ini->seed_lengths[lk]
 						= dat->lengths[s->idx];
-					lidx[sk] = lk;
-				}
+					lidx[sk] = current_k++; //lk;
+					 */
+				//}
 				kept_reads += s->count;
 
 				s = s->hh.next;
-			//	fprintf(stderr, "%d, %d\n",pos,subK);
+			//	fprintf(stderr, "%d, %d\n", pos, subK);
 			}
 			//fprintf(stderr, "%d, %d\n",add_num,subK-1);
 
-			// assign members of split clusters by Hamming distance
+			/* don't update these later, as they are set below */
+			map_cluster_id[k] = K_seeds + 1;
+
+			/* assign members of split clusters by Hamming distance */
 			unsigned int min_dist;
 
 			for (unsigned int i = 0; i < dat->sample_size; ++i) {
@@ -791,19 +897,23 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 				// [TODO] find the minmimal length of seeds and use it when calculate the hamming distance.
 				min_dist = UINT_MAX;
 				for (unsigned int sk = 0; sk < subK; sk++) {
+					unsigned int len = MIN(dat->lengths[i],
+						ini->seed_lengths[lidx[sk]]);
 					unsigned char *hapk
 							= ini->seeds[lidx[sk]];
 					unsigned int hdist = hamming_uchar_dis(
-							dat->dmat[i], hapk,
-							dat->max_read_length);	/* [BUG,KSD] Looks like a bug for variable length reads */
+						dat->dmat[i], hapk, len);
 
 					// fprintf(stderr, "%d, %d\n",lidx[sk], hdist);
 					if (hdist < min_dist) {
-						if (opt->exclude_low_abundance_seeds)
+						//if (opt->exclude_low_abundance_seeds)
 							new_cluster_id[i] = lidx[sk];
-						else
-							ini->cluster_id[i] = lidx[sk];
+						//else
+						//	ini->cluster_id[i] = lidx[sk];
 						min_dist = hdist;
+#ifdef DEBUG_AMPLICI
+						debug_msg(DEBUG_V, fxn_debug, "Assign read %u to cluster %u\n", i, lidx[sk]);
+#endif
 					}
 				}
 				//fprintf(stderr, "previous %d, current %d\n",k, ini->cluster_id[i]);
@@ -812,22 +922,36 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 	}
 
 	if (opt->exclude_low_abundance_seeds && current_k != K_seeds)
-		return mmessage(ERROR_MSG, INTERNAL_ERROR, "current_k = %u != K_seeds = %u\n", current_k, K_seeds);
+		return(mmessage(ERROR_MSG, INTERNAL_ERROR, "current_k = %u != "
+					"K_seeds = %u\n", current_k, K_seeds));
+
+	for (unsigned int i = 0; i < dat->sample_size; ++i)
+		if (map_cluster_id[ini->cluster_id[i]] <= K_seeds)
+			new_cluster_id[i] = map_cluster_id[ini->cluster_id[i]];
+
 	if (opt->exclude_low_abundance_seeds) {
 		free(ini->cluster_id);
 		ini->cluster_id = new_cluster_id;
+	} else {
+		memcpy(ini->cluster_id, new_cluster_id, sizeof(*ini->cluster_id));
+		free(new_cluster_id);
 	}
 
-	mmessage(INFO_MSG, NO_ERROR, "Will estimate errors from %u reads in "
+	info_msg(MINIMAL, opt->info, "Will estimate errors from %u reads in "
 		"%u out of %u clusters.\n", kept_reads, K_seeds, K_partitions);
 
+	/* not ready
+	if (opt->filter_reads)
+		likelihood_filter(opt->K, opt->ll_cutoff, NULL, mod->pi,
+				ini->e_trans, dat->sample_size, ri);
+	 */
 	//for(unsigned int i = 0; i < dat->sample_size; i++){
 	//	fprintf(stderr, "%d",ini->cluster_id[i]);
 	//}
 
 
 	/* count error types with given assignment */
-	err_count_with_assignment(dat, ini->cluster_id, ini->seeds,
+	err_count_with_assignment(opt, dat, ini->cluster_id, ini->seeds,
 				ini->seed_lengths, ini->err_cnt, K_seeds);
 
 	/* free space */
@@ -844,6 +968,7 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
 /**
  * count error types with given assignment
  *
+ * @param opt            options object
  * @param dat            data object
  * @param cluster_id     reads assignment id
  * @param seeds          haplotypes
@@ -851,31 +976,104 @@ int err_cnt_gen_wpartition(options *opt, data *dat, initializer *ini)
  * @param K              maximum number of clusters
  * @return               error status
  */
-int err_count_with_assignment(data *dat, unsigned int *cluster_id,
-	data_t** seeds, unsigned int *seed_lengths, unsigned int *count_mat,
+int err_count_with_assignment(options *opt, data *dat, unsigned int *cluster_id,
+	data_t **seeds, unsigned int *seed_lengths, unsigned int *count_mat,
 								unsigned int K)
 {
+	int fxn_debug = opt->info;
 	unsigned int kept_errors = 0, kept_bases = 0;
 
 	for (size_t i = 0; i < dat->sample_size; ++i) {
+
 		/* ignore any filtered reads */
 		if (cluster_id[i] >= K)
 			continue;
 
-		for (size_t j = 0; j < dat->lengths[i]; ++j)
-			if(j < seed_lengths[cluster_id[i]]) {
-				count_mat[dat->n_quality * (
-					seeds[cluster_id[i]][j]
-					* NUM_NUCLEOTIDES + dat->dmat[i][j])
-					+ dat->qmat[i][j]]++;// order of A,C,T,G
+		double hd = 0;
+		unsigned int len = MIN(dat->lengths[i], seed_lengths[cluster_id[i]]);
+
+		if (opt->filter_reads == FILTER_HAMMING_PROPORTION) {
+
+			for (size_t j = 0; j < len; ++j)
 				if (seeds[cluster_id[i]][j] != dat->dmat[i][j])
-					++kept_errors;
-				++kept_bases;
+					++hd;
+
+			if (fxn_debug >= DEBUG_V && hd > 0
+				&& hd / dat->lengths[i] < opt->hamming_proportion) {
+				for (size_t j = 0; j < dat->lengths[i]; ++j)
+					fprintf(stderr, "%c",
+						xy_to_char[seeds[cluster_id[i]][j]]);
+				fprintf(stderr, "\n");
+				for (size_t j = 0; j < dat->lengths[i]; ++j)
+					fprintf(stderr, "%c",
+						xy_to_char[dat->dmat[i][j]]);
+				fprintf(stderr, "\n");
+
+#ifdef DEBUG_AMPLICI
+				debug_msg(DEBUG_V, fxn_debug, "r=%u h=%u hd=%.0f phd=%f\n", i,
+					cluster_id[i], hd, hd / dat->lengths[i]);
+#endif
+			}
+			if (hd / dat->lengths[i] > opt->hamming_proportion)
+				continue;
+		//} else {
+			//fprintf(stderr, "\n");
 		}
+
+		for (size_t j = 0; j < len; ++j) {
+			count_mat[dat->n_quality * (seeds[cluster_id[i]][j]
+				* NUM_NUCLEOTIDES + dat->dmat[i][j])
+				+ dat->qmat[i][j]]++;// order of A,C,T,G
+			if (seeds[cluster_id[i]][j] != dat->dmat[i][j]) {
+#ifdef DEBUG_AMPLICI
+				debug_msg(DEBUG_V, fxn_debug, "%c%c q=%d\n",
+					xy_to_char[seeds[cluster_id[i]][j]],
+					xy_to_char[dat->dmat[i][j]],
+					dat->qmat[i][j] + dat->n_quality);
+#endif
+				++kept_errors;
+			}
+			++kept_bases;
+		}
+#ifdef DEBUG_AMPLICI
+		debug_msg(DEBUG_IV, fxn_debug, "Errors %u Bases %u (%f)\n",
+			kept_errors, kept_bases, (double) kept_errors / kept_bases);
+#endif
+	}
+
+	if (fxn_debug>=DEBUG_I || opt->outfile_error) {
+		FILE *fp = NULL;
+
+#ifdef DEBUG_AMPLICI
+		debug_msg(DEBUG_I, fxn_debug, "Substitution counts:\n");
+#endif
+
+		if (opt->outfile_error) {
+			fp = fopen(opt->outfile_error, "w");
+			if (!fp)
+				mmessage(WARNING_MSG, FILE_OPEN_ERROR, "Could "
+						"not open '%s' for writing.\n",
+							opt->outfile_error);
+		}
+
+		for (int b1 = 0; b1 < NUM_NUCLEOTIDES; ++b1) {
+		for (int b2 = 0; b2 < NUM_NUCLEOTIDES; ++b2) {
+		for (int q = 0; q < dat->n_quality; ++q) {
+			if (fp)
+				fprintf(fp, "%c %c %u %u\n", xy_to_char[b1],
+					xy_to_char[b2], q + dat->min_quality,
+					count_mat[dat->n_quality *
+					(NUM_NUCLEOTIDES * b1 + b2) + q]);
+#ifdef DEBUG_AMPLICI
+			debug_msg_cont(DEBUG_I, fxn_debug, "%c%c q=%u: %u\n",
+				xy_to_char[b1], xy_to_char[b2],
+				q + dat->min_quality, count_mat[dat->n_quality
+					* (NUM_NUCLEOTIDES * b1 + b2) + q]);
+#endif
+		}}}
 	}
 
 	mmessage(INFO_MSG, NO_ERROR, "Estimating with %u observed errors out "
 			"of %u kept base calls.\n", kept_errors, kept_bases);
 	return NO_ERROR;
 }/* err_count_with_assignment */
-
