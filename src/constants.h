@@ -56,4 +56,6 @@ typedef uint32_t data_t;
 #define AMPLICLUST_SCNu_data_t SCNu32
 #endif
 
+#define LOG10 2.3025850929940459
+
 #endif
