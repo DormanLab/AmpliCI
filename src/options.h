@@ -25,6 +25,14 @@ enum {
 };
 
 
+enum {
+	FILTER_NONE,
+	FILTER_LOG_LIKELIHOOD,
+	FILTER_CONDITIONAL_LOG_LIKELIHOOD,
+	FILTER_HAMMING_PROPORTION
+};
+
+
 typedef struct _options options;
 /**
  * Run options.
@@ -46,6 +54,8 @@ struct _options {
 	char const *outfile_base;	/*!< basename of outfiles */
 	char const *outfile_info;	/*!< name of informational outfile */
 	char const *outfile_fasta;	/*!< name of fasta outfile */
+	char const *outfile_error;	/*!< base substitution counts (out) */
+	char const *infile_error;	/*!< base substitution counts (in) */
 
 	/* UMI information */
 	unsigned int UMI_length;	/*!< length of UMIs (at the beginning of reads ) */
@@ -81,6 +91,7 @@ struct _options {
 	char const *error_profile_name;	/*!< name of file name of error profile */
 	double min_cosdist;		/*!< minimum cosine distance (log version) */
 	int filter_reads;		/*!< filter reads in error estimation */
+	double hamming_proportion;	/*!< threshold for Hamming proportion */
 
 	/* indel error */
 	double insertion_error;	/*!< insertion error rate (not used) */
@@ -125,6 +136,7 @@ struct _options {
 
 	int info;	/*!< level of information to output */
 	int use_curses;	/*!< use curses output */
+	int fix_indel_model;		/*!< use corrected indel model */
 #ifdef USE_CURSES
 	WINDOW *wp;
 #else

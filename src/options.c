@@ -45,9 +45,12 @@ int make_options(options **opt) {
 	op->outfile_base = NULL;
 	op->outfile_fasta = NULL;
 	op->outfile_info = NULL;
+	op->outfile_error = NULL;
+	op->infile_error = NULL;
 	op->initialization_file = NULL;
 	op->trans_matrix = NULL;
 	op->partition_file = NULL;
+
 
 	op->run_amplici =ALGORITHM_AMPLICI;
 	op->histogram = 0;
@@ -74,7 +77,8 @@ int make_options(options **opt) {
 	op->estimate_K =1;
 	op->K_space=100;
 	op->K_fix_err = 0;
-	op->filter_reads = 0;
+	op->filter_reads = FILTER_NONE;
+	op->hamming_proportion = 1;
 
 
 	/* error profile estimation */
@@ -131,6 +135,13 @@ int make_options(options **opt) {
 	op->threshold_UMI = 1;    // allowed minimal UMI abundance
 	op->threshold_hap = 0;    // allowed minimal deduplicated abundance of haplotypes
 	op->umicollision = 1;   // consider UMI collision by default
+	op->fix_indel_model = 0;/* Fix indel model.  We used a Poisson(np) model
+				 * for number of indels in a read, where n is 
+				 * length of haplotype, p is probability of indel,
+				 * but this approximates a Bin(n,p) model where
+				 * only count of indels is models when in fact
+				 * count and location are known.
+				 */
 
 	return NO_ERROR;
 } /* make_options */
@@ -202,12 +213,14 @@ int parse_options(options *opt, int argc, const char **argv)
 
 		switch(a) {
 		case 'a':
+			/* Hide this option for now, as code is broken.
 			if (!strncmp(&argv[i][j], "ali", 3)) {
 				opt->nw_align = ALIGNMENT_UNIQ_SEQ;
 				info_msg(MINIMAL, opt->info,
 					"Align all reads to haplotypes.\n");
 				break;
 			}
+			 */
 			if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
@@ -238,10 +251,32 @@ int parse_options(options *opt, int argc, const char **argv)
 							: "no Bonferroni");
 			}
 			break;
+		case 'b':
+			if (i == argc - 1) {
+				err = INVALID_CMD_OPTION;
+				goto CMDLINE_ERROR;
+			}
+			opt->band = atoi(argv[++i]);
+			info_msg(MINIMAL, opt->info, "Alignment band: %d\n",
+								opt->band);
+			break;
 		case 'c':
 			if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
+			} else if (!strncmp(&argv[i][j], "cou", 3)
+						&& !strcmp(cmd, "error")) {
+				if (!strcmp(argv[i + 1], "in")) {
+					++i;
+					opt->infile_error = argv[++i];
+				} else {
+					opt->outfile_error = argv[++i];
+				}
+				info_msg(MINIMAL, opt->info,
+					"Substitution counts %s '%s'.\n",
+					opt->outfile_error ? "to" : "from",
+					opt->outfile_error ? opt->outfile_error
+							: opt->infile_error);
 			} else if (!strncmp(&argv[i][j], "con", 3)) {
 				if (argv[i + 1][0] >= 48
 						&& argv[i + 1][0] <= 57) {
@@ -397,9 +432,23 @@ int parse_options(options *opt, int argc, const char **argv)
 			break;
 		case 'i':
 			if (!strncmp(&argv[i][j], "inf", 3)) {
-				opt->screen_information = 0;
-				info_msg(MINIMAL, opt->info, "Do not screen AIC"
-								" or BIC.\n");
+				if (has_argument(argc, argv, i)) {
+					++i;
+					opt->screen_information = 1;
+					if (!strcmp(argv[i], "AIC")
+						|| !strcmp(argv[i], "aic"))
+						opt->use_aic = 1;
+					else if (!strcmp(argv[i], "BIC")
+						|| !strcmp(argv[i], "bic"))
+						opt->use_aic = 0;
+					else if (!strcmp(argv[i], "none"))
+						opt->screen_information = 0;
+				} else {
+					opt->screen_information = 0;
+				}
+				info_msg(MINIMAL, opt->info, "Information "
+					"screen: %s\n", opt->screen_information
+					? opt->use_aic ? "AIC" : "BIC" : "No");
 			} else if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
@@ -437,7 +486,7 @@ int parse_options(options *opt, int argc, const char **argv)
 		case 'u':
 			if (!strcmp(&argv[i][j], "umi")) {  /* Parameter set sepcific for clustering UMIs --umi */
 				opt->gap_p = -20;		/* default gap penalty for UMI clustering */
-				opt->band = opt->max_offset;	/* default band for UMI clustering (overwritten in amplici.c for UMI clustering) */ // need further investigation.
+				opt->band = opt->max_offset;	/* default band for UMI alignment in DAUMI */ // need further investigation.
 				//opt->ends_free = 0;   // not counting the offset the begining
 				// opt->nw_align = NO_ALIGNMENT;
 				opt->JC69_model = 0;		/* default NO JC69 for UMI clustering */
@@ -483,22 +532,44 @@ int parse_options(options *opt, int argc, const char **argv)
 			break;
 		case 'f':
 			if (!strcmp(&argv[i][j], "filter")) {
-				opt->filter_reads = 1;
-				i++;
+				opt->filter_reads = FILTER_LOG_LIKELIHOOD;
+				if (has_argument(argc, argv, i)) {
+					if (!strcmp(argv[++i], "hamming")) {
+						if (!has_argument(argc, argv, i)) {
+							err = INVALID_CMD_ARGUMENT;
+							goto CMDLINE_ERROR;
+						}
+						opt->filter_reads = FILTER_HAMMING_PROPORTION;
+						opt->hamming_proportion = atof(argv[++i]);
+					}
+				}
 				info_msg(MINIMAL, opt->info, "Filter reads.\n");
 			} else if (!strcmp(&argv[i][j], "false_positive")
 				|| !strcmp(&argv[i][j], "fp")) {
 				opt->check_false_positive = 0;
 				info_msg(MINIMAL, opt->info, "Do not check for "
 					" false positives.\n");
-				i++;
 			} else if (i == argc - 1) {
 				err = INVALID_CMD_OPTION;
 				goto CMDLINE_ERROR;
 			} else {
-				opt->fastq_file = argv[++i];
-				info_msg(MINIMAL, opt->info, "FASTQ file: %s\n",
-							opt->fastq_file);
+				if (!strcmp(&argv[i][j], "fix")) {
+					if (!strcmp(argv[++i], "indel")) {
+						opt->fix_indel_model = 1;
+						info_msg(MINIMAL, opt->info,
+							"Fixing indel model.\n");
+					} else {
+						return(mmessage(ERROR_MSG,
+							INVALID_CMD_ARGUMENT,
+							"'%s' unrecognized "
+							"argument of --fix.\n",
+							argv[i+1]));
+					}
+				} else {
+					opt->fastq_file = argv[++i];
+					info_msg(MINIMAL, opt->info, "FASTQ "
+						"file: %s\n", opt->fastq_file);
+				}
 			}
 			break;
 		case 'm':	/* hidden option: --most */
@@ -940,17 +1011,23 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 		fprintf(fp, "\t--abundance <adbl>\n\t\t"
 		"Lower bound on observed abundance for inclusion of seeded\n\t\t"
 		"cluster during error estimation.  [DEFAULT: %u]\n", opt->seed_min_observed_abundance);
-	if (!strcmp(command, "cluster") || !strcmp(command, "error"))
-		fprintf(fp, "\t--align, -z\n\t\t"
-		"Align all reads to haplotypes (slow).  [DEFAULT: no]\n");	 /* KSD:  --align | -a */
+// Hide this option: it is buggy and will abort anyway
+//	if (!strcmp(command, "cluster") || !strcmp(command, "error"))
+//		fprintf(fp, "\t--align, -z\n\t\t"
+//		"Align all reads to haplotypes (slow).  [DEFAULT: no]\n");	 /* KSD:  --align | -a */
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--contaminants, -c <ctuint>\n\t\t"
 		"Baseline count abundance of contaminating or noise sequences.\n\t\t"
 		"[DEFAULT: %i]\n", opt->contamination_threshold);
-	if (!strcmp(command, "error"))
+	if (!strcmp(command, "error")) {
 		fprintf(fp, "\t--cosine_distance <cosdbl>\n\t\t"
 		"Minimum cosine distance to consider error estimation converged.\n\t\t"
 		"[DEFAULT: %f]\n", exp(opt->min_cosdist));
+		fprintf(fp, "\t--counts [in] <coustr>\n\t\t"
+		"Store (read if \"in\") substitution counts to (from) a file\n\t\t"
+		"Useful to fit error model externally and read in via --profile.\n\t\t"
+		"[DEFAULT: '%s']\n", opt->outfile_error ? opt->outfile_error : "none");
+	}
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--deletion <deldbl>\n\t\t"
 		"Sequencing deletion error rate (see also --insertion or\n\t\t"
@@ -965,9 +1042,19 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--false_positive, -fp\n\t\t"
 		"Screen for false positives.  [DEFAULT: %s]\n", opt->check_false_positive?"Yes":"No");
-	if (!strcmp(command,"error"))
+	if (!strcmp(command,"error")) {
+		fprintf(fp, "\t--filter[ hamming FLOAT]\n\t\t"
+		"Discard reads with log likelihood too small or or proportional\n\t\t"
+		"Hamming distance too large.  [DEFAULT: ");
+		if (opt->filter_reads == FILTER_LOG_LIKELIHOOD)
+			fprintf(fp, "log likelihood (see --log_like)]\n");
+		else if (opt->filter_reads == FILTER_HAMMING_PROPORTION)
+			fprintf(fp, "Hamming distance (<=%f)]\n", opt->hamming_proportion);
+		else
+			fprintf(fp, "None]\n");
 		fprintf(fp, "\t--partition <pstr>\n\t\t"
 		"Partition file used for error profile.  [DEFAULT: none] \n");
+	}
 /******************************************************************************/
 	if (!strcmp(command, "cluster")) {
 		//fprintf(fp, "\t--n  \n\t\t Disnable sequence alignment during clustering. Use it when there are no indel errors.  [DEFAULT: no]\n");
@@ -1008,8 +1095,9 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 		"Sequencing indel rate.  Cannot also use options --insertion or\n\t\t"
 		"--deletion.  [DEFAULT: %f]\n", opt->indel_error);
 	if (!strcmp(command, "cluster"))
-		fprintf(fp, "\t--information\n\t\t"
-		"Screen candidates with AIC or BIC (see --aic).  [DEFAULT: %s]\n",
+		fprintf(fp, "\t--information[ aic|bic|none]\n\t\t"
+		"Screen candidates for reduction in AIC or BIC, no argument\n\t\t"
+		"to turn off screening.  [DEFAULT: %s]\n",
 		opt->screen_information ? "Yes" : "No");
 	if (!strcmp(command, "cluster"))
 		fprintf(fp, "\t--insertion <insdbl>\n\t\t"
@@ -1023,13 +1111,15 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 		fprintf(fp, "\t--nJC69\n\t\t"
 		"Do NOT use JC69 model for haplotypes to reduce the number of\n\t\t"
 		"model parameters and increases sensitivity.  [DEFAULT: %s]\n", opt->JC69_model ? "use" : "don't use");
-	if (!strcmp(command, "cluster") || !strcmp(command, "assignment"))
+	if (!strcmp(command, "cluster") || !strcmp(command, "assignment")
+					 || !strcmp(command, "error"))
 		fprintf(fp, "\t--log_likelihood, -ll <lldbl>\n\t\t"
 		"Lower bound for screening reads during cluster assignment.\n\t\t"
 		"This is minimum log assignment likelihood,\n\t\t"
 		"ln pi_k + ln Pr(r_i|h_k).  [DEFAULT: %f]\n", opt->ll_cutoff);
 	if (!strcmp(command, "cluster") || !strcmp(command, "cluster_wumi") || !strcmp(command, "daumi")) {
-		fprintf(fp, "\t--outfile, -o FILE | FILE1 FILE2\n\t\tOutput file(s) for haplotype discovery.  [REQUIRED]\n\t\t"
+		fprintf(fp, "\t--outfile, -o FILE | FILE1 FILE2\n\t\t"
+		"Output file(s) for haplotype discovery.  [REQUIRED]\n\t\t"
 		"Provide base name haplotype output file (extension .fa) and\n\t\t"
 		"information (extension .out) or provide names for both files,\n\t\t"
 		"FASTA first.\n");
