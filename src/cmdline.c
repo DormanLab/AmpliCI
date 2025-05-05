@@ -19,6 +19,8 @@
 
 #include "cmdline.h"
 
+extern int has_argument(int argc, char const **argv, int aidx);
+
 /**
  * Print error message, usage information, and return a failure code.
  *

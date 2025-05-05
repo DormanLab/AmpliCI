@@ -13,6 +13,22 @@
 #include <stdio.h>
 #include <string.h>
 
+/**
+ * Check if option argument.
+ *
+ * @param argc	number of command line arguments
+ * @param argv	command line arguments
+ * @param aidx	command line argument currently checking for argument
+ * @param	error status
+ */
+inline int has_argument(int argc, char const **argv, int aidx)
+{
+	if (aidx + 1 == argc || argv[aidx + 1][0] == '-')
+		return 0;
+	return 1;
+} /* has_argument */
+
+
 int usage_error(const char **argv, int i, void *obj);
 
 /* check single entries */
