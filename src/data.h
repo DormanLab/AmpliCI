@@ -105,4 +105,11 @@ void free_data(data *dat);
 int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen, 
 			size_t sample_size, unsigned char max_quality,unsigned char min_quality);
 
+inline void write_sequence(FILE *fp, data_t *seq, unsigned int len)
+{
+	for (unsigned int i = 0; i < len; ++i)
+		fprintf(fp, "%c", xy_to_char[seq[i]]);
+	fprintf(fp, "\n");
+} /* write_sequence */
+
 #endif

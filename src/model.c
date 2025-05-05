@@ -58,7 +58,7 @@ int make_model(model **mod, data *dat, options *opt)
 
 	/* haplotypes */
 	/* [XY] Currently use ini->seeds to store haplotypes */
-	rm -> haplotypes = NULL;  
+	rm -> haplotypes = NULL;
 	//rm->haplotypes = malloc(dat->max_read_length * opt->K
 	//	* sizeof *rm->haplotypes);
 
@@ -73,19 +73,19 @@ int make_model(model **mod, data *dat, options *opt)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "model::eik");
 
 	rm->error_profile = NULL;
-	rm->err_encoding = opt->err_encoding;  
+	rm->err_encoding = opt->err_encoding;
 
 	/* compute Pr(#{indel} <= dat->max_read_length) */
 	rm->rd_length = dat->max_read_length;
-	rm->adj_trunpois = ppois(dat->max_read_length, 
+	rm->adj_trunpois = ppois(dat->max_read_length,
 			dat->max_read_length * opt->indel_error, 1, 1); //log version
 	rm->precomputed_dindel = malloc(rm->rd_length
 					* sizeof(*rm->precomputed_dindel));
-	
+
 	if (!rm->precomputed_dindel)
 		return(mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 						"model::precomputed_dindel"));
-	
+
 	for (unsigned int i = 0; i < rm->rd_length; ++i)
 		rm->precomputed_dindel[i] = i * log(rm->p_indel)
 				+ (rm->rd_length - i) * log(1 - rm->p_indel);
@@ -100,13 +100,13 @@ int make_model(model **mod, data *dat, options *opt)
 		if (!rm->error_profile)
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 							 "error profile");
-		
+
 		unsigned int sq_num_nuc = NUM_NUCLEOTIDES * NUM_NUCLEOTIDES;
 		double rate;
 
 		/* may already be set at the beginning */
 		//rm->err_encoding = STD_ENCODING; // usually the input error profile shows the order of A, C, G, T
-		
+
 		FILE *file = fopen(opt->error_profile_name, "r");// "rb");
 		if (!file)
 			return mmessage(ERROR_MSG, FILE_OPEN_ERROR,
@@ -128,14 +128,14 @@ int make_model(model **mod, data *dat, options *opt)
 		debug_msg(DEBUG_I, fxn_debug, "finish read error profile \n");
 
 		fclose(file);
-		
+
 	}
 
 	/* count parameters */
 	rm->n_param = opt->K * dat->max_read_length	/* haplotypes */
 		+ opt->K - 1				/* pi */
 		+ (opt->use_error_profile ? dat->n_quality*12 : 0);
-	
+
 	rm->ll = -INFINITY;
 	rm->best_ll = -INFINITY;	// best log likelihood
 	rm->JC_ll = -INFINITY;
@@ -228,7 +228,7 @@ int realloc_model(model *mod, data *dat, options *opt)
 	if (!dat->max_read_position || !mod->K)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 			"realloc.model.haplotypes");
-	/* 
+	/*
 	unsigned char *haplotypes = realloc(mod->haplotypes,
 		dat->max_read_length * mod->K * sizeof *mod->haplotypes);
 
@@ -362,7 +362,7 @@ double dindel(model *mod, unsigned int n_indel, unsigned int n_opp,
 	} else if (n_opp == mod->rd_length) {
 		d = dpois(n_indel, mod->p_indel * n_opp, logged)
 							- mod->adj_trunpois;
-	
+
 	/* need to compute adjustment for a haplotype of diff. length */
 	} else {
 		double adj = ppois(n_opp,
