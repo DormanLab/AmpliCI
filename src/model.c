@@ -33,6 +33,7 @@
  */
 int make_model(model **mod, data *dat, options *opt)
 {
+	int fxn_debug = opt->info;//ABSOLUTE_SILENCE;
 	model *rm;
 	*mod = malloc(sizeof **mod);
 
@@ -40,6 +41,9 @@ int make_model(model **mod, data *dat, options *opt)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "model");
 
 	rm = *mod;
+
+	rm->opt = opt;
+
 	/* K */
 	rm->K = opt->K;
 
@@ -63,7 +67,7 @@ int make_model(model **mod, data *dat, options *opt)
 	//		"model::haplotypes");
 
 	/* eik */
-	rm->eik = malloc(dat->sample_size * rm->K * sizeof *rm->eik);
+	rm->eik = malloc(dat->sample_size * rm->K * sizeof(*rm->eik));
 
 	if (rm->eik == NULL)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "model::eik");
@@ -72,15 +76,26 @@ int make_model(model **mod, data *dat, options *opt)
 	rm->err_encoding = opt->err_encoding;  
 
 	/* compute Pr(#{indel} <= dat->max_read_length) */
-	rm->adj_trunpois = ppois(dat->max_read_length, dat->max_read_length * opt->indel_error, 1, 1); //log version
+	rm->rd_length = dat->max_read_length;
+	rm->adj_trunpois = ppois(dat->max_read_length, 
+			dat->max_read_length * opt->indel_error, 1, 1); //log version
+	rm->precomputed_dindel = malloc(rm->rd_length
+					* sizeof(*rm->precomputed_dindel));
+	
+	if (!rm->precomputed_dindel)
+		return(mmessage(ERROR_MSG, MEMORY_ALLOCATION,
+						"model::precomputed_dindel"));
+	
+	for (unsigned int i = 0; i < rm->rd_length; ++i)
+		rm->precomputed_dindel[i] = i * log(rm->p_indel)
+				+ (rm->rd_length - i) * log(1 - rm->p_indel);
 
 	//debug_msg(DEBUG_I, DEBUG_I, "adj: %8.2e\n", rm->adj_trunpois);
 
  	if (opt->use_error_profile && opt->error_profile_name) {
 
-		int fxn_debug = ABSOLUTE_SILENCE;
 		rm->error_profile = calloc(NUM_NUCLEOTIDES * NUM_NUCLEOTIDES
-				* rm->n_quality, sizeof *rm->error_profile);
+				* rm->n_quality, sizeof(*rm->error_profile));
 
 		if (!rm->error_profile)
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
@@ -92,7 +107,7 @@ int make_model(model **mod, data *dat, options *opt)
 		/* may already be set at the beginning */
 		//rm->err_encoding = STD_ENCODING; // usually the input error profile shows the order of A, C, G, T
 		
-		FILE *file = fopen(opt->error_profile_name, "rb");
+		FILE *file = fopen(opt->error_profile_name, "r");// "rb");
 		if (!file)
 			return mmessage(ERROR_MSG, FILE_OPEN_ERROR,
 							opt->error_profile_name);
@@ -103,11 +118,12 @@ int make_model(model **mod, data *dat, options *opt)
 				fscanf(file, "%lf,", &rate);
 				if (q >= dat->min_quality && q <= dat->max_quality)
 					rm->error_profile[r * rm->n_quality +
-									  q - dat->min_quality] = log(rate / 1000); // log(error_rate)
+						  q - dat->min_quality] = log(rate / 1000); // log(error_rate)
 				debug_msg(DEBUG_I, fxn_debug,
-						  "r: %i,q:%i,rate: %f\n", r, q, rate);
+					"%c%c q=%i rate: %f %f\n", xy_to_char[r/NUM_NUCLEOTIDES],
+					xy_to_char[r%NUM_NUCLEOTIDES], q - MIN_ASCII_QUALITY_SCORE, rate, rate/1000);
 			}
-			debug_msg(DEBUG_I, fxn_debug, "\n");
+			//debug_msg(DEBUG_I, fxn_debug, "\n");
 		}
 		debug_msg(DEBUG_I, fxn_debug, "finish read error profile \n");
 
@@ -118,7 +134,7 @@ int make_model(model **mod, data *dat, options *opt)
 	/* count parameters */
 	rm->n_param = opt->K * dat->max_read_length	/* haplotypes */
 		+ opt->K - 1				/* pi */
-		+ (opt->use_error_profile?dat->n_quality*12:0);
+		+ (opt->use_error_profile ? dat->n_quality*12 : 0);
 	
 	rm->ll = -INFINITY;
 	rm->best_ll = -INFINITY;	// best log likelihood
@@ -150,38 +166,38 @@ int make_model(model **mod, data *dat, options *opt)
 	rm->E2_sparse_umi_id = NULL;
 	rm->E2_sparse_value = NULL;
 	rm->ll_UMI = -INFINITY;
-    rm->pll_UMI = -INFINITY;
+	rm->pll_UMI = -INFINITY;
 	rm->penalty_ll = 0.;
 
-	if(opt->UMI_length){
+	if (opt->UMI_length) {
 		/* eik_umi */
-		rm->eik_umi = malloc(dat->sample_size * opt->K_UMI * sizeof *rm->eik_umi);
+		rm->eik_umi = malloc(dat->sample_size * opt->K_UMI * sizeof(*rm->eik_umi));
 		if (!rm->eik_umi)
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "model::eik_umi");
 
 		/* gamma */
-		rm->gamma = calloc(opt->K_UMI * opt->K, sizeof *rm->gamma);
-		//rm->pgamma = calloc(opt->K_UMI * opt->K, sizeof *rm->pgamma);
-		if(!rm->gamma)
+		rm->gamma = calloc(opt->K_UMI * opt->K, sizeof(*rm->gamma));
+		//rm->pgamma = calloc(opt->K_UMI * opt->K, sizeof(*rm->pgamma));
+		if (!rm->gamma)
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "model::gamma");
 
 		/* eta */
-		rm->eta = calloc(opt->K_UMI, sizeof *rm->eta);
-		//rm->peta = calloc(opt->K_UMI, sizeof *rm->peta);
-		if(!rm->eta)
+		rm->eta = calloc(opt->K_UMI, sizeof(*rm->eta));
+		//rm->peta = calloc(opt->K_UMI, sizeof(*rm->peta));
+		if (!rm->eta)
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "model::eta");
 
 		/* E2_sparse_id */
-		rm->E2_sparse_hap_id = malloc(opt->topN * dat->sample_size * sizeof *rm->E2_sparse_hap_id);
-		rm->E2_sparse_umi_id = malloc(opt->topN * dat->sample_size * sizeof *rm->E2_sparse_umi_id);
+		rm->E2_sparse_hap_id = malloc(opt->topN * dat->sample_size * sizeof(*rm->E2_sparse_hap_id));
+		rm->E2_sparse_umi_id = malloc(opt->topN * dat->sample_size * sizeof(*rm->E2_sparse_umi_id));
 
-		if(!rm->E2_sparse_hap_id || !rm->E2_sparse_umi_id)
-			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,"model::E2_sparse_id");
+		if (!rm->E2_sparse_hap_id || !rm->E2_sparse_umi_id)
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "model::E2_sparse_id");
 
 		/* E2_sparse_value */
-		rm->E2_sparse_value = malloc(opt->topN * dat->sample_size * sizeof *rm->E2_sparse_value);
-		if(!rm->E2_sparse_value)
-			return mmessage(ERROR_MSG, MEMORY_ALLOCATION,"model::E2_sparse_value");
+		rm->E2_sparse_value = malloc(opt->topN * dat->sample_size * sizeof(*rm->E2_sparse_value));
+		if (!rm->E2_sparse_value)
+			return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "model::E2_sparse_value");
 	}
 
 	return NO_ERROR;
@@ -238,7 +254,7 @@ int realloc_model(model *mod, data *dat, options *opt)
 	/* count parameters */
 	mod->n_param = opt->K * dat->max_read_length	/* haplotypes */
 		+ opt->K - 1				/* pi */
-		+ (opt->use_error_profile?dat->n_quality*12:0);  
+		+ (opt->use_error_profile ? dat->n_quality*12 :0);
 		//+ 12					/* gamma */
 		//+ (opt->background_model ? NUM_NUCLEOTIDES - 1 : 0);	/* bg_pi */
 
@@ -265,11 +281,12 @@ int realloc_model(model *mod, data *dat, options *opt)
  * @param n_quality	the number of possible quality scores
  * @param hap_nuc	true nucleotide
  * @param obser_nuc	observed nucleotide (with error, possibility)
- * @param qual		observed quality score
+ * @param qual		observed quality score, minimum 0
  * @return		error probability
  */
 double translate_error_STD_to_XY(double *error_profile, unsigned char n_quality,
-	unsigned char hap_nuc, unsigned char obser_nuc, unsigned char qual){
+	unsigned char hap_nuc, unsigned char obser_nuc, unsigned char qual)
+{
 
 	double lp = 0.;
 
@@ -316,6 +333,47 @@ double translate_error_STD_to_XY(double *error_profile, unsigned char n_quality,
 }/* translate_error_STD_to_XY */
 
 /**
+ * Compute per-read indel probability.
+ *
+ * @param mod		model object
+ * @param n_indel	no. observed indel events (>=1 consecutive indels)
+ * @param n_opp		no. possible locations for indel (length of sequence)
+ * @param logged	result logged?
+ * @return		(log) probability of observed indel count
+ */
+double dindel(model *mod, unsigned int n_indel, unsigned int n_opp,
+						int logged)
+{
+	double d = 0;
+
+	/* poisson model was wrong: this is the fix */
+	if (mod->opt->fix_indel_model) {
+		if (n_opp == mod->rd_length)
+			return(logged
+				? mod->precomputed_dindel[n_indel]
+				: exp(mod->precomputed_dindel[n_indel]));
+		else
+			d = logged ?  n_indel * log(mod->p_indel)
+				+ (n_opp - n_indel) * log(1 - mod->p_indel)
+			: pow(mod->p_indel, n_indel)
+				* pow((1 - mod->p_indel), n_opp - n_indel);
+
+	/* use precomputed adjustment (for fixed length datasets) */
+	} else if (n_opp == mod->rd_length) {
+		d = dpois(n_indel, mod->p_indel * n_opp, logged)
+							- mod->adj_trunpois;
+	
+	/* need to compute adjustment for a haplotype of diff. length */
+	} else {
+		double adj = ppois(n_opp,
+			n_opp * mod->p_indel, 1, 1); //log version
+		d = dpois(n_indel, mod->p_indel * n_opp, logged) - adj;
+	}
+
+	return(d);
+} /* dindel */
+
+/**
  * Delete model object.
  *
  * @param mod	pointer to model object to delete
@@ -324,19 +382,34 @@ void free_model(model *mod)
 {
 	if (!mod)
 		return;
-	if (mod->pi) free(mod->pi);
-	if (mod->eik) free(mod->eik);
-	if (mod->distance) free(mod->distance);
-	if (mod->JC_ll_K) free(mod->JC_ll_K);
-	if (mod->haplotypes) free(mod->haplotypes);
-	if (mod->est_ancestor) free(mod->est_ancestor);
-	if (mod->error_profile) free(mod->error_profile);
-	if (mod->eik_umi) free(mod->eik_umi);
-	if (mod->eta) free(mod->eta);
-	if (mod->gamma) free(mod->gamma);
-	if (mod->E2_sparse_hap_id) free(mod->E2_sparse_hap_id);
-	if (mod->E2_sparse_umi_id) free(mod->E2_sparse_umi_id);
-	if (mod->E2_sparse_value) free(mod->E2_sparse_value);
+	if (mod->pi)
+		free(mod->pi);
+	if (mod->eik)
+		free(mod->eik);
+	if (mod->distance)
+		free(mod->distance);
+	if (mod->JC_ll_K)
+		free(mod->JC_ll_K);
+	if (mod->haplotypes)
+		free(mod->haplotypes);
+	if (mod->est_ancestor)
+		free(mod->est_ancestor);
+	if (mod->error_profile)
+		free(mod->error_profile);
+	if (mod->eik_umi)
+		free(mod->eik_umi);
+	if (mod->eta)
+		free(mod->eta);
+	if (mod->gamma)
+		free(mod->gamma);
+	if (mod->E2_sparse_hap_id)
+		free(mod->E2_sparse_hap_id);
+	if (mod->E2_sparse_umi_id)
+		free(mod->E2_sparse_umi_id);
+	if (mod->E2_sparse_value)
+		free(mod->E2_sparse_value);
+	if (mod->precomputed_dindel)
+		free(mod->precomputed_dindel);
 	free(mod);
 	mod = NULL;
 } /* free_model */
