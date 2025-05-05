@@ -57,10 +57,11 @@ enum {
 	RESTRAINED,		/*!< some output */
 	TALKATIVE,		/*!< talkative output */
 	VERBOSE,		/*!< verbose output */
-	DEBUG_I,		/*!< debugging output */
-	DEBUG_II,		/*!< debugging output */
-	DEBUG_III,		/*!< debugging output */
-	DEBUG_IV,		/*!< debugging output */
+	DEBUG_I,		/*!< 7: debugging output */
+	DEBUG_II,		/*!< 8: debugging output */
+	DEBUG_III,		/*!< 9: debugging output */
+	DEBUG_IV,		/*!< 10: debugging output */
+	DEBUG_V,		/*!< 11: debugging output */
 	DEBUG_OVERRIDE,		/*!< ignores global level */
 	NUM_VERBOSITY_LEVELS
 };

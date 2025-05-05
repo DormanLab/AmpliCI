@@ -44,6 +44,7 @@ int message(FILE *fp, const char *file_name, const char *fxn_name, int line,
 	va_start(vl, msg);
 	ret = vmessage(fp, file_name, fxn_name, line, msg_type, msg_id, msg, vl);
 	va_end(vl);
+	fflush(fp);
 	return(ret);
 } /* message */
 
