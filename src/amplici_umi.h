@@ -33,9 +33,7 @@ double ini_eta_gamma(options *opt, initializer *ini, double *gamma, double *eta,
 int EM_algorithm(options *opt, data *dat, model *mod, initializer *ini, run_info *ri);
 int log_vector(double *x, unsigned int len);
 int normalize(size_t n, unsigned int K, double * Emat);
-double mstep_newton(double (*fx)(double x, void *data), 
-		double (*fderv)(double x, void *data), double x0, double eps,
-		int maxiter, void *fdata);
+double mstep_newton(double (*fx)(double x, void *data), double (*fderv)(double x, void *data), double x0, double eps, int maxiter, void *fdata);
 double mstep_pen1_lagrange_cstr_derv(double lambda, void *fdata);
 double mstep_pen1_lagrange_cstr_func(double lambda, void *fdata);
 double mstep_pen1_lambda_support(void *fdata);

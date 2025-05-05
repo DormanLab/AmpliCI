@@ -79,7 +79,9 @@ int make_data(data **dat, options *opt)
  */
 int sync_state(data *dat, options *opt)
 {
+#ifdef DEBUG_AMPLICI
 	int fxn_debug = opt->info; //ABSOLUTE_SILENCE;
+#endif
 	int err = NO_ERROR;
 	// UNUSED(opt);
 
@@ -369,7 +371,9 @@ void free_data(data *dat)
 int sync_data(data *dat, options *opt)
 {
 	//UNUSED(opt);
+#ifdef DEBUG_AMPLICI
 	int fxn_debug = opt->info;
+#endif
 	int err = NO_ERROR;
 
 	/* (re)build hash table for reads */
@@ -379,7 +383,7 @@ int sync_data(data *dat, options *opt)
 
 #ifdef DEBUG_AMPLICI
 	debug_msg(DEBUG_I, fxn_debug, "Building sequence hash...\n");
-#endidf
+#endif
 
 	if ((err = build_hash(&dat->seq_count, dat->dmat, &dat->hash_length,
 					dat->lengths, 0, dat->sample_size)))

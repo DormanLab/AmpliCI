@@ -32,7 +32,7 @@ int M_step(options* opt, model *mod,size_t sample_size, unsigned int topN, unsig
 int reads_assign_sparse(model *mod, run_info *ri, size_t sample_size, unsigned int topN, unsigned int K, unsigned int K_UMI);
 int reads_assign_optimal(model *mod, run_info *ri, size_t sample_size, unsigned int topN, unsigned int K, unsigned int K_UMI);
 double MPLE_gamma_s(double *x_s, unsigned int K, int *err, unsigned int s,double rho, double omega);
-int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI, double *error_profile, double *trans_prob, int ends_free);
+int trans_expect_UMIs(options *opt, model *mod, data *dat, data_t *seeds_UMI, double *error_profile, double *trans_prob, int ends_free);
 
 
 /* main model for UMI */
@@ -385,8 +385,8 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
 	//opt->ends_free = 1;	/* [KSD, BUG, TODO] Why, why, why?  Changed because does not work for nonhomologous sequences.  Trust caller! */
 
 	/* transition probability for reads */
-	if ((err = trans_expectation(opt, dat, ini, error_profile,
-			 mod->adj_trunpois, mod->eik, opt->ends_free)))
+	if ((err = trans_expectation(opt, mod, dat, ini, error_profile,
+						mod->eik, opt->ends_free)))
 		return err;
 
 
@@ -404,7 +404,7 @@ int trans_hap_and_umi(options *opt, data *dat, initializer *ini, model *mod)
 	// opt->ends_free = 1;
 
 	/* transition probability for UMIs */
-	if ((err = trans_expect_UMIs(opt, dat, ini->seeds_UMI, error_profile,
+	if ((err = trans_expect_UMIs(opt, mod, dat, ini->seeds_UMI, error_profile,
 						mod->eik_umi, ends_free)))
 		return err;
 	/* calculate the transition probability without alignment */
@@ -1080,7 +1080,7 @@ double mstep_pen1_lambda_support(void *fdata)
  * @param ends_free	semiglobal alignment: always 1 in calls
  * @return		error status
  */
-int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI,
+int trans_expect_UMIs(options *opt, model *mod, data *dat, data_t *seeds_UMI,
 	double *error_profile, double *trans_prob, int ends_free)
 {
 
@@ -1118,7 +1118,6 @@ int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI,
 								* dat->n_quality
 								+ dat->qmatU[r][j]];
 					} else {
-						//double ep = adj * error_prob(dat->fdata, dat->qmat[r][j]);
 						double ep = dat->error_prob[dat->qmatU[r][j]];
 						if (dat->dmatU[r][j] == hap_seq[j] )
 							eik += log(1 - ep);
@@ -1135,8 +1134,6 @@ int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI,
 		}
 		return err;
 	}
-
-	double adj_trunpois = ppois(dat->max_read_length, dat->max_read_length * opt->indel_error, 1, 1);
 
 	for (s = dat->UMI_count; s != NULL; s = s->hh.next) {
 
@@ -1179,10 +1176,12 @@ int trans_expect_UMIs(options *opt, data *dat, data_t *seeds_UMI,
 				 * so terminal gaps not counted; however, there
 				 * are no terminal gaps because band was 0
 				 */
-				trans_prob[b * dat->sample_size + idx_array[r]] = trans_nw(opt, aln,
-					alen, nmismatch, nindels, error_profile, opt->err_encoding,
-					dat->qmatU[idx_array[r]], dat->n_quality, adj_trunpois,
-								rlen, dat->error_prob, ends_free);
+				trans_prob[b * dat->sample_size + idx_array[r]]
+					= trans_nw(opt, mod, aln, alen, nmismatch,
+					nindels, error_profile,
+					opt->err_encoding,
+					dat->qmatU[idx_array[r]], dat->n_quality,
+					rlen, dat->error_prob, ends_free);
 
 			}
 

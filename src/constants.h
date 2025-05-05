@@ -14,6 +14,9 @@
 
 #include <inttypes.h>
 
+/* make debugging code accessible */
+#define DEBUG_AMPLICI
+
 #define UNUSED(x) (void)(x)
 
 /* suss out C standard enforced */
