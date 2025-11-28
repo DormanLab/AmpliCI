@@ -49,6 +49,7 @@ struct _initializer {
 	unsigned int *cluster_id;	/*<! cluster assignments  */
 	double *criterion;		/*<! criterion per cluster  */
 	unsigned int *cluster_size;	/*<! cluster sizes  */
+	unsigned int **cluster_members;	/*<! cluster membership */
 
 	/* sequence table with abundance (sorted) for AmpliCI */
 	size_t *uidx_to_ridx;		/*<! unique sequence index to dmat (read) index */

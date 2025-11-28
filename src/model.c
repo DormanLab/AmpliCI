@@ -229,7 +229,7 @@ int realloc_model(model *mod, data *dat, options *opt)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 			"realloc.model.haplotypes");
 	/*
-	unsigned char *haplotypes = realloc(mod->haplotypes,
+	dats_t *haplotypes = realloc(mod->haplotypes,
 		dat->max_read_length * mod->K * sizeof *mod->haplotypes);
 
 	if (!haplotypes)
@@ -284,8 +284,8 @@ int realloc_model(model *mod, data *dat, options *opt)
  * @param qual		observed quality score, minimum 0
  * @return		error probability
  */
-double translate_error_STD_to_XY(double *error_profile, unsigned char n_quality,
-	unsigned char hap_nuc, unsigned char obser_nuc, unsigned char qual)
+double translate_error_STD_to_XY(double *error_profile, data_t n_quality,
+	data_t hap_nuc, data_t obser_nuc, data_t qual)
 {
 
 	double lp = 0.;

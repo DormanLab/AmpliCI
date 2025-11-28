@@ -50,10 +50,10 @@ int make_initializer(initializer **ini, data *dat, options *opt,
 	in = *ini;
 
 	in->K = opt->K;
+
 	in->cluster_id = NULL;
-
+	in->cluster_membership = NULL;
 	in->seed_idx = NULL;
-
 	in->criterion = NULL;
 
 	in->cluster_size = malloc(opt->K * sizeof(*in->cluster_size));

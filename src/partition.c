@@ -108,8 +108,8 @@ int ampliCI_wpartition(options *opt, data *dat, model *mod, initializer *ini, ru
 		
 		*/
 		unsigned int ss = 0;
-		//unsigned char *rptr = rsub;
-		//unsigned char *qptr = qsub;
+		//data_t *rptr = rsub;
+		//data_t *qptr = qsub;
 		for(unsigned int i = 0; i < dat->sample_size; i++){
 			if(ini->cluster_id[i] == p){
 			   //memcpy(rptr, dat->dmat[i], dat->max_read_length * sizeof **dat->dmat);
@@ -130,7 +130,7 @@ int ampliCI_wpartition(options *opt, data *dat, model *mod, initializer *ini, ru
 		unsigned int K = 0;
 		unsigned int *cluster_id = NULL;  // not needed here
 		unsigned int *cluster_size = NULL;  // not needed here
-		unsigned char *seeds = NULL;
+		data_t *seeds = NULL;
 		unsigned int *seeds_length = NULL;
 		double *ll = NULL;
 		double *abun = NULL;
@@ -160,7 +160,7 @@ int ampliCI_wpartition(options *opt, data *dat, model *mod, initializer *ini, ru
 			//		fprintf(stderr, "%c", xy_to_char[(int) seeds[k*dat->max_read_length+j]]);
 			//}
 			hash *new;
-			HASH_FIND(hh, dat->seq_count, &seeds[k*dat->max_read_length], seeds_length[k] * sizeof (unsigned char), new);
+			HASH_FIND(hh, dat->seq_count, &seeds[k*dat->max_read_length], seeds_length[k] * sizeof(data_t), new);
 			if(new->seeds == 0){   // avoid duplicate
 				new->seeds = 1;
 				sum_K ++;

@@ -44,12 +44,12 @@ enum{
 struct _model {
 	options *opt;			/*<! pointer to options object */
 
-	unsigned char n_quality;	/*<! no. post-compression quality scores */
+	data_t n_quality;		/*<! no. post-compression quality scores */
 
 	double *eik;			/*<! expectated no. seq i from hap k */
 	unsigned int K;			/*<! number of clusters */
 	double *pi;			/*<! Kx1 mixing proportions */
-	unsigned char *haplotypes;	/*<! haplotypes */
+	data_t *haplotypes;		/*<! haplotypes */
 	double ll;			/*<! current log likelihood */
 	double best_ll;			/*<! best log likelihood so far */
 	double JC_ll;      		/*<! log likelihood of JC69 model */
@@ -70,7 +70,7 @@ struct _model {
 
 	/* for the JC69 model */
 	double *distance;		/*<! Kx1 haplotypes to ancestor distances */
-	unsigned char *est_ancestor;	/*<! estimated ancestor */
+	data_t *est_ancestor;		/*<! estimated ancestor */
 	double *JC_ll_K;		/*<! Kx1 log likelihood under JC69 model */
 
 	/* for UMI model */
@@ -87,7 +87,7 @@ struct _model {
 
 }; /* model */
 
-double translate_error_STD_to_XY(double *error_profile, unsigned char n_quality, unsigned char hap_nuc, unsigned char obser_nuc, unsigned char qual);
+double translate_error_STD_to_XY(double *error_profile, data_t n_quality, data_t hap_nuc, data_t obser_nuc, data_t qual);
 double dindel(model *mod, unsigned int n_indel, unsigned int n_opp, int logged);
 
 int make_model(model **mod, data *dat, options *opt);

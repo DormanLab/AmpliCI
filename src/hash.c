@@ -9,6 +9,7 @@
 #include <stdlib.h>
 
 #include "uthash.h"
+#include "constants.h"
 #include "hash.h"
 #include "error.h"
 
@@ -22,7 +23,7 @@
  *
  * @return		The first observation time
  */
-int add_sequence(hash **seq_count, unsigned char *seq, unsigned int length,
+int add_sequence(hash **seq_count, data_t *seq, unsigned int length,
 								size_t idx, int *err)
 {
 	hash *new;
@@ -63,7 +64,7 @@ int add_sequence(hash **seq_count, unsigned char *seq, unsigned int length,
  *
  * @return		error status
  */
-int add_seq_idx(hash *seq_count, unsigned char *seq, unsigned int length,
+int add_seq_idx(hash *seq_count, data_t *seq, unsigned int length,
 								size_t idx)
 {
 	hash *unit;
@@ -228,7 +229,7 @@ int store_count(hash *seq_count, unsigned int *count, unsigned int length)
  *
  * @return		error status
  * */
-int find_index(hash *seq_count, unsigned char *seq, unsigned int length,
+int find_index(hash *seq_count, data_t *seq, unsigned int length,
 							size_t **idx_array)
 {
 

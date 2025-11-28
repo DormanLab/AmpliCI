@@ -30,7 +30,7 @@
  * @param asc		alignment score
  * @return		alignment
  */
-unsigned char **nwalign(unsigned char const * const s1, unsigned char const * const s2,
+data_t **nwalign(data_t const * const s1, data_t const * const s2,
 	size_t len1, size_t len2, int score[4][4], int gap_p, int band,
 	int ends_free, double const *perr, int *err, size_t *alen, double *asc)
 {
@@ -151,8 +151,8 @@ unsigned char **nwalign(unsigned char const * const s1, unsigned char const * co
 		}
 	}
 
-	unsigned char *al0 = (unsigned char *) malloc((len1+len2) * sizeof(unsigned char));
-	unsigned char *al1 = (unsigned char *) malloc((len1+len2) * sizeof(unsigned char));
+	data_t *al0 = malloc((len1+len2) * sizeof(*al0));
+	data_t *al1 = malloc((len1+len2) * sizeof(*al1));
 	if (al0 == NULL || al1 == NULL) {
 		*err = MEMORY_ALLOCATION;
 		mmessage(ERROR_MSG, *err, "al0 & al1");
@@ -192,15 +192,15 @@ unsigned char **nwalign(unsigned char const * const s1, unsigned char const * co
 	}
 
 	// Allocate memory to alignment strings.
-	unsigned char **al = (unsigned char **) malloc( 2 * sizeof(unsigned char *) ); //E
+	data_t **al = malloc(2 * sizeof(*al)); //E
 	if (al == NULL) {
 		*err = MEMORY_ALLOCATION;
 		mmessage(ERROR_MSG, *err, "al");
 		return NULL;
 	}
 
-	al[0] = (unsigned char *) malloc(len_al); //E
-	al[1] = (unsigned char *) malloc(len_al); //E
+	al[0] = malloc(len_al); //E
+	al[1] = malloc(len_al); //E
 	if (al[0] == NULL || al[1] == NULL) {
 		*err = MEMORY_ALLOCATION;
 		mmessage(ERROR_MSG, *err, "al[]");
@@ -237,11 +237,11 @@ unsigned char **nwalign(unsigned char const * const s1, unsigned char const * co
  * @param nindels	pointer to number of indel events
  * @param cnt_indels	pointer to number of indels
  * @param cnt_5prime	pointer to number of 5' indels
- * @param nmismatch	pointer to Number of mismatches
+ * @param nmismatch	pointer to number of mismatches
  * @param dbg		debug information
  * @return		error status
  */
-int ana_alignment(unsigned char **aln, size_t alen, unsigned int rlen,
+int ana_alignment(data_t **aln, size_t alen, unsigned int rlen,
 	unsigned int *nindels, unsigned int *cnt_indels,
 	unsigned int *cnt_5prime_indels, unsigned int *nmismatch,
 				int ends_free, int dbg)

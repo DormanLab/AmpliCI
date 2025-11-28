@@ -21,6 +21,7 @@
 #include "error.h"
 #include "hash.h"
 
+extern double error_prob_d(data_t q);
 extern void write_sequence(FILE *fp, data_t *seq, unsigned int len);
 
 int build_hash(hash **hash_table, data_t **dmat, unsigned int *hash_length, unsigned int *seq_lengths, unsigned int seq_len, size_t sample_size);
@@ -141,7 +142,7 @@ int sync_state(data *dat, options *opt)
 	if (!dat->dmat)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "dat.dmat");
 
-	unsigned char *rptr = dat->fdata->reads;
+	data_t *rptr = dat->fdata->reads;
 
 	rptr += opt->UMI_length;  // default = 0
 	for (size_t i = 0; i < dat->sample_size; ++i) {
@@ -160,7 +161,7 @@ int sync_state(data *dat, options *opt)
 	if (!dat->qmat)
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "dat.qmat");
 
-	unsigned char *qptr = dat->fdata->quals;
+	data_t *qptr = dat->fdata->quals;
 	qptr += opt->UMI_length;   // default = 0
 	for (size_t i = 0; i < dat->sample_size; i++) {
 		dat->qmat[i] = qptr;
@@ -186,7 +187,7 @@ int sync_state(data *dat, options *opt)
 		if (!dat->dmatU)
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "dat.dmatU");
 
-		unsigned char *rptr = dat->fdata->reads;
+		data_t *rptr = dat->fdata->reads;
 		for (size_t i = 0; i < dat->sample_size; i++) {
 			dat->dmatU[i] = rptr;
 			rptr += dat->lengths[i];
@@ -202,7 +203,7 @@ int sync_state(data *dat, options *opt)
 		if (!dat->qmatU )
 			return mmessage(ERROR_MSG, MEMORY_ALLOCATION, "dat.qmatU");
 
-		unsigned char * qptr = dat->fdata->quals;
+		data_t *qptr = dat->fdata->quals;
 
 		for (size_t i = 0; i < dat->sample_size; i++) {
 			dat->qmatU[i] = qptr;
@@ -439,7 +440,7 @@ int write_abundance_histogram(data *dat, options *opt)
 
 /* fill data object with provided dmat and qmat [CURRENTLY UNUSED] */
 int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen,
-	size_t sample_size, unsigned char max_quality, unsigned char min_quality)
+	size_t sample_size, data_t max_quality, data_t min_quality)
 {
 
 	int err = NO_ERROR;
@@ -459,7 +460,7 @@ int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen,
 		return mmessage(ERROR_MSG, MEMORY_ALLOCATION,
 							"data::error_prob");
 
-	for (unsigned char q = 0; q < dat->n_quality; q++)
+	for (data_t q = 0; q < dat->n_quality; q++)
 		dat->error_prob[q] = exp(- (q + min_quality
 				- MIN_ASCII_QUALITY_SCORE) / 10. * LOG10);
 

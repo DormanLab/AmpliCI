@@ -15,6 +15,7 @@
 
 typedef struct _data data;
 
+
 /**
  * Data.  Store the fastq file.
  */
@@ -23,9 +24,9 @@ struct _data {
 	/* data */
 	fastq_data *fdata;		/*<! contents of fastq file */
 	size_t *coverage;		/*<! coverage at each read position */
-	unsigned char n_quality;	/*<! number quality scores [min, max] */
-	unsigned char min_quality;
-	unsigned char max_quality; 
+	data_t n_quality;	/*<! number quality scores [min, max] */
+	data_t min_quality;
+	data_t max_quality; 
 	double *error_prob;    /* pre-compute error prob based on quality score */
 
 	/* [KSD] We assume that all reads are trimmed of technical sequence and
@@ -102,8 +103,21 @@ int sync_data(data *dat, options *opt);
 int write_abundance_histogram(data *dat, options *opt);
 void free_data(data *dat);
 
-int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen, 
-			size_t sample_size, unsigned char max_quality,unsigned char min_quality);
+int fill_data(data *dat, data_t **dmat, data_t **qmat, unsigned int rlen, size_t sample_size, data_t max_quality, data_t min_quality);
+
+ 
+/**
+ * Convert quality code to error probability.
+ * 
+ * @param q	quality code encoded as ASCII
+ * @param fqd	fastq_data object pointer
+ * @return	probability
+ */
+inline double error_prob_d(data_t q) 
+{
+fprintf(stderr, "q=%u e=%f\n", q, exp(- ((q - 33) / 10.) * LOG10));
+	return exp(- ((q - 33) / 10.) * LOG10);
+} /* error_prob_d */
 
 inline void write_sequence(FILE *fp, data_t *seq, unsigned int len)
 {

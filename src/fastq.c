@@ -40,12 +40,12 @@ const unsigned char popcnt[] = {0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4};
 /**
  * Convert xy_t to char for human consumption.
  */
-unsigned char const xy_to_char[NUM_NUCLEOTIDES] = {'A', 'C', 'T', 'G'};
+char const xy_to_char[NUM_NUCLEOTIDES] = {'A', 'C', 'T', 'G'};
 
 /**
  * Convert iupac_t to char for human consumption.
  */
-unsigned char const iupac_to_char[NUM_IUPAC_SYMBOLS] = {
+char const iupac_to_char[NUM_IUPAC_SYMBOLS] = {
 	'-', 'A', 'C', 'M', 'G', 'R', 'S',
 	'V', 'T', 'W', 'Y', 'H', 'K',
 	'D', 'B', 'N'
@@ -89,7 +89,7 @@ xy_t const iupac_to_xy[NUM_IUPAC_SYMBOLS] = {
  * Convert iupac_t to standard nucleotide order A=0, C=1, G=2, T=3, which is
  * NOT xy_t.
  */
-unsigned char const iupac_to_std[NUM_IUPAC_SYMBOLS] = {
+data_t const iupac_to_std[NUM_IUPAC_SYMBOLS] = {
 	0, STD_A, STD_C, 0, STD_G, 0, 0, 0, STD_T, 0, 0, 0, 0, 0, 0, 0
 };
 
@@ -97,7 +97,7 @@ unsigned char const iupac_to_std[NUM_IUPAC_SYMBOLS] = {
  * Standard order: A, C, G, T
  * XY order: A, C, T, G
  */
-unsigned char const xy_to_std[NUM_NUCLEOTIDES] = {0, 1, 3, 2};
+data_t const xy_to_std[NUM_NUCLEOTIDES] = {0, 1, 3, 2};
 xy_t const std_to_xy[NUM_NUCLEOTIDES] = {0, 1, 3, 2};
 
 /**
@@ -124,13 +124,14 @@ xy_t const nuc_to_xy[NUCLEOTIDE_ALPHABET_SIZE] = {
  * Validate human-readable nucleotide characters as IUPAC symbols or one
  * of standard nucleotides: A, C, G, T.
  */
-extern int valid_iupac(unsigned char c);
-extern int valid_nucleotide(unsigned char c);
+extern int valid_iupac(char c);
+extern int valid_nucleotide(char c);
 
 /**
  * Convert quality score to probability.
  */
-extern double error_prob(fastq_data *fqd, char c);
+extern double raw_error_prob(char c);
+extern double error_prob(fastq_data *fqd, data_t c);
 
 /**
  * Print all observed quality scores as probabilities.
@@ -141,14 +142,14 @@ extern void fprint_error_probs(FILE *fp, fastq_data *fqd);
  * Write one read of given length to file in R table format (space-separated
  * integers).
  */
-extern void write_read_in_table(FILE *fp, unsigned char *read, unsigned int len);
+extern void write_read_in_table(FILE *fp, data_t *read, unsigned int len);
 
 /**
  * Return length of requested read.
  */
 extern unsigned int read_length(fastq_data *fqd, unsigned int i);
 
-int read_read(FILE *fp, fastq_data *fqd, unsigned int *len, unsigned char *nptr, unsigned char *qptr);
+//int read_read(FILE *fp, fastq_data *fqd, unsigned int *len, data_t *rptr, data_t *qptr);
 extern unsigned int number_nucleotide(iupac_t c);
 extern const iupac_t *nucleotide_list(iupac_t c);
 
@@ -362,9 +363,9 @@ int read_fastq(const char *filename, fastq_data **in_fqd, fastq_options *fqo)
 int fread_fastq(FILE *fp, fastq_data **in_fqd, fastq_options *fqo)
 {
 	int fxn_debug = ABSOLUTE_SILENCE;	//SILENT;	//DEBUG_III;	//
-	unsigned char *rptr, *qptr;
+	data_t *rptr, *qptr;
 	unsigned int n_reads, n_bytes, *uiptr;
-	unsigned char c, elen = 1;
+	char c, elen = 1;
 	fastq_data *fqd = *in_fqd;
 	int err = NO_ERROR;
 
@@ -573,13 +574,12 @@ int fread_fastq(FILE *fp, fastq_data **in_fqd, fastq_options *fqo)
  * @param fp	open fastq file handle
  * @param fqd	allocated fastq object
  * @param len	pointer to memory to store length of current read
- * @param nptr	pointer to memory to store read base characters
+ * @param rptr	pointer to memory to store read base characters
  * @param qptr	pointer to memory to store quality characters
  *
  * @return	error code
  */
-int read_read(FILE *fp, fastq_data *fqd, unsigned int *len, unsigned char *nptr,
-							 unsigned char *qptr)
+int read_read(FILE *fp, fastq_data *fqd, unsigned int *len, data_t *rptr, data_t *qptr)
 {
 	int fxn_debug = ABSOLUTE_SILENCE;	//SILENT;	//DEBUG_II;	//
 	int err = NO_ERROR;
@@ -618,15 +618,15 @@ int read_read(FILE *fp, fastq_data *fqd, unsigned int *len, unsigned char *nptr,
 			: 0;
 
 		/* record valid read */
-		if (nptr && v_iupac && fqd->read_encoding == IUPAC_ENCODING) {
+		if (rptr && v_iupac && fqd->read_encoding == IUPAC_ENCODING) {
 
-			*nptr = nuc_to_iupac[c - 'A'];
-			nptr++;
+			*rptr = nuc_to_iupac[c - 'A'];
+			rptr++;
 
-		} else if (nptr && v_nuc) {
+		} else if (rptr && v_nuc) {
 
-			*nptr = (c >> 1) & 3;	/* unique encoding of A, C, G, T, but no others! */
-			nptr++;
+			*rptr = (c >> 1) & 3;	/* unique encoding of A, C, G, T, but no others! */
+			rptr++;
 
 		/* invalid read: invalid character */
 		} else if (!v_iupac) {
@@ -688,13 +688,13 @@ int read_read(FILE *fp, fastq_data *fqd, unsigned int *len, unsigned char *nptr,
 	/* read or skip the quality score sequence */
 	if (qptr)
 		while ((c = fgetc(fp)) != '\n' && c != EOF) {
-			*qptr = (unsigned char) c;
+			*qptr = (data_t) c;
 			qptr++;
 			qlen++;
 			if (c < fqd->min_quality)
-				fqd->min_quality = (unsigned char) c;
+				fqd->min_quality = (data_t) c;
 			if (c > fqd->max_quality)
-				fqd->max_quality = (unsigned char) c;
+				fqd->max_quality = (data_t) c;
 		}
 	else
 		fforward_cnt(fp, c, '\n', qlen);
@@ -756,9 +756,10 @@ int allocate_empty_fastq(fastq_data **in_fqd, fastq_options *fqo,
 	return NO_ERROR;
 }/* allocate_empty_fastq */
 
-unsigned char const * display_sequence(unsigned char const * const in_str, unsigned int len, int encoding) {
+char const * display_sequence(data_t const * const in_str, unsigned int len, int encoding)
+{
 	unsigned int j;
-	unsigned char *str = malloc((len + 1) * sizeof *str);
+	char *str = malloc((len + 1) * sizeof *str);
 
 	if (str == NULL) {
 		mmessage(ERROR_MSG, MEMORY_ALLOCATION, "string to store read");
@@ -774,9 +775,10 @@ unsigned char const * display_sequence(unsigned char const * const in_str, unsig
 	return str;
 } /* display_sequence */
 
-unsigned char const * display_quals(unsigned char const * const in_str, unsigned int len, unsigned char min) {
+char const * display_quals(data_t const * const in_str, unsigned int len, data_t min)
+{
 	unsigned int j;
-	unsigned char *str = malloc((len + 1) * sizeof *str);
+	char *str = malloc((len + 1) * sizeof *str);
 
 	if (str == NULL) {
 		mmessage(ERROR_MSG, MEMORY_ALLOCATION,
@@ -791,9 +793,10 @@ unsigned char const * display_quals(unsigned char const * const in_str, unsigned
 	return str;
 } /* display_quals */
 
-unsigned char const * display_reverse_complement(unsigned char const * const in_str, unsigned int len, int encoding) {
+char const * display_reverse_complement(data_t const * const in_str, unsigned int len, int encoding)
+{
 	unsigned int j, l;
-	unsigned char *str = malloc((len + 1) * sizeof *str);
+	char *str = malloc((len + 1) * sizeof *str);
 
 	if (str == NULL) {
 		mmessage(ERROR_MSG, MEMORY_ALLOCATION,
@@ -810,9 +813,10 @@ unsigned char const * display_reverse_complement(unsigned char const * const in_
 	return str;
 } /* display_reverse_complement */
 
-unsigned char const * display_reverse_quals(unsigned char const * const in_str, unsigned int len, unsigned char min) {
+char const * display_reverse_quals(data_t const * const in_str, unsigned int len, data_t min)
+{
 	unsigned int j, l;
-	unsigned char *str = malloc((len + 1) * sizeof *str);
+	char *str = malloc((len + 1) * sizeof *str);
 
 	if (str == NULL) {
 		mmessage(ERROR_MSG, MEMORY_ALLOCATION,
@@ -830,8 +834,8 @@ unsigned char const * display_reverse_quals(unsigned char const * const in_str, 
 int write_fastq(fastq_data *fqd, fastq_options *fqo)
 {
 	unsigned int i;
-	unsigned char *reads = fqd->reads;
-	unsigned char *quals = fqd->quals;
+	data_t *reads = fqd->reads;
+	data_t *quals = fqd->quals;
 	FILE *fp = fopen(fqo->outfile, fqo->append ? "a" : "w");
 
 	if (!fp)
@@ -867,8 +871,8 @@ int write_fastq_marked(fastq_data *fqd, fastq_options *fqo, unsigned int *id,
 	unsigned int selected_id)
 {
 	unsigned int i;
-	unsigned char *reads = fqd->reads;
-	unsigned char *quals = fqd->quals;
+	data_t *reads = fqd->reads;
+	data_t *quals = fqd->quals;
 	FILE *fp = fopen(fqo->outfile, fqo->append ? "a" : "w");
 
 	if (!fp)
@@ -913,7 +917,7 @@ int write_fastq_marked(fastq_data *fqd, fastq_options *fqo, unsigned int *id,
 int write_table(fastq_data *fqd, char const *filename)
 {
 	unsigned int i, len;
-	unsigned char *reads = fqd->reads;
+	data_t *reads = fqd->reads;
 	FILE *fp = fopen(filename, "w");
 
 	if (!fp)
@@ -1073,14 +1077,14 @@ int pw_align_reads(fastq_data *fqd, char const * const rfile) {
 		fprintf(stderr, "%c", xy_to_char[(int) fqd->reference_seq[i]]);
 	fprintf(stderr, "\n");
 
-	unsigned char *rptr = fqd->reads;
+	data_t *rptr = fqd->reads;
 	int score[NUM_NUCLEOTIDES][NUM_NUCLEOTIDES] = {{2, -3, -3, -2},
 		{-3, 2, -2, -3}, {-3, -2, 2, -3}, {-2, -3, -3, 2}};
 	double const perr[] = {0.999401, 0.992814, 0.993413, 0.997006, 0.996407, 0.994910, 0.994311, 0.742627, 0.993713, 0.995808, 0.992216, 0.997305, 0.997006, 0.997904, 0.968593, 0.993114, 0.994611, 0.995808, 0.997305, 0.998204, 0.975150, 0.998503, 0.998204, 0.994611, 0.984731, 0.967365, 0.996707, 0.997904, 0.915868, 0.984431, 0.987126, 0.997605, 0.979042, 0.993114, 0.994311, 0.989820, 0.985629, 0.993114, 0.985329, 0.977246, 0.995808, 0.997305, 0.986527, 0.996108, 0.997006, 0.988623, 0.989532, 0.970659, 0.944346, 0.998204, 0.989820, 0.996707, 0.996707, 0.960778, 0.982934, 0.986527, 0.998204, 0.986527, 0.998503, 0.981737, 0.991916, 0.991018, 0.995210, 0.985329, 0.991916, 0.978789, 0.972156, 0.970060, 0.994963, 0.990719, 0.992814, 0.994611, 0.991916, 0.985917, 0.976700, 0.990419, 0.996707, 0.991018, 0.982635, 0.985329, 0.997305, 0.986228, 0.978144, 0.997006, 0.994311, 0.994012, 0.996108, 0.985928, 0.971856, 0.962874, 0.980838, 0.986228, 0.988323, 0.994311, 0.915194, 0.971512, 0.994311, 0.968862, 0.977545, 0.981437, 0.985329, 0.997006, 0.995210, 0.994012, 0.993450, 0.987183, 0.993413, 0.991916, 0.996379, 0.998503, 0.985629, 0.993513, 0.998503, 0.987725, 0.975449, 0.981138, 0.979641, 0.961770, 0.996108, 0.994910, 0.981437, 0.981437, 0.985329, 0.994311, 0.965015, 0.990075, 0.953293, 0.979341, 0.990120, 0.991617, 0.993114, 0.995210, 0.985928, 0.996707, 0.997904, 0.985329, 0.998204, 0.979341, 0.991916, 0.979641, 0.981437, 0.984132, 0.991617, 0.997006, 0.959880, 0.991916, 0.996707, 0.989521, 0.997006, 0.961386, 0.993413, 0.972156, 0.995509, 0.973653, 0.990120, 0.996707, 0.976647, 0.988323, 0.997605, 0.988922, 0.985629, 0.965269, 0.998503, 0.977545, 0.971557, 0.973952, 0.981737, 0.992814, 0.986527, 0.981737, 0.995509, 0.994311, 0.981737, 0.997006, 0.973054, 0.965569, 0.994311, 0.978144, 0.972455, 0.994311, 0.990719, 0.988623, 0.997305, 0.964072, 0.988623, 0.986527, 0.991018, 0.995210, 0.996407, 0.981437, 0.971788, 0.959581, 0.982335, 0.992515, 0.993713, 0.991617, 0.993114, 0.988623, 0.986826, 0.994611, 0.987126, 0.967504, 0.997305, 0.936483, 0.994910, 0.996707, 0.982335, 0.996407, 0.997305, 0.947006, 0.985940, 0.994910, 0.963473, 0.950299, 0.953593, 0.994311, 0.972156, 0.995210, 0.989222, 0.920475, 0.997305, 0.941018, 0.988024, 0.971557, 0.960479, 0.989222, 0.994910, 0.988323, 0.977246, 0.996707, 0.967365, 0.912167, 0.948165, 0.995509, 0.979940, 0.985050, 0.944311, 0.973353, 0.947305, 0.990719, 0.987126, 0.970958, 0.975150, 0.997006, 0.992814, 0.932335, 0.948802, 0.933832, 0.937504, 0.991317, 0.982335, 0.991617, 0.967365, 0.956287, 0.996108, 0.960180, 0.985329, 0.994311, 0.971257, 0.994611, 0.994311, 0.937126, 0.994311, 0.995210, 0.997904, 0.997305, 0.904790, 0.923653, 0.926048, 0.901982, 0.998503, 0.986826, 0.964970, 0.997605};
 
 	for (unsigned int i = 0; i < fqd->n_reads; ++i) {
 		size_t alen;
-		unsigned char **aln = nwalign(fqd->reference_seq, rptr, len,
+		data_t **aln = nwalign(fqd->reference_seq, rptr, len,
 			read_length(fqd, i), score, -1, -1, 1, perr, &err,
 			&alen, NULL);
 		fprintf(stderr, "Read %u alignment length %lu\n", i, alen);
@@ -1109,10 +1113,10 @@ double read_distance(fastq_data *fqd, unsigned int i, unsigned int j)
 	if (i == j)
 		return 0;
 
-	unsigned char *qptr1 = NULL, *qptr2 = NULL;
-	unsigned char *rptr1 = NULL, *rptr2 = NULL;
-	unsigned char *rptr = fqd->reads;
-	unsigned char *qptr = fqd->quals;
+	data_t *qptr1 = NULL, *qptr2 = NULL;
+	data_t *rptr1 = NULL, *rptr2 = NULL;
+	data_t *rptr = fqd->reads;
+	data_t *qptr = fqd->quals;
 	unsigned int len;
 
 	for (unsigned int n = 0; n < fqd->n_reads; ++n) {
@@ -1137,11 +1141,10 @@ double read_distance(fastq_data *fqd, unsigned int i, unsigned int j)
 	return read_distance_ptr(fqd, len, rptr1, rptr2, qptr1, qptr2);
 } /* read_distance */
 
-double read_distance_ptr(fastq_data *fqd, unsigned int len, unsigned char *rptr1,
-	unsigned char *rptr2, unsigned char *qptr1, unsigned char *qptr2)
+double read_distance_ptr(fastq_data *fqd, unsigned int len, data_t *rptr1,
+	data_t *rptr2, data_t *qptr1, data_t *qptr2)
 {
 	if (qptr1 == qptr2) {
-fprintf(stderr, "here!\n");
 		return 0;
 	}
 	double dis = 0;
@@ -1181,7 +1184,7 @@ fprintf(stderr, "here!\n");
  * @param aln	alignment as 2 x alen character matrix
  * @param alen	alignment length
  */
-void print_alignment(FILE *fp, unsigned char **aln, size_t alen)
+void print_alignment(FILE *fp, data_t **aln, size_t alen)
 {
 	for (size_t j = 0; j < alen; ++j)
 		fprintf(fp, "%c", aln[0][j] == '-' ? '-'

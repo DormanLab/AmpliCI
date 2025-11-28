@@ -78,7 +78,7 @@ int make_options(options **opt) {
 	op->K_space=100;
 	op->K_fix_err = 0;
 	op->filter_reads = FILTER_NONE;
-	op->hamming_proportion = 1;
+	op->hamming_proportion = -1;
 
 
 	/* error profile estimation */
@@ -749,7 +749,7 @@ int parse_options(options *opt, int argc, const char **argv)
 
 
 	/* check compatibility of options */
-	if (!opt->fastq_file)
+	if (!opt->fastq_file && !strcmp(cmd, "error") && !opt->infile_error)
 		err = mmessage(ERROR_MSG, INVALID_USER_INPUT,
 			"No input fastq file! (see help -h) \n");
 
@@ -1044,14 +1044,15 @@ void fprint_usage(FILE *fp, const char *exe_name, const char *command, void *obj
 		"Screen for false positives.  [DEFAULT: %s]\n", opt->check_false_positive?"Yes":"No");
 	if (!strcmp(command,"error")) {
 		fprintf(fp, "\t--filter[ hamming FLOAT]\n\t\t"
-		"Discard reads with log likelihood too small or or proportional\n\t\t"
+		"Discard reads with log likelihood too small or proportional\n\t\t"
 		"Hamming distance too large.  [DEFAULT: ");
 		if (opt->filter_reads == FILTER_LOG_LIKELIHOOD)
 			fprintf(fp, "log likelihood (see --log_like)]\n");
 		else if (opt->filter_reads == FILTER_HAMMING_PROPORTION)
-			fprintf(fp, "Hamming distance (<=%f)]\n", opt->hamming_proportion);
+			fprintf(fp, "Hamming proportion (<=%f)]\n", opt->hamming_proportion);
 		else
 			fprintf(fp, "None]\n");
+		fprintf(fp, "\t\tInterpretted as Hamming distance if >=1.\n");
 		fprintf(fp, "\t--partition <pstr>\n\t\t"
 		"Partition file used for error profile.  [DEFAULT: none] \n");
 	}

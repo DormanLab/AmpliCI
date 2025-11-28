@@ -76,7 +76,8 @@ int main(int argc, const char **argv)
 	fqo->read_encoding = XY_ENCODING;
 
 #ifdef DEBUG_AMPLICI
-	debug_msg(fxn_debug, opt->info, "Reading FASTQ...\n");
+	if (opt->fastq_file)
+		debug_msg(fxn_debug, opt->info, "Reading FASTQ...\n");
 #endif
 
 	/* read sequence data */
@@ -85,7 +86,7 @@ int main(int argc, const char **argv)
 		goto CLEAR_AND_EXIT;
 
 	/* with data now loaded, can polish off data object */
-	if ((err = sync_state(dat, opt)))
+	if (opt->fastq_file && (err = sync_state(dat, opt)))
 		goto CLEAR_AND_EXIT;
 
 #ifdef DEBUG_AMPLICI
@@ -107,7 +108,7 @@ int main(int argc, const char **argv)
 
 	/* read initialization UMI file into fqdfu */
 	if (opt->initialization_UMI) {
-		if((err = read_initialization_file(opt->initialization_UMI,
+		if ((err = read_initialization_file(opt->initialization_UMI,
 							 &fqdfu, opt->info)))
 			goto CLEAR_AND_EXIT;
 		opt->K_UMI = fqdfu->n_reads;

@@ -1101,7 +1101,7 @@ int trans_expect_UMIs(options *opt, model *mod, data *dat, data_t *seeds_UMI,
 			for (unsigned int b = 0; b < opt->K_UMI; b++) {
 
 				eik = 0.;
-				unsigned char * hap_seq = &seeds_UMI[b *opt->UMI_length];
+				data_t * hap_seq = &seeds_UMI[b *opt->UMI_length];
 
 				for (unsigned int j = 0; j < opt->UMI_length; j++) {
 
@@ -1140,7 +1140,7 @@ int trans_expect_UMIs(options *opt, model *mod, data *dat, data_t *seeds_UMI,
 		if (u == dat->hash_UMI_length)
 			return mmessage(ERROR_MSG, INTERNAL_ERROR, "exceed the length");
 
-		unsigned char *read = s->sequence;
+		data_t *read = s->sequence;
 		unsigned int rlen = opt->UMI_length;
 
 		unsigned int count = s->count; // num. of reads wih unique seq
@@ -1148,13 +1148,13 @@ int trans_expect_UMIs(options *opt, model *mod, data *dat, data_t *seeds_UMI,
 
 		for (unsigned int b = 0; b < opt->K_UMI; ++b) {
 
-			unsigned char *hap_seq = &seeds_UMI[b*opt->UMI_length];
+			data_t *hap_seq = &seeds_UMI[b*opt->UMI_length];
 			size_t alen = opt->UMI_length;
 			unsigned int nindels = 0;
 			unsigned int nmismatch = 0;
 
 			/* options::band=0 is forced in calls to this function, so NOT ends-free */
-			unsigned char **aln = nwalign(hap_seq, read,
+			data_t **aln = nwalign(hap_seq, read,
 				(size_t) opt->UMI_length, (size_t) rlen,
 				opt->score, opt->gap_p, opt->band, 1, NULL,	/* WARNING: force ends-free alignment!!!! */
 							&err, &alen, NULL);

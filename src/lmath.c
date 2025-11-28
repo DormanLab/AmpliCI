@@ -1,5 +1,6 @@
 #include <math.h>
 #include "lmath.h"
+#include "constants.h"
 
 /**
  * Compute squared Euclidean distance between two p-vectors.
@@ -56,7 +57,7 @@ size_t hamming_char_dis(char *x, char *y, size_t p)
  * @param p	length of vector
  * @return	Hamming distance between two vectors
  */
-unsigned int hamming_uchar_dis(unsigned char *x, unsigned char *y, unsigned int p)
+unsigned int hamming_uchar_dis(data_t *x, data_t *y, unsigned int p)
 {
 	unsigned int hd = 0;
 	for (unsigned int i = 0; i < p; ++i)

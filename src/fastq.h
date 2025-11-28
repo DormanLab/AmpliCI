@@ -71,23 +71,23 @@ enum {
 	IUPAC_ENCODING,		/*!< iupac_t */
 	XY_ENCODING,		/*!< xy_t */
 	NUC_ENCODING,		/*!< nuc_t: should not use */
-	STD_ENCODING        /*!< std_t */
+	STD_ENCODING        	/*!< std_t */
 };
 
 /**
  * IUPAC symbols encoded in 4 lower bits.
  */
-typedef unsigned char iupac_t;
+typedef data_t iupac_t;
 
 /**
  * A, C, G, T as encoded by Xin Yin in 2 lower bits.
  */
-typedef unsigned char xy_t;
+typedef data_t xy_t;
 
 /**
  * IUPAC symbols and 'X' encoded (with some gaps) as chars 0 to 24.
  */
-typedef unsigned char nuc_t;
+typedef data_t nuc_t;
 
 /**
  * Types of files.
@@ -153,18 +153,18 @@ enum {
 /**
  * Convert xy_t, iupac_t to display char.
  */
-extern unsigned char const xy_to_char[NUM_NUCLEOTIDES];
-extern unsigned char const iupac_to_char[NUM_IUPAC_SYMBOLS];
+extern char const xy_to_char[NUM_NUCLEOTIDES];
+extern char const iupac_to_char[NUM_IUPAC_SYMBOLS];
 
 /**
  * Convert among iupac_t, xy_t, std, and nuc_t.
  */
-extern unsigned char const iupac_to_xy[NUM_IUPAC_SYMBOLS];
-extern unsigned char const iupac_to_std[NUM_IUPAC_SYMBOLS];
+extern data_t const iupac_to_xy[NUM_IUPAC_SYMBOLS];
+extern data_t const iupac_to_std[NUM_IUPAC_SYMBOLS];
 
-extern unsigned char const xy_to_std[NUM_NUCLEOTIDES];
-extern unsigned char const xy_to_iupac[NUM_NUCLEOTIDES];
-extern unsigned char const std_to_xy[NUM_NUCLEOTIDES];
+extern data_t const xy_to_std[NUM_NUCLEOTIDES];
+extern data_t const xy_to_iupac[NUM_NUCLEOTIDES];
+extern xy_t const std_to_xy[NUM_NUCLEOTIDES];
 extern iupac_t const nuc_to_iupac[NUCLEOTIDE_ALPHABET_SIZE];
 extern xy_t const nuc_to_xt[NUCLEOTIDE_ALPHABET_SIZE];
 
@@ -175,7 +175,7 @@ extern xy_t const xy_to_rc[NUM_NUCLEOTIDES];
 extern iupac_t const iupac_to_rc[NUM_IUPAC_SYMBOLS];
 
 #define NUM_IUPAC_SYMBOLS	16
-extern unsigned char iupac_symbols[NUM_IUPAC_SYMBOLS];
+extern data_t iupac_symbols[NUM_IUPAC_SYMBOLS];
 extern const unsigned char popcnt[NUM_IUPAC_SYMBOLS];
 
 /**
@@ -201,13 +201,13 @@ struct _fastq_data {
 	unsigned int n_reads;		/*!< number of reads */
 	unsigned int n_max_length;	/*!< length of reads if identical */
 	unsigned int n_min_length;	/*!< length of shortest read */
-	unsigned char max_quality;	/*!< maximum observed quality score */
-	unsigned char min_quality;	/*!< minimum observed quality score */
+	data_t max_quality;		/*!< maximum observed quality score */
+	data_t min_quality;		/*!< minimum observed quality score */
 	size_t *index;			/*!< byte pointer of reads in file */
 	unsigned int *n_lengths;	/*!< length of reads if not identical */
-	unsigned char *reads;		/*!< sequence reads */
-	unsigned char *quals;		/*!< quality score strings */
-	unsigned char *reference_seq;	/*!< optional reference sequence */
+	data_t *reads;			/*!< sequence reads */
+	data_t *quals;			/*!< quality score strings */
+	data_t *reference_seq;		/*!< optional reference sequence */
 };
 
 /**
@@ -226,7 +226,7 @@ struct _fastq_options {
 int allocate_empty_fastq(fastq_data **in_fqd, fastq_options *fqo, unsigned int nreads, unsigned int read_length);
 int fread_fastq(FILE *fp, fastq_data **fqd, fastq_options *fqo);
 int read_fastq(const char *filename, fastq_data **fqd, fastq_options *fqo);
-int read_read(FILE *fp, fastq_data *fqd, unsigned int *len, unsigned char *nptr, unsigned char *qptr);
+int read_read(FILE *fp, fastq_data *fqd, unsigned int *len, data_t *nptr, data_t *qptr);
 unsigned int cnt_reads(char const * const filename);
 unsigned int fcnt_reads(FILE *fp);
 int findex_reads(FILE *fp, fastq_data *fqd);
@@ -236,17 +236,17 @@ int make_fastq_options(fastq_options **opt);
 int read_compare(fastq_data *fqd, unsigned int i, unsigned int j);
 int pw_align_reads(fastq_data *fqd, char const * const rfile);
 double read_distance(fastq_data *fqd, unsigned int i, unsigned int j);
-double read_distance_ptr(fastq_data *fqd, unsigned int len, unsigned char *rptr1, unsigned char *rptr2, unsigned char *qptr1, unsigned char *qptr2);
+double read_distance_ptr(fastq_data *fqd, unsigned int len, data_t *rptr1, data_t *rptr2, data_t *qptr1, data_t *qptr2);
 
 /* output */
-unsigned char const * display_sequence(unsigned char const * const in_str, unsigned int len, int encoding);
-unsigned char const * display_reverse_complement(unsigned char const * const in_str, unsigned int len, int encoding);
-unsigned char const * display_quals(unsigned char const * const in_str, unsigned int len, unsigned char min);
-unsigned char const * display_reverse_quals(unsigned char const * const in_str, unsigned int len, unsigned char min);
+char const * display_sequence(data_t const * const in_str, unsigned int len, int encoding);
+char const * display_reverse_complement(data_t const * const in_str, unsigned int len, int encoding);
+char const * display_quals(data_t  const * const in_str, unsigned int len, data_t min);
+char const * display_reverse_quals(data_t const * const in_str, unsigned int len, data_t min);
 int write_fastq(fastq_data *fqd, fastq_options *fqo);
 int write_fastq_marked(fastq_data *fqd, fastq_options *fqo, unsigned int *id, unsigned int selected_id);
 int write_table(fastq_data *fqd, char const *filename);
-void print_alignment(FILE *fp, unsigned char **aln, size_t alen);
+void print_alignment(FILE *fp, data_t **aln, size_t alen);
 
 const char *fastq_error_message(int err_no);
 
@@ -262,7 +262,7 @@ void free_fastq_options(fastq_options *opt);
  * @param c	human-readable character
  * @return	0|1
  */
-inline int valid_iupac(unsigned char c) {
+inline int valid_iupac(char c) {
 	for (size_t i = 0; i < NUM_IUPAC_SYMBOLS; ++i)
 		if (iupac_to_char[i] == c)
 			return 1;
@@ -279,7 +279,7 @@ inline int valid_iupac(unsigned char c) {
  * @param c	human-readable character
  * @return	1|0
  */
-inline int valid_nucleotide(unsigned char c) {
+inline int valid_nucleotide(char c) {
 	return c == 'A' || c == 'C' || c == 'G' || c == 'T' || c == 'U';
 } /* valid_nucleotide */
 
@@ -290,9 +290,21 @@ inline int valid_nucleotide(unsigned char c) {
  * @param fqd	fastq_data object pointer
  * @return	probability
  */
-inline double error_prob(fastq_data *fqd, char q)
+inline double raw_error_prob(char q)
 {
-	return exp(- (q + fqd->min_quality - 33) / 10. * LOG10);
+	return exp(- ((q - 33) / 10.) * LOG10);
+} /* raw_error_prob */
+
+/**
+ * Convert quality code to error probability.
+ *
+ * @param q	quality code encoded as ASCII
+ * @param fqd	fastq_data object pointer
+ * @return	probability
+ */
+inline double error_prob(fastq_data *fqd, data_t q)
+{
+	return exp(- ((q + fqd->min_quality - 33) / 10.) * LOG10);
 } /* error_prob */
 
 /**
@@ -327,7 +339,7 @@ inline unsigned int read_length(fastq_data *fqd, unsigned int i)
  * @param read	read to write
  * @param len	length of read
  */
-inline void write_read_in_table(FILE *fp, unsigned char *read, unsigned int len)
+inline void write_read_in_table(FILE *fp, data_t *read, unsigned int len)
 {
 	for (unsigned int j = 0; j < len; ++j) {
 		if (j)
